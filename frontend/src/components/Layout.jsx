@@ -145,32 +145,8 @@ export default function Layout({ children }) {
             </button>
           </div>
 
-          {/* Active Warehouse Switcher in Mobile Drawer */}
-          <div className="p-3 bg-blue-50/60 border-b border-blue-100 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-[#003366] uppercase tracking-wider">
-              <Building2 className="w-3.5 h-3.5 text-[#004c8f]" /> Active Warehouse
-            </div>
-            {['Admin', 'Super Admin', 'Warehouse Admin', 'ADMIN', 'SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'SuperAdmin'].includes(user?.role) ? (
-              <select
-                value={activeWarehouse?.id || ''}
-                onChange={(e) => switchWarehouse(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-800 focus:border-[#004c8f] focus:outline-none cursor-pointer shadow-xs"
-              >
-                {warehouses.map(w => (
-                  <option key={w.id} value={w.id}>
-                    {w.warehouse_name} ({w.warehouse_code})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <div className="bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-800 truncate">
-                {activeWarehouse?.warehouse_name || 'Warehouse'}
-              </div>
-            )}
-          </div>
-
           {/* Mobile Nav Links */}
-          <nav className="p-3 overflow-y-auto max-h-[calc(100vh-220px)]">
+          <nav className="p-3 overflow-y-auto max-h-[calc(100vh-170px)]">
             {renderNavSection('Operations', operationsNav, true)}
             {renderNavSection('Master Registries', mastersNav, true)}
             {renderNavSection('System Admin', adminNav, true)}
@@ -233,39 +209,8 @@ export default function Layout({ children }) {
             </button>
           </div>
 
-          {/* Active Warehouse Context in Desktop Sidebar */}
-          {!collapsed ? (
-            <div className="p-3 bg-slate-50 border-b border-slate-200 space-y-1.5">
-              <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-[#003366] uppercase tracking-wider">
-                <Building2 className="w-3.5 h-3.5 text-[#004c8f]" /> Active Warehouse
-              </div>
-
-              {['Admin', 'Super Admin', 'Warehouse Admin', 'ADMIN', 'SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'SuperAdmin'].includes(user?.role) ? (
-                <select
-                  value={activeWarehouse?.id || ''}
-                  onChange={(e) => switchWarehouse(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:border-[#004c8f] focus:outline-none cursor-pointer shadow-xs"
-                >
-                  {warehouses.map(w => (
-                    <option key={w.id} value={w.id}>
-                      {w.warehouse_name} ({w.warehouse_code})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 truncate">
-                  {activeWarehouse?.warehouse_name || 'Warehouse'}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="p-2 border-b border-slate-200 flex justify-center">
-              <span className="w-3 h-3 rounded-full bg-emerald-500" title={`Warehouse: ${activeWarehouse?.warehouse_name || 'Active'}`} />
-            </div>
-          )}
-
           {/* Desktop Scrollable Navigation */}
-          <nav className="p-3 overflow-y-auto max-h-[calc(100vh-170px)]">
+          <nav className="p-3 overflow-y-auto max-h-[calc(100vh-120px)]">
             {renderNavSection('Operations', operationsNav, false)}
             {renderNavSection('Master Registries', mastersNav, false)}
             {renderNavSection('System Admin', adminNav, false)}
