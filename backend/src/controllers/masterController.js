@@ -52,9 +52,9 @@ async function deleteWarehouse(req, res) {
 // 2. Routes (Route Master) & Route Schedules CRUD
 async function getRoutes(req, res) {
   try {
-    const whId = req.activeWarehouseId;
-    const routes = await dbAsync.all('SELECT * FROM route_masters WHERE warehouse_id = ? ORDER BY route_name ASC', [whId]);
-    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE warehouse_id = ? ORDER BY priority_order ASC, dispatch_time ASC', [whId]);
+    const whId = req.activeWarehouseId || 1;
+    const routes = await dbAsync.all('SELECT * FROM route_masters WHERE warehouse_id = ? OR warehouse_id IS NULL ORDER BY route_name ASC', [whId]);
+    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE warehouse_id = ? OR warehouse_id IS NULL ORDER BY priority_order ASC, dispatch_time ASC', [whId]);
     
     const routesWithSchedules = routes.map(r => {
       const rScheds = schedules.filter(s => s.route_id === r.id);
@@ -68,6 +68,7 @@ async function getRoutes(req, res) {
 
     return res.json(routesWithSchedules);
   } catch (err) {
+    console.error('Error fetching routes:', err);
     return res.status(500).json({ message: 'Error fetching routes.' });
   }
 }
@@ -135,7 +136,6 @@ async function createRoute(req, res) {
 async function updateRoute(req, res) {
   try {
     const { id } = req.params;
-    const whId = req.activeWarehouseId;
     const { 
       route_code, 
       route_name,
@@ -150,6 +150,9 @@ async function updateRoute(req, res) {
       selected_days
     } = req.body;
 
+    const existingRoute = await dbAsync.get('SELECT warehouse_id FROM route_masters WHERE id = ?', [id]);
+    const whId = req.activeWarehouseId || existingRoute?.warehouse_id || 1;
+
     await dbAsync.run(`
       UPDATE route_masters
       SET route_code = ?, route_name = ?
@@ -160,10 +163,10 @@ async function updateRoute(req, res) {
     if (morning_enabled !== undefined || evening_enabled !== undefined) {
       const defaultDays = selected_days ? (typeof selected_days === 'string' ? selected_days : JSON.stringify(selected_days)) : JSON.stringify(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
 
-      // Remove existing Morning & Evening schedules to cleanly refresh
+      // Remove all previous schedules for this route to cleanly refresh with user's choices
       await dbAsync.run(`
         DELETE FROM route_schedules 
-        WHERE route_id = ? AND (trip_name LIKE '%Morning%' OR trip_name LIKE '%Evening%')
+        WHERE route_id = ?
       `, [id]);
 
       if (morning_enabled) {
