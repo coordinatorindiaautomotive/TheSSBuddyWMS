@@ -4,6 +4,8 @@
   "description": "TheSSBuddy Enterprise Warehouse & Dispatch Management System",
   "main": "backend/app.js",
   "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
     "start": "node backend/app.js",
     "build": "cd frontend && npm install && npm run build",
     "postinstall": "cd backend && npm install"
