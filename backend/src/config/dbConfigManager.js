@@ -8,40 +8,46 @@ const mysql = require('mysql2/promise');
 const configPath = path.join(__dirname, '../../config.json');
 
 function getConfig() {
+  let fileConfig = {};
   try {
     if (fs.existsSync(configPath)) {
       const data = fs.readFileSync(configPath, 'utf8');
-      return JSON.parse(data);
+      fileConfig = JSON.parse(data);
     }
   } catch (e) {}
 
   return {
-    dbType: 'SQLITE',
-    sqlite: { dbPath: 'data/wms_enterprise.db' },
+    dbType: process.env.DB_TYPE || fileConfig.dbType || 'MYSQL',
+    sqlite: { 
+      dbPath: process.env.SQLITE_DB_PATH || fileConfig.sqlite?.dbPath || 'data/wms_enterprise.db' 
+    },
     mssql: {
-      host: '172.20.25.5',
-      port: 1433,
-      database: 'WmsEnterpriseDb',
-      user: 'sa',
-      password: 'Admin@12345',
+      host: process.env.MSSQL_HOST || fileConfig.mssql?.host || '127.0.0.1',
+      port: parseInt(process.env.MSSQL_PORT || fileConfig.mssql?.port, 10) || 1433,
+      database: process.env.MSSQL_DATABASE || fileConfig.mssql?.database || 'WmsEnterpriseDb',
+      user: process.env.MSSQL_USER || fileConfig.mssql?.user || 'sa',
+      password: process.env.MSSQL_PASSWORD || fileConfig.mssql?.password || '',
       encrypt: false,
       trustServerCertificate: true
     },
     postgres: {
-      host: '127.0.0.1',
-      port: 5432,
-      database: 'wms_enterprise_db',
-      user: 'postgres',
-      password: ''
+      host: process.env.PG_HOST || fileConfig.postgres?.host || '127.0.0.1',
+      port: parseInt(process.env.PG_PORT || fileConfig.postgres?.port, 10) || 5432,
+      database: process.env.PG_DATABASE || fileConfig.postgres?.database || 'wms_enterprise_db',
+      user: process.env.PG_USER || fileConfig.postgres?.user || 'postgres',
+      password: process.env.PG_PASSWORD || fileConfig.postgres?.password || ''
     },
     mysql: {
-      host: '127.0.0.1',
-      port: 3306,
-      database: 'wms_enterprise_db',
-      user: 'root',
-      password: ''
+      host: process.env.DB_HOST || fileConfig.mysql?.host || '127.0.0.1',
+      port: parseInt(process.env.DB_PORT || fileConfig.mysql?.port, 10) || 3306,
+      database: process.env.DB_NAME || fileConfig.mysql?.database || 'wms_enterprise_db',
+      user: process.env.DB_USER || fileConfig.mysql?.user || 'root',
+      password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : (fileConfig.mysql?.password || '')
     },
-    server: { port: 5000, host: '0.0.0.0' }
+    server: { 
+      port: parseInt(process.env.PORT || fileConfig.server?.port, 10) || 5000, 
+      host: process.env.HOST || fileConfig.server?.host || '0.0.0.0' 
+    }
   };
 }
 
