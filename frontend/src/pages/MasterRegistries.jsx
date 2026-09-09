@@ -473,7 +473,7 @@ export default function MasterRegistries() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[850px]">
+            <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
                   <TH>Party Code</TH>
@@ -533,7 +533,7 @@ export default function MasterRegistries() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[850px]">
+            <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
                   <TH>Employee Code</TH>
@@ -587,7 +587,7 @@ export default function MasterRegistries() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[850px]">
+            <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
                   <TH>Driver</TH>
@@ -644,7 +644,7 @@ export default function MasterRegistries() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[850px]">
+            <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
                   <TH>Vehicle No</TH>
@@ -699,7 +699,7 @@ export default function MasterRegistries() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[850px]">
+            <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
                   <TH>Route Code</TH>
@@ -757,7 +757,7 @@ export default function MasterRegistries() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[850px]">
+            <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
                   <TH>#</TH>
@@ -830,7 +830,7 @@ export default function MasterRegistries() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[850px]">
+            <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
                   <TH>Warehouse Code</TH>
@@ -889,7 +889,7 @@ export default function MasterRegistries() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[850px]">
+            <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
                   <TH>Full Name</TH>

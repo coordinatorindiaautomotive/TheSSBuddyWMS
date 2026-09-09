@@ -153,31 +153,31 @@ export default function EWayBill() {
       </div>
 
       {/* Generated E-Way Bills Register Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden w-full">
         <div className="overflow-x-auto max-h-[550px]">
-          <table className="w-full text-left text-xs border-collapse min-w-[950px]">
+          <table className="w-full text-left text-xs border-collapse">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-[#003366] border-b-4 border-[#ed1c24] text-white text-xs font-bold uppercase tracking-wider">
-                <th className="px-5 py-4 whitespace-nowrap">EWB No</th>
-                <th className="px-5 py-4 whitespace-nowrap">Doc / Invoice No</th>
-                <th className="px-5 py-4 whitespace-nowrap">Party Name</th>
-                <th className="px-5 py-4 whitespace-nowrap">GSTIN</th>
-                <th className="px-5 py-4 whitespace-nowrap">Taxable Value</th>
-                <th className="px-5 py-4 whitespace-nowrap">CGST + SGST</th>
-                <th className="px-5 py-4 whitespace-nowrap">Total Invoice Value</th>
-                <th className="px-5 py-4 whitespace-nowrap">EWB Status</th>
+              <tr className="bg-[#003366] border-b-4 border-[#ed1c24] text-white text-[11px] font-bold uppercase tracking-wider">
+                <th className="px-3 py-3 whitespace-nowrap">EWB No</th>
+                <th className="px-3 py-3 whitespace-nowrap">Doc / Invoice No</th>
+                <th className="px-3 py-3 whitespace-nowrap">Party Name</th>
+                <th className="px-3 py-3 whitespace-nowrap">GSTIN</th>
+                <th className="px-3 py-3 whitespace-nowrap">Taxable Value</th>
+                <th className="px-3 py-3 whitespace-nowrap">CGST + SGST</th>
+                <th className="px-3 py-3 whitespace-nowrap">Total Invoice Value</th>
+                <th className="px-3 py-3 whitespace-nowrap">EWB Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400 font-semibold">
+                  <td colSpan={8} className="text-center py-10 text-slate-400 font-semibold">
                     Loading E-Way Bill registers...
                   </td>
                 </tr>
               ) : ewayBills.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400 font-semibold">
+                  <td colSpan={8} className="text-center py-10 text-slate-400 font-semibold">
                     No E-Way Bill records found. Upload an Excel sheet above to generate EWB records.
                   </td>
                 </tr>
@@ -191,19 +191,19 @@ export default function EWayBill() {
                   return (
                     paginatedData.map((e) => (
                       <tr key={e.id} className="hover:bg-blue-50/60 transition-colors">
-                        <td className="px-5 py-4 font-extrabold text-[#004c8f] font-mono">
+                        <td className="px-3 py-2.5 font-extrabold text-[#004c8f] font-mono whitespace-nowrap">
                           {e.ewb_no || 'Pending EWB Generation'}
                         </td>
-                        <td className="px-5 py-4 font-bold text-slate-800">{e.doc_no}</td>
-                        <td className="px-5 py-4 font-bold text-slate-900">{e.party_name}</td>
-                        <td className="px-5 py-4 font-mono text-slate-600">{e.gstin || 'URP / Consumer'}</td>
-                        <td className="px-5 py-4 font-medium text-slate-700">₹{(e.taxable_value || 0).toLocaleString()}</td>
-                        <td className="px-5 py-4 font-medium text-slate-600">
+                        <td className="px-3 py-2.5 font-bold text-slate-800 whitespace-nowrap">{e.doc_no}</td>
+                        <td className="px-3 py-2.5 font-bold text-slate-900 max-w-[200px] truncate" title={e.party_name}>{e.party_name}</td>
+                        <td className="px-3 py-2.5 font-mono text-slate-600 whitespace-nowrap">{e.gstin || 'URP / Consumer'}</td>
+                        <td className="px-3 py-2.5 font-medium text-slate-700 whitespace-nowrap">₹{(e.taxable_value || 0).toLocaleString()}</td>
+                        <td className="px-3 py-2.5 font-medium text-slate-600 whitespace-nowrap">
                           ₹{((e.cgst_value || 0) + (e.sgst_value || 0)).toLocaleString()}
                         </td>
-                        <td className="px-5 py-4 font-black text-emerald-700">₹{(e.total_value || 0).toLocaleString()}</td>
-                        <td className="px-5 py-4">
-                          <span className="px-3 py-1 rounded-xl text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <td className="px-3 py-2.5 font-black text-emerald-700 whitespace-nowrap">₹{(e.total_value || 0).toLocaleString()}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <span className="px-2.5 py-0.5 rounded-lg text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             {e.status || 'Generated'}
                           </span>
                         </td>
