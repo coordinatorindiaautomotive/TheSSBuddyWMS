@@ -2,9 +2,24 @@
   "name": "thesssystem-wms-portal",
   "version": "1.0.0",
   "description": "TheSSBuddy Enterprise Warehouse & Dispatch Management System",
+  "main": "backend/app.js",
   "scripts": {
+    "start": "node backend/app.js",
     "build": "cd frontend && npm install && npm run build",
-    "start": "cd backend && npm start",
-    "prod": "npm run build && npm start"
+    "postinstall": "cd backend && npm install"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mssql": "^12.7.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.23.2",
+    "pg": "^8.22.0",
+    "socket.io": "^4.7.5",
+    "sqlite3": "^5.1.7",
+    "xlsx": "^0.18.5"
   }
 }
