@@ -941,76 +941,136 @@ export default function MasterRegistries() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
-                  <TH>Route Code</TH>
-                  <TH>Route Name</TH>
-                  <TH>Configured Dispatch Trips &amp; Schedule</TH>
-                  <TH>Parties on Route</TH>
+                  <TH>Route Details</TH>
+                  <TH>🌅 Morning Dispatch</TH>
+                  <TH>🌆 Evening Dispatch</TH>
+                  <TH>🌙 Other Trips / On-Demand</TH>
+                  <TH>Assigned Parties</TH>
                   <TH>Actions</TH>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td colSpan={5} className="text-center py-12 text-slate-400 text-sm font-semibold">Loading delivery routes...</td></tr>
+                  <tr><td colSpan={6} className="text-center py-12 text-slate-400 text-sm font-semibold">Loading delivery routes...</td></tr>
                 ) : filtered(routes, ['route_code', 'route_name']).length === 0 ? (
-                  <EmptyTable colSpan={5} message="No routes found" />
+                  <EmptyTable colSpan={6} message="No routes found" />
                 ) : paginate(filtered(routes, ['route_code', 'route_name'])).map(r => {
                   const scheds = Array.isArray(r.schedules) ? r.schedules : [];
-                  const activeScheds = scheds.filter(s => s.is_active);
+                  
+                  // Find Morning trip (trip name contains morning, or dispatch before 12:00)
+                  const morningTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('morning') || (s.dispatch_time && parseInt(s.dispatch_time.split(':')[0], 10) < 12 && s.dispatch_type !== 'ON_DEMAND'));
+                  
+                  // Find Evening trip (trip name contains evening, or dispatch >= 12:00)
+                  const eveningTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('evening') || (s.dispatch_time && parseInt(s.dispatch_time.split(':')[0], 10) >= 12 && parseInt(s.dispatch_time.split(':')[0], 10) < 21 && s.dispatch_type !== 'ON_DEMAND'));
+                  
+                  // Other trips (Night, on-demand, or extra custom trips)
+                  const otherTrips = scheds.filter(s => s.id !== morningTrip?.id && s.id !== eveningTrip?.id);
+
                   return (
                     <tr key={r.id} className="hover:bg-blue-50/40 transition-colors">
-                      <TD><span className="font-mono font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">{r.route_code}</span></TD>
-                      <TD><span className="font-bold text-slate-900 text-sm">{r.route_name}</span></TD>
+                      {/* Route Code & Name */}
                       <TD>
-                        <div className="flex flex-wrap items-center gap-1.5 max-w-lg">
-                          {activeScheds.length === 0 ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                              <Clock className="w-3 h-3 text-slate-400" /> On-Demand (No fixed schedule)
-                            </span>
-                          ) : (
-                            activeScheds.map(s => {
-                              let daysSummary = 'Daily';
-                              if (s.frequency === 'ON_DEMAND') daysSummary = 'On-Demand';
-                              else if (s.frequency === 'WEEKLY_SPECIFIC_DAYS' && s.selected_days) {
-                                try {
-                                  const parsed = typeof s.selected_days === 'string' ? JSON.parse(s.selected_days) : s.selected_days;
-                                  daysSummary = Array.isArray(parsed) && parsed.length < 7
-                                    ? parsed.map(d => d.slice(0, 3)).join(', ')
-                                    : 'Daily';
-                                } catch (e) {
-                                  daysSummary = 'Custom';
-                                }
-                              }
-                              return (
-                                <span
-                                  key={s.id}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50/80 text-indigo-900 border border-indigo-200"
-                                >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
-                                  <strong className="font-extrabold text-indigo-950">{s.trip_name}</strong>
-                                  <span className="text-indigo-600 font-medium">({daysSummary})</span>
-                                  <span className="font-mono text-[11px] bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-800">
-                                    Cutoff {s.cutoff_time} | Disp {s.dispatch_time}
-                                  </span>
-                                </span>
-                              );
-                            })
-                          )}
+                        <div>
+                          <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200 text-xs">
+                            {r.route_code}
+                          </span>
+                          <div className="font-bold text-slate-900 text-sm mt-1">{r.route_name}</div>
                         </div>
                       </TD>
+
+                      {/* 🌅 Morning Slot */}
+                      <TD>
+                        {morningTrip ? (
+                          <div className="space-y-1">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold bg-amber-50 text-amber-900 border border-amber-200">
+                              <Sunrise className="w-3.5 h-3.5 text-amber-600" />
+                              <span>{morningTrip.trip_name}</span>
+                              {morningTrip.is_active ? (
+                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                              ) : (
+                                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                              )}
+                            </div>
+                            <div className="text-[11px] font-mono text-slate-600">
+                              Cutoff: <strong className="text-amber-800">{morningTrip.cutoff_time}</strong> | Disp: <strong className="text-blue-800">{morningTrip.dispatch_time}</strong>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => { openScheduleModal(r); applyPreset('MORNING'); }}
+                            className="px-2.5 py-1.5 rounded-lg border border-dashed border-amber-300 bg-amber-50/40 hover:bg-amber-100 text-amber-900 text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <Sunrise className="w-3.5 h-3.5 text-amber-600" />
+                            <span>+ Set Morning (08:00)</span>
+                          </button>
+                        )}
+                      </TD>
+
+                      {/* 🌆 Evening Slot */}
+                      <TD>
+                        {eveningTrip ? (
+                          <div className="space-y-1">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold bg-indigo-50 text-indigo-900 border border-indigo-200">
+                              <Sunset className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>{eveningTrip.trip_name}</span>
+                              {eveningTrip.is_active ? (
+                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                              ) : (
+                                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                              )}
+                            </div>
+                            <div className="text-[11px] font-mono text-slate-600">
+                              Cutoff: <strong className="text-amber-800">{eveningTrip.cutoff_time}</strong> | Disp: <strong className="text-blue-800">{eveningTrip.dispatch_time}</strong>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => { openScheduleModal(r); applyPreset('EVENING'); }}
+                            className="px-2.5 py-1.5 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/40 hover:bg-indigo-100 text-indigo-900 text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <Sunset className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>+ Set Evening (18:00)</span>
+                          </button>
+                        )}
+                      </TD>
+
+                      {/* 🌙 Other Trips / On-Demand */}
+                      <TD>
+                        {otherTrips.length === 0 ? (
+                          <span className="text-slate-400 text-xs">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {otherTrips.map(ot => (
+                              <span
+                                key={ot.id}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200"
+                              >
+                                {ot.trip_name} ({ot.dispatch_time || 'On-Demand'})
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </TD>
+
+                      {/* Assigned Parties */}
                       <TD>
                         <span className="bg-blue-50 text-[#004c8f] border border-blue-200 px-2.5 py-1 rounded-lg text-xs font-bold">
                           {(parties || []).filter(p => p.route_name === r.route_name).length} Parties
                         </span>
                       </TD>
+
+                      {/* Actions */}
                       <TD>
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => openScheduleModal(r)}
                             className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
-                            title="Configure Trip Dispatch Schedules"
+                            title="Configure Full Trip Schedules"
                           >
                             <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Configure Trips ({scheds.length})</span>
+                            <span>Configure ({scheds.length})</span>
                           </button>
                           <button onClick={() => openEdit(r)}
                             className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
