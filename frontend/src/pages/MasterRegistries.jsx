@@ -1882,299 +1882,321 @@ export default function MasterRegistries() {
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left Column: List of Configured Trips */}
-              <div className="lg:col-span-6 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-indigo-600" />
-                    Configured Trips ({routeSchedules.length})
+            {/* Modal Body: Clean Tabular Form */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-5">
+              {/* Top Quick Action Presets Bar */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                    Quick Dispatch Setup:
                   </h4>
-                  <button
-                    type="button"
-                    onClick={handleResetScheduleForm}
-                    className="text-xs font-bold text-[#004c8f] hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> + Add New Trip
-                  </button>
+                  <p className="text-[11px] text-slate-500">
+                    Add standard slots in 1-click or customize timings below.
+                  </p>
                 </div>
 
-                {/* 1-Click Quick Preset: Add Standard Morning & Evening Dispatches */}
-                <button
-                  type="button"
-                  onClick={handle1ClickAddMorningAndEvening}
-                  disabled={savingSchedule}
-                  className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-600 hover:opacity-95 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
-                  title="Automatically adds Morning (08:00) and Evening (18:00) departures for this route"
-                >
-                  <Zap className="w-4 h-4 fill-current" />
-                  <span>+ 1-Click Setup: Morning &amp; Evening Daily Dispatches</span>
-                </button>
-
-                {loadingSchedules ? (
-                  <div className="py-12 text-center text-xs text-slate-400 font-semibold">
-                    Loading dispatch schedules...
-                  </div>
-                ) : routeSchedules.length === 0 ? (
-                  <div className="p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-300 text-center space-y-2">
-                    <Clock className="w-8 h-8 text-slate-400 mx-auto" />
-                    <p className="text-xs font-bold text-slate-700">No scheduled trips configured for this route.</p>
-                    <p className="text-[11px] text-slate-400">
-                      Select Morning or Evening on the right to add a schedule, or click the 1-Click Setup button above.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
-                    {routeSchedules.map((sched) => {
-                      let daysSummary = 'Everyday (Daily)';
-                      if (sched.frequency === 'ON_DEMAND') daysSummary = '⚡ On-Demand Manual Trigger';
-                      else if (sched.frequency === 'WEEKLY_SPECIFIC_DAYS' && sched.selected_days) {
-                        try {
-                          const parsed = typeof sched.selected_days === 'string' ? JSON.parse(sched.selected_days) : sched.selected_days;
-                          daysSummary = Array.isArray(parsed) && parsed.length < 7
-                            ? `Days: ${parsed.join(', ')}`
-                            : 'Everyday (Daily)';
-                        } catch (e) {
-                          daysSummary = 'Custom Days';
-                        }
-                      }
-
-                      const isSelected = editingScheduleId === sched.id;
-                      const isMorning = sched.trip_name?.toLowerCase().includes('morning') || (sched.dispatch_time && parseInt(sched.dispatch_time.split(':')[0], 10) < 12);
-                      const isEvening = sched.trip_name?.toLowerCase().includes('evening') || (sched.dispatch_time && parseInt(sched.dispatch_time.split(':')[0], 10) >= 12);
-
-                      return (
-                        <div
-                          key={sched.id}
-                          className={`p-3.5 rounded-xl border transition-all ${
-                            isSelected
-                              ? 'bg-blue-50/80 border-[#004c8f] shadow-xs'
-                              : sched.is_active
-                              ? 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
-                              : 'bg-slate-50/70 border-slate-200 opacity-60'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1.5 flex-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`p-1 rounded-md text-xs font-bold ${
-                                  isMorning ? 'bg-amber-100 text-amber-800' : isEvening ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'
-                                }`}>
-                                  {isMorning ? <Sunrise className="w-3.5 h-3.5 inline" /> : isEvening ? <Sunset className="w-3.5 h-3.5 inline" /> : <Clock className="w-3.5 h-3.5 inline" />}
-                                </span>
-                                <strong className="text-sm font-extrabold text-slate-900">
-                                  {sched.trip_name}
-                                </strong>
-                                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                                  sched.frequency === 'DAILY' ? 'bg-indigo-100 text-indigo-800' :
-                                  sched.frequency === 'ON_DEMAND' ? 'bg-amber-100 text-amber-800' :
-                                  'bg-purple-100 text-purple-800'
-                                }`}>
-                                  {sched.frequency}
-                                </span>
-                                {sched.is_active ? (
-                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-                                    Active
-                                  </span>
-                                ) : (
-                                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                                    Disabled
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs text-slate-500 font-medium">
-                                {daysSummary}
-                              </div>
-                              <div className="flex items-center gap-3 text-xs font-mono pt-1">
-                                <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                                  ⏱ Cutoff: <strong>{sched.cutoff_time ? `${sched.cutoff_time} (${fmtTime12(sched.cutoff_time)})` : '—'}</strong>
-                                </span>
-                                <span className="text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                  🚛 Disp: <strong>{sched.dispatch_time ? `${sched.dispatch_time} (${fmtTime12(sched.dispatch_time)})` : '—'}</strong>
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => handleEditScheduleClick(sched)}
-                                className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 text-xs font-bold cursor-pointer"
-                                title="Edit Trip Schedule"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleToggleSchedule(sched)}
-                                className={`p-1.5 rounded-lg text-xs font-bold border cursor-pointer ${
-                                  sched.is_active
-                                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
-                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
-                                }`}
-                                title={sched.is_active ? 'Disable' : 'Enable'}
-                              >
-                                {sched.is_active ? <ToggleLeft className="w-3.5 h-3.5" /> : <ToggleRight className="w-3.5 h-3.5" />}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteSchedule(sched.id)}
-                                className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold cursor-pointer"
-                                title="Delete Trip Schedule"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handle1ClickAddMorningAndEvening}
+                    disabled={savingSchedule}
+                    className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-indigo-600 hover:opacity-95 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+                  >
+                    <Zap className="w-3.5 h-3.5 fill-current" />
+                    <span>1-Click Morning &amp; Evening Setup</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('MORNING')}
+                    className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Sunrise className="w-3.5 h-3.5 text-amber-600" />
+                    <span>+ Morning (08:00)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('EVENING')}
+                    className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Sunset className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>+ Evening (18:00)</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Right Column: Add / Edit Trip Form with Morning & Evening Selectors */}
-              <div className="lg:col-span-6 bg-slate-50/80 p-5 rounded-2xl border border-slate-200 space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              {/* Main Tabular Schedule Table */}
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                <div className="bg-[#003366] px-5 py-3.5 flex items-center justify-between text-white">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider">
+                      Configured Route Trips ({routeSchedules.length})
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-300">
+                    Active trips automatically feed the Operations Console
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-200 text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                        <th className="px-4 py-3">#</th>
+                        <th className="px-4 py-3">Slot / Shift</th>
+                        <th className="px-4 py-3">Trip Name</th>
+                        <th className="px-4 py-3">Frequency / Days</th>
+                        <th className="px-4 py-3">Order Cut-off Time</th>
+                        <th className="px-4 py-3">Vehicle Dispatch Time</th>
+                        <th className="px-4 py-3 text-center">Status</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {loadingSchedules ? (
+                        <tr>
+                          <td colSpan={8} className="text-center py-10 text-slate-400 font-bold">
+                            Loading route schedules...
+                          </td>
+                        </tr>
+                      ) : routeSchedules.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="text-center py-12 text-slate-500">
+                            <div className="flex flex-col items-center gap-2">
+                              <Clock className="w-8 h-8 text-slate-300" />
+                              <span className="font-bold text-slate-700">No scheduled trips configured for this route.</span>
+                              <span className="text-xs text-slate-400">
+                                Click "1-Click Morning &amp; Evening Setup" above or use the form below to add a trip.
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        routeSchedules.map((sched, idx) => {
+                          const isMorning = sched.trip_name?.toLowerCase().includes('morning') || (sched.dispatch_time && parseInt(sched.dispatch_time.split(':')[0], 10) < 12);
+                          const isEvening = sched.trip_name?.toLowerCase().includes('evening') || (sched.dispatch_time && parseInt(sched.dispatch_time.split(':')[0], 10) >= 12);
+                          const isEditing = editingScheduleId === sched.id;
+
+                          let daysSummary = 'Daily (All Days)';
+                          if (sched.frequency === 'ON_DEMAND') daysSummary = 'On-Demand';
+                          else if (sched.frequency === 'WEEKLY_SPECIFIC_DAYS' && sched.selected_days) {
+                            try {
+                              const parsed = typeof sched.selected_days === 'string' ? JSON.parse(sched.selected_days) : sched.selected_days;
+                              daysSummary = Array.isArray(parsed) && parsed.length < 7
+                                ? parsed.map(d => d.slice(0, 3)).join(', ')
+                                : 'Daily';
+                            } catch (e) {
+                              daysSummary = 'Custom';
+                            }
+                          }
+
+                          return (
+                            <tr
+                              key={sched.id}
+                              className={`transition-colors ${isEditing ? 'bg-blue-50/90 font-semibold' : 'hover:bg-slate-50'}`}
+                            >
+                              <td className="px-4 py-3.5 font-mono text-slate-500 font-bold">
+                                {idx + 1}
+                              </td>
+                              <td className="px-4 py-3.5 whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold border ${
+                                  isMorning
+                                    ? 'bg-amber-50 text-amber-900 border-amber-200'
+                                    : isEvening
+                                    ? 'bg-indigo-50 text-indigo-900 border-indigo-200'
+                                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                                }`}>
+                                  {isMorning ? <Sunrise className="w-3.5 h-3.5 text-amber-600" /> : isEvening ? <Sunset className="w-3.5 h-3.5 text-indigo-600" /> : <Clock className="w-3.5 h-3.5 text-slate-500" />}
+                                  <span>{isMorning ? 'Morning' : isEvening ? 'Evening' : sched.dispatch_type === 'ON_DEMAND' ? 'On-Demand' : 'Custom'}</span>
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 font-bold text-slate-900">
+                                {sched.trip_name}
+                              </td>
+                              <td className="px-4 py-3.5 whitespace-nowrap">
+                                <span className="text-slate-700 font-medium">{daysSummary}</span>
+                              </td>
+                              <td className="px-4 py-3.5 whitespace-nowrap font-mono">
+                                {sched.cutoff_time ? (
+                                  <span className="font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                    {sched.cutoff_time} ({fmtTime12(sched.cutoff_time)})
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 italic">No Cutoff</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5 whitespace-nowrap font-mono">
+                                {sched.dispatch_time ? (
+                                  <span className="font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                    {sched.dispatch_time} ({fmtTime12(sched.dispatch_time)})
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 italic">On-Demand</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleSchedule(sched)}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border cursor-pointer inline-flex items-center gap-1 transition-colors ${
+                                    sched.is_active
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                      : 'bg-slate-100 text-slate-500 border-slate-300'
+                                  }`}
+                                >
+                                  {sched.is_active ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <XCircle className="w-3 h-3 text-slate-400" />}
+                                  <span>{sched.is_active ? 'Active' : 'Disabled'}</span>
+                                </button>
+                              </td>
+                              <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditScheduleClick(sched)}
+                                    className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 text-xs font-bold cursor-pointer transition-colors"
+                                  >
+                                    <Edit2 className="w-3 h-3 inline mr-1" /> Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSchedule(sched.id)}
+                                    className="px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold cursor-pointer transition-colors"
+                                  >
+                                    <Trash2 className="w-3 h-3 inline mr-1" /> Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Clean, Form Row to Add or Edit Schedule */}
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                  <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-emerald-600" />
-                    {editingScheduleId ? 'Edit Trip Schedule' : 'Configure Trip Schedule'}
-                  </h4>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
+                      {editingScheduleId ? 'Edit Selected Trip' : '+ Add New Trip to this Route'}
+                    </h4>
+                  </div>
                   {editingScheduleId && (
                     <button
                       type="button"
                       onClick={handleResetScheduleForm}
-                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                      className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
                     >
-                      Cancel Edit
+                      Cancel Editing
                     </button>
                   )}
                 </div>
 
-                {/* ── Selectable Shift / Slot Presets (Morning, Evening, Night, On-Demand) ── */}
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
-                    Select Departure Slot / Shift Preset:
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Morning Button */}
-                    <button
-                      type="button"
-                      onClick={() => applyPreset('MORNING')}
-                      className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                        scheduleForm.trip_name?.toLowerCase().includes('morning')
-                          ? 'border-amber-500 bg-amber-50/80 shadow-xs'
-                          : 'border-slate-200 bg-white hover:border-amber-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 font-extrabold text-xs text-amber-900">
-                        <Sunrise className="w-4 h-4 text-amber-600" />
-                        <span>🌅 Morning Trip</span>
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-600 mt-1">
-                        Cutoff: 08:00 AM | Disp: 09:30 AM
-                      </div>
-                    </button>
-
-                    {/* Evening Button */}
-                    <button
-                      type="button"
-                      onClick={() => applyPreset('EVENING')}
-                      className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                        scheduleForm.trip_name?.toLowerCase().includes('evening')
-                          ? 'border-indigo-600 bg-indigo-50/80 shadow-xs'
-                          : 'border-slate-200 bg-white hover:border-indigo-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 font-extrabold text-xs text-indigo-950">
-                        <Sunset className="w-4 h-4 text-indigo-600" />
-                        <span>🌆 Evening Trip</span>
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-600 mt-1">
-                        Cutoff: 06:00 PM | Disp: 07:30 PM
-                      </div>
-                    </button>
-
-                    {/* Night Button */}
-                    <button
-                      type="button"
-                      onClick={() => applyPreset('NIGHT')}
-                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                        scheduleForm.trip_name?.toLowerCase().includes('night')
-                          ? 'border-purple-600 bg-purple-50 shadow-xs'
-                          : 'border-slate-200 bg-white hover:border-purple-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 font-extrabold text-xs text-purple-900">
-                        <Moon className="w-3.5 h-3.5 text-purple-600" />
-                        <span>🌙 Night Express</span>
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-500 mt-0.5">
-                        Cutoff: 09:00 PM | Disp: 10:30 PM
-                      </div>
-                    </button>
-
-                    {/* On-Demand Button */}
-                    <button
-                      type="button"
-                      onClick={() => applyPreset('ON_DEMAND')}
-                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                        scheduleForm.dispatch_type === 'ON_DEMAND'
-                          ? 'border-blue-600 bg-blue-50 shadow-xs'
-                          : 'border-slate-200 bg-white hover:border-blue-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 font-extrabold text-xs text-blue-900">
-                        <Zap className="w-3.5 h-3.5 text-blue-600" />
-                        <span>⚡ On-Demand</span>
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-500 mt-0.5">
-                        Manual trigger / No fixed time
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                <form onSubmit={handleSaveSchedule} className="space-y-3.5 pt-1">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Trip / Dispatch Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={scheduleForm.trip_name}
-                      onChange={(e) => setScheduleForm(prev => ({ ...prev, trip_name: e.target.value }))}
-                      required
-                      placeholder="e.g. Morning Dispatch, Evening Run, Friday Express"
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#004c8f]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Frequency Type *
-                    </label>
-                    <select
-                      value={scheduleForm.frequency}
-                      onChange={(e) => setScheduleForm(prev => ({ ...prev, frequency: e.target.value }))}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#004c8f]"
-                    >
-                      <option value="DAILY">Daily (Runs every day)</option>
-                      <option value="WEEKLY_SPECIFIC_DAYS">Specific Days of Week (e.g. Mon, Thu)</option>
-                      <option value="ON_DEMAND">On-Demand (Triggered on backlog / urgency)</option>
-                      <option value="CUSTOM_INTERVAL">Custom Interval</option>
-                    </select>
-                  </div>
-
-                  {/* Day Checkboxes if WEEKLY_SPECIFIC_DAYS */}
-                  {scheduleForm.frequency === 'WEEKLY_SPECIFIC_DAYS' && (
-                    <div className="space-y-1.5 bg-white p-3 rounded-xl border border-slate-200">
-                      <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
-                        Select Active Weekdays
+                <form onSubmit={handleSaveSchedule} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    {/* Shift Selector */}
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-700 uppercase mb-1">
+                        Shift Preset
                       </label>
-                      <div className="grid grid-cols-4 gap-1.5">
+                      <select
+                        onChange={(e) => applyPreset(e.target.value)}
+                        value={
+                          scheduleForm.trip_name?.toLowerCase().includes('morning') ? 'MORNING' :
+                          scheduleForm.trip_name?.toLowerCase().includes('evening') ? 'EVENING' :
+                          scheduleForm.trip_name?.toLowerCase().includes('night') ? 'NIGHT' :
+                          scheduleForm.dispatch_type === 'ON_DEMAND' ? 'ON_DEMAND' : 'CUSTOM'
+                        }
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                      >
+                        <option value="MORNING">🌅 Morning (08:00 - 09:30)</option>
+                        <option value="EVENING">🌆 Evening (18:00 - 19:30)</option>
+                        <option value="NIGHT">🌙 Night (21:00 - 22:30)</option>
+                        <option value="ON_DEMAND">⚡ On-Demand</option>
+                        <option value="CUSTOM">⚙️ Custom Trip</option>
+                      </select>
+                    </div>
+
+                    {/* Trip Name */}
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-700 uppercase mb-1">
+                        Trip Label *
+                      </label>
+                      <input
+                        type="text"
+                        value={scheduleForm.trip_name}
+                        onChange={(e) => setScheduleForm(prev => ({ ...prev, trip_name: e.target.value }))}
+                        required
+                        placeholder="e.g. Morning Dispatch"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                      />
+                    </div>
+
+                    {/* Frequency */}
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-700 uppercase mb-1">
+                        Frequency *
+                      </label>
+                      <select
+                        value={scheduleForm.frequency}
+                        onChange={(e) => setScheduleForm(prev => ({ ...prev, frequency: e.target.value }))}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                      >
+                        <option value="DAILY">Daily (Every Day)</option>
+                        <option value="WEEKLY_SPECIFIC_DAYS">Specific Days</option>
+                        <option value="ON_DEMAND">On-Demand Only</option>
+                      </select>
+                    </div>
+
+                    {/* Cutoff Time */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-extrabold text-slate-700 uppercase">
+                          Cutoff Time
+                        </label>
+                        {scheduleForm.cutoff_time && (
+                          <span className="text-[10px] font-mono font-bold text-amber-700">
+                            {fmtTime12(scheduleForm.cutoff_time)}
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="time"
+                        value={scheduleForm.cutoff_time}
+                        onChange={(e) => setScheduleForm(prev => ({ ...prev, cutoff_time: e.target.value }))}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                      />
+                    </div>
+
+                    {/* Dispatch Time */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-extrabold text-slate-700 uppercase">
+                          Dispatch Time
+                        </label>
+                        {scheduleForm.dispatch_time && (
+                          <span className="text-[10px] font-mono font-bold text-blue-700">
+                            {fmtTime12(scheduleForm.dispatch_time)}
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="time"
+                        value={scheduleForm.dispatch_time}
+                        onChange={(e) => setScheduleForm(prev => ({ ...prev, dispatch_time: e.target.value }))}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Day Checkboxes if Specific Days */}
+                  {scheduleForm.frequency === 'WEEKLY_SPECIFIC_DAYS' && (
+                    <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                      <span className="text-[11px] font-extrabold text-slate-600 uppercase">Active Days:</span>
+                      <div className="flex flex-wrap gap-1.5">
                         {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
                           const active = (scheduleForm.selected_days || []).includes(day);
                           return (
@@ -2182,10 +2204,10 @@ export default function MasterRegistries() {
                               key={day}
                               type="button"
                               onClick={() => toggleDayInSchedule(day)}
-                              className={`px-2 py-1.5 rounded-lg text-xs font-bold text-center border transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-lg text-xs font-bold border cursor-pointer transition-all ${
                                 active
                                   ? 'bg-[#003366] text-white border-[#003366]'
-                                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                  : 'bg-slate-50 text-slate-600 border-slate-200'
                               }`}
                             >
                               {day.slice(0, 3)}
@@ -2196,70 +2218,26 @@ export default function MasterRegistries() {
                     </div>
                   )}
 
-                  {/* Cutoff & Dispatch Times (with 12h AM/PM preview) */}
-                  {scheduleForm.frequency !== 'ON_DEMAND' && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-xs font-bold text-slate-700">
-                            Cutoff Time (IST) *
-                          </label>
-                          {scheduleForm.cutoff_time && (
-                            <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                              {fmtTime12(scheduleForm.cutoff_time)}
-                            </span>
-                          )}
-                        </div>
-                        <input
-                          type="time"
-                          value={scheduleForm.cutoff_time}
-                          onChange={(e) => setScheduleForm(prev => ({ ...prev, cutoff_time: e.target.value }))}
-                          required
-                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
-                        />
-                        <span className="text-[10px] text-slate-400 block mt-0.5">Order intake deadline</span>
-                      </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!scheduleForm.is_active}
+                        onChange={(e) => setScheduleForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                        className="w-4 h-4 accent-[#003366]"
+                      />
+                      <span className="text-xs font-bold text-slate-700">Set Active on Save</span>
+                    </label>
 
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-xs font-bold text-slate-700">
-                            Dispatch Time (IST) *
-                          </label>
-                          {scheduleForm.dispatch_time && (
-                            <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
-                              {fmtTime12(scheduleForm.dispatch_time)}
-                            </span>
-                          )}
-                        </div>
-                        <input
-                          type="time"
-                          value={scheduleForm.dispatch_time}
-                          onChange={(e) => setScheduleForm(prev => ({ ...prev, dispatch_time: e.target.value }))}
-                          required
-                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
-                        />
-                        <span className="text-[10px] text-slate-400 block mt-0.5">Vehicle departure time</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={!!scheduleForm.is_active}
-                      onChange={(e) => setScheduleForm(prev => ({ ...prev, is_active: e.target.checked }))}
-                      className="w-4 h-4 accent-[#003366]"
-                    />
-                    <span className="text-xs font-bold text-slate-700">Trip is Active &amp; Operational</span>
-                  </label>
-
-                  <button
-                    type="submit"
-                    disabled={savingSchedule}
-                    className="w-full py-2.5 bg-[#003366] hover:bg-[#004c8f] text-white text-xs font-extrabold rounded-xl shadow cursor-pointer transition-all disabled:opacity-50"
-                  >
-                    {savingSchedule ? 'Saving Schedule...' : editingScheduleId ? 'Update Trip Schedule' : '+ Add Trip Schedule'}
-                  </button>
+                    <button
+                      type="submit"
+                      disabled={savingSchedule}
+                      className="px-6 py-2.5 bg-[#003366] hover:bg-[#004c8f] text-white text-xs font-extrabold rounded-xl shadow cursor-pointer transition-all disabled:opacity-50 flex items-center gap-2"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{savingSchedule ? 'Saving...' : editingScheduleId ? 'Update Trip' : 'Save Trip to Route'}</span>
+                    </button>
+                  </div>
                 </form>
               </div>
             </div>
