@@ -184,7 +184,49 @@ export default function MasterRegistries() {
   };
 
   const openAdd  = () => { setEditingItem(null); setForm(defaultForm()); setConfirmPassword(''); setShowModal(true); };
-  const openEdit = (item) => { setEditingItem(item); setForm({ ...item, password: '' }); setConfirmPassword(''); setShowModal(true); };
+  const openEdit = (item) => { 
+    if (activeTab === 'route') {
+      const scheds = Array.isArray(item.schedules) ? item.schedules : [];
+      const mTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('morning') || (s.dispatch_time && parseInt(s.dispatch_time.split(':')[0], 10) < 12 && s.dispatch_type !== 'ON_DEMAND'));
+      const eTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('evening') || (s.dispatch_time && parseInt(s.dispatch_time.split(':')[0], 10) >= 12 && parseInt(s.dispatch_time.split(':')[0], 10) < 21 && s.dispatch_type !== 'ON_DEMAND'));
+      
+      let mDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      if (mTrip && mTrip.selected_days) {
+        try {
+          const parsed = typeof mTrip.selected_days === 'string' ? JSON.parse(mTrip.selected_days) : mTrip.selected_days;
+          if (Array.isArray(parsed) && parsed.length > 0) mDays = parsed;
+        } catch(e) {}
+      }
+
+      let eDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      if (eTrip && eTrip.selected_days) {
+        try {
+          const parsed = typeof eTrip.selected_days === 'string' ? JSON.parse(eTrip.selected_days) : eTrip.selected_days;
+          if (Array.isArray(parsed) && parsed.length > 0) eDays = parsed;
+        } catch(e) {}
+      }
+
+      setEditingItem(item);
+      setForm({
+        ...item,
+        morning_enabled: !!mTrip,
+        morning_cutoff: mTrip?.cutoff_time || '08:00',
+        morning_dispatch: mTrip?.dispatch_time || '09:30',
+        morning_days: mDays,
+        evening_enabled: !!eTrip,
+        evening_cutoff: eTrip?.cutoff_time || '18:00',
+        evening_dispatch: eTrip?.dispatch_time || '19:30',
+        evening_days: eDays
+      });
+      setConfirmPassword('');
+      setShowModal(true);
+      return;
+    }
+    setEditingItem(item); 
+    setForm({ ...item, password: '' }); 
+    setConfirmPassword(''); 
+    setShowModal(true); 
+  };
 
   const getNextWorkerCode = () => {
     if (!Array.isArray(workers) || workers.length === 0) return 'EMP-1';
@@ -205,7 +247,18 @@ export default function MasterRegistries() {
     if (activeTab === 'worker')    return { employee_code: getNextWorkerCode(), name:'', phone:'', role:'Picker', is_active:true };
     if (activeTab === 'driver')    return { name:'', phone:'', license_no:'', emergency_contact:'', route:'', is_active:true };
     if (activeTab === 'vehicle')   return { vehicle_number:'', vehicle_type:'Truck', capacity:'', registration_no:'', is_active:true };
-    if (activeTab === 'route')     return { route_code:'', route_name:'' };
+    if (activeTab === 'route')     return { 
+      route_code: '', 
+      route_name: '',
+      morning_enabled: true,
+      morning_cutoff: '08:00',
+      morning_dispatch: '09:30',
+      morning_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      evening_enabled: false,
+      evening_cutoff: '18:00',
+      evening_dispatch: '19:30',
+      evening_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    };
     if (activeTab === 'salesman')  return { name:'' };
     if (activeTab === 'warehouse') return { warehouse_code:'', warehouse_name:'', prefix_logic:'', contact_person:'', phone:'', email:'', address:'', is_active:true };
     if (activeTab === 'user')      return { full_name:'', email:'', password:'', role_name:'Operator', warehouse_id:'', is_active:true };
@@ -1778,20 +1831,239 @@ export default function MasterRegistries() {
 
               {/* ── ROUTE FORM ── */}
               {activeTab === 'route' && (
-                <>
+                <div className="space-y-4">
+                  {/* Route Basic Details */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Route Code *</label>
-                      <input value={f('route_code')} onChange={e => sf('route_code', e.target.value.toUpperCase())} required placeholder="e.g. RTE-001"
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold uppercase text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
+                      <input value={f('route_code')} onChange={e => sf('route_code', e.target.value.toUpperCase())} required placeholder="e.g. BHIWADI / MAN-01"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono font-bold uppercase text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Route Name *</label>
-                      <input value={f('route_name')} onChange={e => sf('route_name', e.target.value)} required placeholder="e.g. North Delhi Express Route"
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
+                      <input value={f('route_name')} onChange={e => sf('route_name', e.target.value)} required placeholder="e.g. Bhiwadi Industrial Route"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                   </div>
-                </>
+
+                  {/* 🌅 Morning Shift Configuration */}
+                  <div className={`p-4 rounded-2xl border transition-all ${
+                    f('morning_enabled') 
+                      ? 'bg-amber-50/50 border-amber-300 shadow-xs' 
+                      : 'bg-slate-50 border-slate-200 opacity-75'
+                  }`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!f('morning_enabled')}
+                          onChange={e => sf('morning_enabled', e.target.checked)}
+                          className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
+                        />
+                        <span className="text-xs font-extrabold text-amber-950 uppercase flex items-center gap-1.5">
+                          <Sunrise className="w-4 h-4 text-amber-600" /> 🌅 Morning Dispatch Slot
+                        </span>
+                      </label>
+                      {f('morning_enabled') && (
+                        <span className="text-[11px] font-bold text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md">
+                          Active
+                        </span>
+                      )}
+                    </div>
+
+                    {f('morning_enabled') && (
+                      <div className="space-y-3 pt-1">
+                        {/* Cutoff & Dispatch Times */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] font-extrabold text-slate-700 uppercase">Order Cut-off Time</label>
+                              <span className="text-[10px] font-mono font-bold text-amber-700">{fmtTime12(f('morning_cutoff') || '08:00')}</span>
+                            </div>
+                            <input
+                              type="time"
+                              value={f('morning_cutoff') || '08:00'}
+                              onChange={e => sf('morning_cutoff', e.target.value)}
+                              className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] font-extrabold text-slate-700 uppercase">Vehicle Dispatch Time</label>
+                              <span className="text-[10px] font-mono font-bold text-blue-700">{fmtTime12(f('morning_dispatch') || '09:30')}</span>
+                            </div>
+                            <input
+                              type="time"
+                              value={f('morning_dispatch') || '09:30'}
+                              onChange={e => sf('morning_dispatch', e.target.value)}
+                              className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Morning Days Selection */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-extrabold text-slate-700 uppercase">Morning Dispatch Days:</span>
+                            <div className="flex gap-2 text-[10px]">
+                              <button
+                                type="button"
+                                onClick={() => sf('morning_days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])}
+                                className="font-bold text-[#004c8f] hover:underline cursor-pointer"
+                              >
+                                All Days (Daily)
+                              </button>
+                              <span className="text-slate-300">|</span>
+                              <button
+                                type="button"
+                                onClick={() => sf('morning_days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'])}
+                                className="font-bold text-[#004c8f] hover:underline cursor-pointer"
+                              >
+                                Mon-Sat
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                              const activeDays = Array.isArray(f('morning_days')) ? f('morning_days') : [];
+                              const isSelected = activeDays.includes(day);
+                              return (
+                                <button
+                                  key={day}
+                                  type="button"
+                                  onClick={() => {
+                                    const next = isSelected ? activeDays.filter(d => d !== day) : [...activeDays, day];
+                                    sf('morning_days', next);
+                                  }}
+                                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                                  }`}
+                                >
+                                  {day.slice(0, 3)}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 🌆 Evening Shift Configuration */}
+                  <div className={`p-4 rounded-2xl border transition-all ${
+                    f('evening_enabled') 
+                      ? 'bg-indigo-50/50 border-indigo-300 shadow-xs' 
+                      : 'bg-slate-50 border-slate-200 opacity-75'
+                  }`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!f('evening_enabled')}
+                          onChange={e => sf('evening_enabled', e.target.checked)}
+                          className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                        />
+                        <span className="text-xs font-extrabold text-indigo-950 uppercase flex items-center gap-1.5">
+                          <Sunset className="w-4 h-4 text-indigo-600" /> 🌆 Evening Dispatch Slot
+                        </span>
+                      </label>
+                      {f('evening_enabled') && (
+                        <span className="text-[11px] font-bold text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                          Active
+                        </span>
+                      )}
+                    </div>
+
+                    {f('evening_enabled') && (
+                      <div className="space-y-3 pt-1">
+                        {/* Cutoff & Dispatch Times */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] font-extrabold text-slate-700 uppercase">Order Cut-off Time</label>
+                              <span className="text-[10px] font-mono font-bold text-amber-700">{fmtTime12(f('evening_cutoff') || '18:00')}</span>
+                            </div>
+                            <input
+                              type="time"
+                              value={f('evening_cutoff') || '18:00'}
+                              onChange={e => sf('evening_cutoff', e.target.value)}
+                              className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] font-extrabold text-slate-700 uppercase">Vehicle Dispatch Time</label>
+                              <span className="text-[10px] font-mono font-bold text-blue-700">{fmtTime12(f('evening_dispatch') || '19:30')}</span>
+                            </div>
+                            <input
+                              type="time"
+                              value={f('evening_dispatch') || '19:30'}
+                              onChange={e => sf('evening_dispatch', e.target.value)}
+                              className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Evening Days Selection */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-extrabold text-slate-700 uppercase">Evening Dispatch Days:</span>
+                            <div className="flex gap-2 text-[10px]">
+                              <button
+                                type="button"
+                                onClick={() => sf('evening_days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])}
+                                className="font-bold text-[#004c8f] hover:underline cursor-pointer"
+                              >
+                                All Days (Daily)
+                              </button>
+                              <span className="text-slate-300">|</span>
+                              <button
+                                type="button"
+                                onClick={() => sf('evening_days', ['Tuesday', 'Friday'])}
+                                className="font-bold text-indigo-700 hover:underline cursor-pointer"
+                              >
+                                Tue &amp; Fri
+                              </button>
+                              <span className="text-slate-300">|</span>
+                              <button
+                                type="button"
+                                onClick={() => sf('evening_days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'])}
+                                className="font-bold text-[#004c8f] hover:underline cursor-pointer"
+                              >
+                                Mon-Sat
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                              const activeDays = Array.isArray(f('evening_days')) ? f('evening_days') : [];
+                              const isSelected = activeDays.includes(day);
+                              return (
+                                <button
+                                  key={day}
+                                  type="button"
+                                  onClick={() => {
+                                    const next = isSelected ? activeDays.filter(d => d !== day) : [...activeDays, day];
+                                    sf('evening_days', next);
+                                  }}
+                                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                                  }`}
+                                >
+                                  {day.slice(0, 3)}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {/* ── SALESMAN FORM ── */}

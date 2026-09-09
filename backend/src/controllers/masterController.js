@@ -75,24 +75,59 @@ async function getRoutes(req, res) {
 async function createRoute(req, res) {
   try {
     const whId = req.activeWarehouseId;
-    const { route_code, route_name } = req.body;
+    const { 
+      route_code, 
+      route_name,
+      morning_enabled,
+      morning_cutoff,
+      morning_dispatch,
+      morning_days,
+      evening_enabled,
+      evening_cutoff,
+      evening_dispatch,
+      evening_days,
+      selected_days
+    } = req.body;
+
     const result = await dbAsync.run(`
       INSERT INTO route_masters (route_code, route_name, warehouse_id)
       VALUES (?, ?, ?)
     `, [route_code, route_name, whId]);
 
-    // Create default schedule for the newly created route
-    await dbAsync.run(`
-      INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
-      VALUES (?, 'Standard Trip', 'FIXED', 'DAILY', '["Mon","Tue","Wed","Thu","Fri","Sat"]', '06:00', '08:00', 1, 1, ?)
-    `, [result.id, whId]);
+    const routeId = result.id;
+    const defaultDays = selected_days ? (typeof selected_days === 'string' ? selected_days : JSON.stringify(selected_days)) : JSON.stringify(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+
+    // Check if custom morning / evening provided or fallback
+    if (morning_enabled !== undefined || evening_enabled !== undefined) {
+      if (morning_enabled) {
+        const mDays = morning_days ? (typeof morning_days === 'string' ? morning_days : JSON.stringify(morning_days)) : defaultDays;
+        await dbAsync.run(`
+          INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+          VALUES (?, 'Morning Shift', 'FIXED_TIME', 'WEEKLY_SPECIFIC_DAYS', ?, ?, ?, 1, 1, ?)
+        `, [routeId, mDays, morning_cutoff || '08:00', morning_dispatch || '09:30', whId]);
+      }
+      if (evening_enabled) {
+        const eDays = evening_days ? (typeof evening_days === 'string' ? evening_days : JSON.stringify(evening_days)) : defaultDays;
+        await dbAsync.run(`
+          INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+          VALUES (?, 'Evening Shift', 'FIXED_TIME', 'WEEKLY_SPECIFIC_DAYS', ?, ?, ?, 1, 2, ?)
+        `, [routeId, eDays, evening_cutoff || '18:00', evening_dispatch || '19:30', whId]);
+      }
+    } else {
+      // Default initial schedule
+      await dbAsync.run(`
+        INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+        VALUES (?, 'Morning Shift', 'FIXED_TIME', 'DAILY', ?, '08:00', '09:30', 1, 1, ?)
+      `, [routeId, defaultDays, whId]);
+    }
 
     if (req.io) {
       req.io.emit('routeMasterUpdated', { action: 'CREATE', routeId: result.id });
     }
 
-    return res.json({ message: 'Route created successfully with default schedule!', id: result.id });
+    return res.json({ message: 'Route and dispatch schedules created successfully!', id: result.id });
   } catch (err) {
+    console.error('Error creating route:', err);
     return res.status(500).json({ message: 'Error creating route.' });
   }
 }
@@ -100,12 +135,53 @@ async function createRoute(req, res) {
 async function updateRoute(req, res) {
   try {
     const { id } = req.params;
-    const { route_code, route_name } = req.body;
+    const whId = req.activeWarehouseId;
+    const { 
+      route_code, 
+      route_name,
+      morning_enabled,
+      morning_cutoff,
+      morning_dispatch,
+      morning_days,
+      evening_enabled,
+      evening_cutoff,
+      evening_dispatch,
+      evening_days,
+      selected_days
+    } = req.body;
+
     await dbAsync.run(`
       UPDATE route_masters
       SET route_code = ?, route_name = ?
       WHERE id = ?
     `, [route_code, route_name, id]);
+
+    // If morning/evening settings were passed in edit form, update them directly
+    if (morning_enabled !== undefined || evening_enabled !== undefined) {
+      const defaultDays = selected_days ? (typeof selected_days === 'string' ? selected_days : JSON.stringify(selected_days)) : JSON.stringify(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+
+      // Remove existing Morning & Evening schedules to cleanly refresh
+      await dbAsync.run(`
+        DELETE FROM route_schedules 
+        WHERE route_id = ? AND (trip_name LIKE '%Morning%' OR trip_name LIKE '%Evening%')
+      `, [id]);
+
+      if (morning_enabled) {
+        const mDays = morning_days ? (typeof morning_days === 'string' ? morning_days : JSON.stringify(morning_days)) : defaultDays;
+        await dbAsync.run(`
+          INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+          VALUES (?, 'Morning Shift', 'FIXED_TIME', 'WEEKLY_SPECIFIC_DAYS', ?, ?, ?, 1, 1, ?)
+        `, [id, mDays, morning_cutoff || '08:00', morning_dispatch || '09:30', whId]);
+      }
+
+      if (evening_enabled) {
+        const eDays = evening_days ? (typeof evening_days === 'string' ? evening_days : JSON.stringify(evening_days)) : defaultDays;
+        await dbAsync.run(`
+          INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+          VALUES (?, 'Evening Shift', 'FIXED_TIME', 'WEEKLY_SPECIFIC_DAYS', ?, ?, ?, 1, 2, ?)
+        `, [id, eDays, evening_cutoff || '18:00', evening_dispatch || '19:30', whId]);
+      }
+    }
 
     if (req.io) {
       req.io.emit('routeMasterUpdated', { action: 'UPDATE', routeId: id });
@@ -113,6 +189,7 @@ async function updateRoute(req, res) {
 
     return res.json({ message: 'Route updated successfully!' });
   } catch (err) {
+    console.error('Error updating route:', err);
     return res.status(500).json({ message: 'Error updating route.' });
   }
 }
