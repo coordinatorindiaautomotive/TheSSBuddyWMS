@@ -982,17 +982,29 @@ export default function MasterRegistries() {
                       <TD>
                         {morningTrip ? (
                           <div className="space-y-1">
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold bg-amber-50 text-amber-900 border border-amber-200">
-                              <Sunrise className="w-3.5 h-3.5 text-amber-600" />
-                              <span>{morningTrip.trip_name}</span>
-                              {morningTrip.is_active ? (
-                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-extrabold bg-amber-50 text-amber-900 border border-amber-200">
+                                <Sunrise className="w-3 h-3 text-amber-600" />
+                                {morningTrip.trip_name}
+                              </span>
+                              {morningTrip.frequency === 'WEEKLY_SPECIFIC_DAYS' && morningTrip.selected_days ? (
+                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                  {(() => {
+                                    try {
+                                      const d = typeof morningTrip.selected_days === 'string' ? JSON.parse(morningTrip.selected_days) : morningTrip.selected_days;
+                                      return Array.isArray(d) ? d.map(x => x.slice(0, 3)).join(', ') : 'Custom Days';
+                                    } catch(e) { return 'Custom Days'; }
+                                  })()}
+                                </span>
                               ) : (
-                                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                                  Daily
+                                </span>
                               )}
+                              <span className={`w-2 h-2 rounded-full ${morningTrip.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`} title={morningTrip.is_active ? 'Active' : 'Disabled'}></span>
                             </div>
                             <div className="text-[11px] font-mono text-slate-600">
-                              Cutoff: <strong className="text-amber-800">{morningTrip.cutoff_time}</strong> | Disp: <strong className="text-blue-800">{morningTrip.dispatch_time}</strong>
+                              Cutoff: <strong className="text-amber-800">{fmtTime12(morningTrip.cutoff_time)}</strong> • Disp: <strong className="text-blue-800">{fmtTime12(morningTrip.dispatch_time)}</strong>
                             </div>
                           </div>
                         ) : (
@@ -1002,7 +1014,7 @@ export default function MasterRegistries() {
                             className="px-2.5 py-1.5 rounded-lg border border-dashed border-amber-300 bg-amber-50/40 hover:bg-amber-100 text-amber-900 text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
                           >
                             <Sunrise className="w-3.5 h-3.5 text-amber-600" />
-                            <span>+ Set Morning (08:00)</span>
+                            <span>+ Set Morning</span>
                           </button>
                         )}
                       </TD>
@@ -1011,17 +1023,29 @@ export default function MasterRegistries() {
                       <TD>
                         {eveningTrip ? (
                           <div className="space-y-1">
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold bg-indigo-50 text-indigo-900 border border-indigo-200">
-                              <Sunset className="w-3.5 h-3.5 text-indigo-600" />
-                              <span>{eveningTrip.trip_name}</span>
-                              {eveningTrip.is_active ? (
-                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-extrabold bg-indigo-50 text-indigo-900 border border-indigo-200">
+                                <Sunset className="w-3 h-3 text-indigo-600" />
+                                {eveningTrip.trip_name}
+                              </span>
+                              {eveningTrip.frequency === 'WEEKLY_SPECIFIC_DAYS' && eveningTrip.selected_days ? (
+                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                  {(() => {
+                                    try {
+                                      const d = typeof eveningTrip.selected_days === 'string' ? JSON.parse(eveningTrip.selected_days) : eveningTrip.selected_days;
+                                      return Array.isArray(d) ? d.map(x => x.slice(0, 3)).join(', ') : 'Custom Days';
+                                    } catch(e) { return 'Custom Days'; }
+                                  })()}
+                                </span>
                               ) : (
-                                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                                  Daily
+                                </span>
                               )}
+                              <span className={`w-2 h-2 rounded-full ${eveningTrip.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`} title={eveningTrip.is_active ? 'Active' : 'Disabled'}></span>
                             </div>
                             <div className="text-[11px] font-mono text-slate-600">
-                              Cutoff: <strong className="text-amber-800">{eveningTrip.cutoff_time}</strong> | Disp: <strong className="text-blue-800">{eveningTrip.dispatch_time}</strong>
+                              Cutoff: <strong className="text-amber-800">{fmtTime12(eveningTrip.cutoff_time)}</strong> • Disp: <strong className="text-blue-800">{fmtTime12(eveningTrip.dispatch_time)}</strong>
                             </div>
                           </div>
                         ) : (
@@ -1031,7 +1055,7 @@ export default function MasterRegistries() {
                             className="px-2.5 py-1.5 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/40 hover:bg-indigo-100 text-indigo-900 text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
                           >
                             <Sunset className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>+ Set Evening (18:00)</span>
+                            <span>+ Set Evening</span>
                           </button>
                         )}
                       </TD>
