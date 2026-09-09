@@ -123,8 +123,11 @@ app.delete('/api/masters/routes/:id', masterController.deleteRoute);
 
 // Route Schedules Sub-Master API
 app.get('/api/masters/routes/:routeId/schedules', masterController.getRouteSchedules);
+app.post('/api/masters/routes/:routeId/schedules', masterController.createRouteSchedule);
 app.post('/api/masters/routes/schedules', masterController.createRouteSchedule);
+app.put('/api/masters/routes/:routeId/schedules/:scheduleId', masterController.updateRouteSchedule);
 app.put('/api/masters/routes/schedules/:scheduleId', masterController.updateRouteSchedule);
+app.delete('/api/masters/routes/:routeId/schedules/:scheduleId', masterController.deleteRouteSchedule);
 app.delete('/api/masters/routes/schedules/:scheduleId', masterController.deleteRouteSchedule);
 
 app.get('/api/masters/workers', masterController.getWorkers);
