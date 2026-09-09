@@ -1,0 +1,26 @@
+{
+  "name": "thesssystem-backend",
+  "version": "1.0.0",
+  "description": "WMS Enterprise Node.js Express & Socket.io Backend",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mssql": "^12.7.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.23.2",
+    "pg": "^8.22.0",
+    "socket.io": "^4.7.5",
+    "sqlite3": "^5.1.7",
+    "xlsx": "^0.18.5"
+  }
+}
