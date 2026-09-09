@@ -49,12 +49,24 @@ async function deleteWarehouse(req, res) {
   }
 }
 
-// 2. Routes (Route Master) CRUD
+// 2. Routes (Route Master) & Route Schedules CRUD
 async function getRoutes(req, res) {
   try {
     const whId = req.activeWarehouseId;
     const routes = await dbAsync.all('SELECT * FROM route_masters WHERE warehouse_id = ? ORDER BY route_name ASC', [whId]);
-    return res.json(routes);
+    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE warehouse_id = ? ORDER BY priority_order ASC, dispatch_time ASC', [whId]);
+    
+    const routesWithSchedules = routes.map(r => {
+      const rScheds = schedules.filter(s => s.route_id === r.id);
+      return {
+        ...r,
+        schedules: rScheds,
+        scheduleCount: rScheds.length,
+        activeScheduleCount: rScheds.filter(s => s.is_active).length
+      };
+    });
+
+    return res.json(routesWithSchedules);
   } catch (err) {
     return res.status(500).json({ message: 'Error fetching routes.' });
   }
@@ -68,7 +80,18 @@ async function createRoute(req, res) {
       INSERT INTO route_masters (route_code, route_name, warehouse_id)
       VALUES (?, ?, ?)
     `, [route_code, route_name, whId]);
-    return res.json({ message: 'Route created successfully!', id: result.id });
+
+    // Create default schedule for the newly created route
+    await dbAsync.run(`
+      INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+      VALUES (?, 'Standard Trip', 'FIXED', 'DAILY', '["Mon","Tue","Wed","Thu","Fri","Sat"]', '06:00', '08:00', 1, 1, ?)
+    `, [result.id, whId]);
+
+    if (req.io) {
+      req.io.emit('routeMasterUpdated', { action: 'CREATE', routeId: result.id });
+    }
+
+    return res.json({ message: 'Route created successfully with default schedule!', id: result.id });
   } catch (err) {
     return res.status(500).json({ message: 'Error creating route.' });
   }
@@ -83,6 +106,11 @@ async function updateRoute(req, res) {
       SET route_code = ?, route_name = ?
       WHERE id = ?
     `, [route_code, route_name, id]);
+
+    if (req.io) {
+      req.io.emit('routeMasterUpdated', { action: 'UPDATE', routeId: id });
+    }
+
     return res.json({ message: 'Route updated successfully!' });
   } catch (err) {
     return res.status(500).json({ message: 'Error updating route.' });
@@ -92,12 +120,138 @@ async function updateRoute(req, res) {
 async function deleteRoute(req, res) {
   try {
     const { id } = req.params;
+    await dbAsync.run('DELETE FROM route_schedules WHERE route_id = ?', [id]);
     await dbAsync.run('DELETE FROM route_masters WHERE id = ?', [id]);
-    return res.json({ message: 'Route deleted successfully!' });
+
+    if (req.io) {
+      req.io.emit('routeMasterUpdated', { action: 'DELETE', routeId: id });
+    }
+
+    return res.json({ message: 'Route and its schedules deleted successfully!' });
   } catch (err) {
     return res.status(500).json({ message: 'Error deleting route.' });
   }
 }
+
+// 2b. Route Schedules Sub-Master
+async function getRouteSchedules(req, res) {
+  try {
+    const { routeId } = req.params;
+    const whId = req.activeWarehouseId;
+    const schedules = await dbAsync.all(`
+      SELECT * FROM route_schedules 
+      WHERE route_id = ? AND warehouse_id = ? 
+      ORDER BY priority_order ASC, dispatch_time ASC
+    `, [routeId, whId]);
+    return res.json(schedules);
+  } catch (err) {
+    return res.status(500).json({ message: 'Error fetching route schedules.' });
+  }
+}
+
+async function createRouteSchedule(req, res) {
+  try {
+    const whId = req.activeWarehouseId;
+    const { route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order } = req.body;
+
+    const daysStr = typeof selected_days === 'object' ? JSON.stringify(selected_days) : (selected_days || '["Mon","Tue","Wed","Thu","Fri","Sat"]');
+
+    const result = await dbAsync.run(`
+      INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      route_id,
+      trip_name || 'Trip',
+      dispatch_type || 'FIXED',
+      frequency || 'DAILY',
+      daysStr,
+      cutoff_time || '06:00',
+      dispatch_time || '08:00',
+      is_active !== undefined ? (is_active ? 1 : 0) : 1,
+      priority_order || 1,
+      whId
+    ]);
+
+    await dbAsync.run(`
+      INSERT INTO audit_logs (warehouse_id, user_name, user_role, action_type, module, target_id, details)
+      VALUES (?, ?, ?, 'CREATE', 'ROUTE_SCHEDULE', ?, ?)
+    `, [whId, req.user?.full_name || 'Admin', req.user?.role || 'Admin', String(result.id), `Added trip schedule '${trip_name}' for Route ID ${route_id}`]);
+
+    if (req.io) {
+      req.io.emit('routeScheduleUpdated', { route_id, schedule_id: result.id, action: 'CREATE' });
+    }
+
+    return res.json({ message: 'Route schedule created successfully!', id: result.id });
+  } catch (err) {
+    console.error('Error creating route schedule:', err);
+    return res.status(500).json({ message: 'Error creating route schedule.' });
+  }
+}
+
+async function updateRouteSchedule(req, res) {
+  try {
+    const { scheduleId } = req.params;
+    const { trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order } = req.body;
+
+    const daysStr = typeof selected_days === 'object' ? JSON.stringify(selected_days) : (selected_days || '["Mon","Tue","Wed","Thu","Fri","Sat"]');
+
+    const oldSchedule = await dbAsync.get('SELECT * FROM route_schedules WHERE id = ?', [scheduleId]);
+
+    await dbAsync.run(`
+      UPDATE route_schedules
+      SET trip_name = ?, dispatch_type = ?, frequency = ?, selected_days = ?, cutoff_time = ?, dispatch_time = ?, is_active = ?, priority_order = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [
+      trip_name,
+      dispatch_type || 'FIXED',
+      frequency || 'DAILY',
+      daysStr,
+      cutoff_time || '',
+      dispatch_time || '',
+      is_active !== undefined ? (is_active ? 1 : 0) : 1,
+      priority_order || 1,
+      scheduleId
+    ]);
+
+    // Audit Log old vs new
+    const details = `Updated trip '${trip_name}' - Cutoff: ${oldSchedule?.cutoff_time || ''}->${cutoff_time}, Dispatch: ${oldSchedule?.dispatch_time || ''}->${dispatch_time}`;
+    await dbAsync.run(`
+      INSERT INTO audit_logs (warehouse_id, user_name, user_role, action_type, module, target_id, details)
+      VALUES (?, ?, ?, 'UPDATE', 'ROUTE_SCHEDULE', ?, ?)
+    `, [req.activeWarehouseId, req.user?.full_name || 'Admin', req.user?.role || 'Admin', String(scheduleId), details]);
+
+    if (req.io) {
+      req.io.emit('routeScheduleUpdated', { schedule_id: scheduleId, route_id: oldSchedule?.route_id, action: 'UPDATE' });
+    }
+
+    return res.json({ message: 'Route schedule updated successfully!' });
+  } catch (err) {
+    console.error('Error updating route schedule:', err);
+    return res.status(500).json({ message: 'Error updating route schedule.' });
+  }
+}
+
+async function deleteRouteSchedule(req, res) {
+  try {
+    const { scheduleId } = req.params;
+    const sched = await dbAsync.get('SELECT * FROM route_schedules WHERE id = ?', [scheduleId]);
+    await dbAsync.run('DELETE FROM route_schedules WHERE id = ?', [scheduleId]);
+
+    await dbAsync.run(`
+      INSERT INTO audit_logs (warehouse_id, user_name, user_role, action_type, module, target_id, details)
+      VALUES (?, ?, ?, 'DELETE', 'ROUTE_SCHEDULE', ?, ?)
+    `, [req.activeWarehouseId, req.user?.full_name || 'Admin', req.user?.role || 'Admin', String(scheduleId), `Deleted trip schedule '${sched?.trip_name}'`]);
+
+    if (req.io) {
+      req.io.emit('routeScheduleUpdated', { schedule_id: scheduleId, route_id: sched?.route_id, action: 'DELETE' });
+    }
+
+    return res.json({ message: 'Route schedule deleted successfully!' });
+  } catch (err) {
+    return res.status(500).json({ message: 'Error deleting route schedule.' });
+  }
+}
+
 
 // 3. Workers CRUD
 async function getWorkers(req, res) {
@@ -437,6 +591,10 @@ module.exports = {
   createRoute,
   updateRoute,
   deleteRoute,
+  getRouteSchedules,
+  createRouteSchedule,
+  updateRouteSchedule,
+  deleteRouteSchedule,
 
   getWorkers,
   createWorker,

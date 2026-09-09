@@ -1,4 +1,50 @@
 const { dbAsync } = require('../config/db');
+const { getOperationsConsoleData } = require('../services/routeSchedulingEngine');
+
+async function getOperationsConsole(req, res) {
+  try {
+    const whId = req.activeWarehouseId;
+    const consoleData = await getOperationsConsoleData(whId);
+    return res.json(consoleData);
+  } catch (err) {
+    console.error('Error calculating Operations Console data:', err);
+    return res.status(500).json({ message: 'Error calculating Operations Console data.' });
+  }
+}
+
+async function createOnDemandDispatch(req, res) {
+  try {
+    const whId = req.activeWarehouseId;
+    const { route_id, route_name } = req.body;
+
+    const rName = route_name || (await dbAsync.get('SELECT route_name FROM route_masters WHERE id = ?', [route_id]))?.route_name;
+    if (!rName) {
+      return res.status(400).json({ message: 'Route identification is required.' });
+    }
+
+    // Find pending billings for this route
+    const pendingBills = await dbAsync.all(`
+      SELECT b.id, b.bill_no, b.invoice_amount, pt.qty_in_pick_ticket as total_cartons, pt.party_code
+      FROM billings b
+      JOIN pick_tickets pt ON b.pick_ticket_id = pt.id
+      WHERE b.warehouse_id = ? 
+        AND LOWER(pt.route) = LOWER(?)
+        AND b.id NOT IN (SELECT billing_id FROM dispatch_parties WHERE status != 'Failed')
+    `, [whId, rName]);
+
+    return res.json({
+      message: 'On-Demand dispatch review generated.',
+      route_name: rName,
+      eligibleBills: pendingBills,
+      totalBills: pendingBills.length,
+      totalCartons: pendingBills.reduce((acc, b) => acc + (b.total_cartons || 1), 0),
+      totalAmount: pendingBills.reduce((acc, b) => acc + (b.invoice_amount || 0), 0)
+    });
+  } catch (err) {
+    console.error('Error creating on-demand dispatch:', err);
+    return res.status(500).json({ message: 'Error initiating on-demand dispatch.' });
+  }
+}
 
 async function getPlanningData(req, res) {
   try {
@@ -252,6 +298,8 @@ async function markTicketsDispatched(req, res) {
 }
 
 module.exports = {
+  getOperationsConsole,
+  createOnDemandDispatch,
   getPlanningData,
   createTrip,
   getPartyBillStatus,

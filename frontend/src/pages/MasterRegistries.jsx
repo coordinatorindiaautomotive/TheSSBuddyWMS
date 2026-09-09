@@ -4,7 +4,8 @@ import { useToast } from '../context/ToastContext';
 import {
   Store, MapPin, UserCheck, Briefcase, Truck, Warehouse as WarehouseIcon,
   Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, ToggleLeft, ToggleRight,
-  User, Phone, FileText, Route as RouteIcon, ShieldCheck, Lock
+  User, Phone, FileText, Route as RouteIcon, ShieldCheck, Lock,
+  Calendar, Clock, AlertTriangle, PlayCircle, Settings2, Sparkles, Check
 } from 'lucide-react';
 
 const TABS = [
@@ -75,6 +76,23 @@ export default function MasterRegistries() {
   // Delete modal
   const [deleteItem,   setDeleteItem]   = useState(null);
   const [deleting,     setDeleting]     = useState(false);
+
+  // Route Schedule Modal State
+  const [scheduleModalRoute, setScheduleModalRoute] = useState(null);
+  const [routeSchedules, setRouteSchedules] = useState([]);
+  const [loadingSchedules, setLoadingSchedules] = useState(false);
+  const [editingScheduleId, setEditingScheduleId] = useState(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    trip_name: '',
+    dispatch_type: 'FIXED_TIME',
+    frequency: 'DAILY',
+    selected_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    cutoff_time: '08:00',
+    dispatch_time: '09:30',
+    priority_order: 1,
+    is_active: true
+  });
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -260,6 +278,131 @@ export default function MasterRegistries() {
       fetchAll();
     } catch (e) { toast.error(e.response?.data?.message || 'Error saving record.'); }
     finally { setSubmitting(false); }
+  };
+
+  // ── Route Schedules Handlers ──────────────────────────────────────────────
+  const openScheduleModal = async (route) => {
+    setScheduleModalRoute(route);
+    setEditingScheduleId(null);
+    setScheduleForm({
+      trip_name: '',
+      dispatch_type: 'FIXED_TIME',
+      frequency: 'DAILY',
+      selected_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      cutoff_time: '08:00',
+      dispatch_time: '09:30',
+      priority_order: 1,
+      is_active: true
+    });
+    setLoadingSchedules(true);
+    try {
+      const res = await axios.get(`/api/masters/routes/${route.id}/schedules`);
+      setRouteSchedules(Array.isArray(res.data) ? res.data : []);
+    } catch (e) {
+      setRouteSchedules(route.schedules || []);
+    } finally {
+      setLoadingSchedules(false);
+    }
+  };
+
+  const handleEditScheduleClick = (sched) => {
+    setEditingScheduleId(sched.id);
+    let parsedDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    if (sched.selected_days) {
+      try {
+        parsedDays = typeof sched.selected_days === 'string' ? JSON.parse(sched.selected_days) : sched.selected_days;
+      } catch (e) {}
+    }
+    setScheduleForm({
+      trip_name: sched.trip_name || '',
+      dispatch_type: sched.dispatch_type || 'FIXED_TIME',
+      frequency: sched.frequency || 'DAILY',
+      selected_days: Array.isArray(parsedDays) ? parsedDays : ['Monday'],
+      cutoff_time: sched.cutoff_time || '08:00',
+      dispatch_time: sched.dispatch_time || '09:30',
+      priority_order: sched.priority_order || 1,
+      is_active: sched.is_active !== undefined ? !!sched.is_active : true
+    });
+  };
+
+  const handleResetScheduleForm = () => {
+    setEditingScheduleId(null);
+    setScheduleForm({
+      trip_name: '',
+      dispatch_type: 'FIXED_TIME',
+      frequency: 'DAILY',
+      selected_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      cutoff_time: '08:00',
+      dispatch_time: '09:30',
+      priority_order: (routeSchedules?.length || 0) + 1,
+      is_active: true
+    });
+  };
+
+  const handleSaveSchedule = async (e) => {
+    e.preventDefault();
+    if (!scheduleModalRoute) return;
+    setSavingSchedule(true);
+    try {
+      const payload = {
+        ...scheduleForm,
+        selected_days: JSON.stringify(scheduleForm.selected_days || [])
+      };
+      if (editingScheduleId) {
+        await axios.put(`/api/masters/routes/${scheduleModalRoute.id}/schedules/${editingScheduleId}`, payload);
+        toast.success('Dispatch trip schedule updated!');
+      } else {
+        await axios.post(`/api/masters/routes/${scheduleModalRoute.id}/schedules`, payload);
+        toast.success('New dispatch trip schedule added!');
+      }
+      handleResetScheduleForm();
+      const res = await axios.get(`/api/masters/routes/${scheduleModalRoute.id}/schedules`);
+      setRouteSchedules(Array.isArray(res.data) ? res.data : []);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error saving dispatch schedule.');
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
+
+  const handleToggleSchedule = async (sched) => {
+    try {
+      await axios.put(`/api/masters/routes/${scheduleModalRoute.id}/schedules/${sched.id}`, {
+        ...sched,
+        is_active: !sched.is_active
+      });
+      toast.success('Schedule status toggled!');
+      const res = await axios.get(`/api/masters/routes/${scheduleModalRoute.id}/schedules`);
+      setRouteSchedules(Array.isArray(res.data) ? res.data : []);
+      fetchAll();
+    } catch {
+      toast.error('Failed to toggle schedule status.');
+    }
+  };
+
+  const handleDeleteSchedule = async (schedId) => {
+    if (!window.confirm('Are you sure you want to delete this dispatch trip schedule?')) return;
+    try {
+      await axios.delete(`/api/masters/routes/${scheduleModalRoute.id}/schedules/${schedId}`);
+      toast.success('Dispatch schedule deleted.');
+      const res = await axios.get(`/api/masters/routes/${scheduleModalRoute.id}/schedules`);
+      setRouteSchedules(Array.isArray(res.data) ? res.data : []);
+      fetchAll();
+    } catch {
+      toast.error('Failed to delete dispatch schedule.');
+    }
+  };
+
+  const toggleDayInSchedule = (day) => {
+    setScheduleForm(prev => {
+      const days = prev.selected_days || [];
+      if (days.includes(day)) {
+        return { ...prev, selected_days: days.filter(d => d !== day) };
+      } else {
+        return { ...prev, selected_days: [...days, day] };
+      }
+    });
   };
 
   const f = (key) => form[key] ?? '';
@@ -693,9 +836,14 @@ export default function MasterRegistries() {
           <div className="bg-[#003366] border-b-4 border-[#ed1c24] px-6 py-4 flex items-center justify-between">
             <div>
               <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <RouteIcon className="w-4 h-4 text-emerald-400" /> Route Master
+                <RouteIcon className="w-4 h-4 text-emerald-400" /> Route Master &amp; Dispatch Schedules
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Define transit routes for parties and driver assignments</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Single source of truth for route frequency, dispatch timings, cutoffs, and customer party allocations</p>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="bg-emerald-900/40 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg font-bold">
+                {(routes || []).length} Total Routes
+              </span>
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -704,38 +852,88 @@ export default function MasterRegistries() {
                 <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
                   <TH>Route Code</TH>
                   <TH>Route Name</TH>
+                  <TH>Configured Dispatch Trips &amp; Schedule</TH>
                   <TH>Parties on Route</TH>
                   <TH>Actions</TH>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td colSpan={4} className="text-center py-12 text-slate-400 text-sm font-semibold">Loading delivery routes...</td></tr>
+                  <tr><td colSpan={5} className="text-center py-12 text-slate-400 text-sm font-semibold">Loading delivery routes...</td></tr>
                 ) : filtered(routes, ['route_code', 'route_name']).length === 0 ? (
-                  <EmptyTable colSpan={4} message="No routes found" />
-                ) : paginate(filtered(routes, ['route_code', 'route_name'])).map(r => (
-                  <tr key={r.id} className="hover:bg-blue-50/40 transition-colors">
-                    <TD><span className="font-mono font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">{r.route_code}</span></TD>
-                    <TD><span className="font-bold text-slate-900 text-sm">{r.route_name}</span></TD>
-                    <TD>
-                      <span className="bg-blue-50 text-[#004c8f] border border-blue-200 px-2.5 py-1 rounded-lg text-xs font-bold">
-                        {(parties || []).filter(p => p.route_name === r.route_name).length} Parties
-                      </span>
-                    </TD>
-                    <TD>
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={() => openEdit(r)}
-                          className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                        <button onClick={() => setDeleteItem(r)}
-                          className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                        </button>
-                      </div>
-                    </TD>
-                  </tr>
-                ))}
+                  <EmptyTable colSpan={5} message="No routes found" />
+                ) : paginate(filtered(routes, ['route_code', 'route_name'])).map(r => {
+                  const scheds = Array.isArray(r.schedules) ? r.schedules : [];
+                  const activeScheds = scheds.filter(s => s.is_active);
+                  return (
+                    <tr key={r.id} className="hover:bg-blue-50/40 transition-colors">
+                      <TD><span className="font-mono font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">{r.route_code}</span></TD>
+                      <TD><span className="font-bold text-slate-900 text-sm">{r.route_name}</span></TD>
+                      <TD>
+                        <div className="flex flex-wrap items-center gap-1.5 max-w-lg">
+                          {activeScheds.length === 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                              <Clock className="w-3 h-3 text-slate-400" /> On-Demand (No fixed schedule)
+                            </span>
+                          ) : (
+                            activeScheds.map(s => {
+                              let daysSummary = 'Daily';
+                              if (s.frequency === 'ON_DEMAND') daysSummary = 'On-Demand';
+                              else if (s.frequency === 'WEEKLY_SPECIFIC_DAYS' && s.selected_days) {
+                                try {
+                                  const parsed = typeof s.selected_days === 'string' ? JSON.parse(s.selected_days) : s.selected_days;
+                                  daysSummary = Array.isArray(parsed) && parsed.length < 7
+                                    ? parsed.map(d => d.slice(0, 3)).join(', ')
+                                    : 'Daily';
+                                } catch (e) {
+                                  daysSummary = 'Custom';
+                                }
+                              }
+                              return (
+                                <span
+                                  key={s.id}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50/80 text-indigo-900 border border-indigo-200"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                                  <strong className="font-extrabold text-indigo-950">{s.trip_name}</strong>
+                                  <span className="text-indigo-600 font-medium">({daysSummary})</span>
+                                  <span className="font-mono text-[11px] bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-800">
+                                    Cutoff {s.cutoff_time} | Disp {s.dispatch_time}
+                                  </span>
+                                </span>
+                              );
+                            })
+                          )}
+                        </div>
+                      </TD>
+                      <TD>
+                        <span className="bg-blue-50 text-[#004c8f] border border-blue-200 px-2.5 py-1 rounded-lg text-xs font-bold">
+                          {(parties || []).filter(p => p.route_name === r.route_name).length} Parties
+                        </span>
+                      </TD>
+                      <TD>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => openScheduleModal(r)}
+                            className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                            title="Configure Trip Dispatch Schedules"
+                          >
+                            <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Configure Trips ({scheds.length})</span>
+                          </button>
+                          <button onClick={() => openEdit(r)}
+                            className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button onClick={() => setDeleteItem(r)}
+                            className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </div>
+                      </TD>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1554,6 +1752,319 @@ export default function MasterRegistries() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          ROUTE SCHEDULES CONFIGURATION MODAL (SINGLE SOURCE OF TRUTH)
+      ═══════════════════════════════════════════════════════════════ */}
+      {scheduleModalRoute && (
+        <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-4xl border border-slate-200 shadow-2xl my-4 overflow-hidden max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-[#003366] border-b-4 border-[#ed1c24] px-6 py-4 flex items-center justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight flex items-center gap-2">
+                    <span>Dispatch Schedules:</span>
+                    <span className="text-emerald-300 font-mono">{scheduleModalRoute.route_name}</span>
+                    <span className="text-xs font-mono bg-white/10 text-slate-200 px-2 py-0.5 rounded">
+                      {scheduleModalRoute.route_code}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] sm:text-xs text-slate-300">
+                    Configure multi-trip daily dispatches, weekday-specific departures, cutoff timings, and on-demand triggers.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScheduleModalRoute(null)}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold cursor-pointer transition-colors"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: List of Configured Trips */}
+              <div className="lg:col-span-7 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-indigo-600" />
+                    Configured Trips ({routeSchedules.length})
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleResetScheduleForm}
+                    className="text-xs font-bold text-[#004c8f] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> + Add New Trip
+                  </button>
+                </div>
+
+                {loadingSchedules ? (
+                  <div className="py-12 text-center text-xs text-slate-400 font-semibold">
+                    Loading dispatch schedules...
+                  </div>
+                ) : routeSchedules.length === 0 ? (
+                  <div className="p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-300 text-center space-y-2">
+                    <Clock className="w-8 h-8 text-slate-400 mx-auto" />
+                    <p className="text-xs font-bold text-slate-700">No scheduled trips configured for this route.</p>
+                    <p className="text-[11px] text-slate-400">
+                      Orders for this route will default to On-Demand trigger until a schedule is added.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                    {routeSchedules.map((sched) => {
+                      let daysSummary = 'Everyday (Daily)';
+                      if (sched.frequency === 'ON_DEMAND') daysSummary = '⚡ On-Demand Manual Trigger';
+                      else if (sched.frequency === 'WEEKLY_SPECIFIC_DAYS' && sched.selected_days) {
+                        try {
+                          const parsed = typeof sched.selected_days === 'string' ? JSON.parse(sched.selected_days) : sched.selected_days;
+                          daysSummary = Array.isArray(parsed) && parsed.length < 7
+                            ? `Days: ${parsed.join(', ')}`
+                            : 'Everyday (Daily)';
+                        } catch (e) {
+                          daysSummary = 'Custom Days';
+                        }
+                      }
+
+                      const isSelected = editingScheduleId === sched.id;
+
+                      return (
+                        <div
+                          key={sched.id}
+                          className={`p-3.5 rounded-xl border transition-all ${
+                            isSelected
+                              ? 'bg-blue-50/80 border-[#004c8f] shadow-xs'
+                              : sched.is_active
+                              ? 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
+                              : 'bg-slate-50/70 border-slate-200 opacity-60'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <strong className="text-sm font-extrabold text-slate-900">
+                                  {sched.trip_name}
+                                </strong>
+                                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                  sched.frequency === 'DAILY' ? 'bg-indigo-100 text-indigo-800' :
+                                  sched.frequency === 'ON_DEMAND' ? 'bg-amber-100 text-amber-800' :
+                                  'bg-purple-100 text-purple-800'
+                                }`}>
+                                  {sched.frequency}
+                                </span>
+                                {sched.is_active ? (
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                    Active
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                    Disabled
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-slate-500 font-medium">
+                                {daysSummary}
+                              </div>
+                              <div className="flex items-center gap-4 text-xs font-mono pt-1">
+                                <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                  ⏱ Cutoff: <strong>{sched.cutoff_time || '—'}</strong>
+                                </span>
+                                <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                  🚛 Dispatch: <strong>{sched.dispatch_time || '—'}</strong>
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleEditScheduleClick(sched)}
+                                className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 text-xs font-bold cursor-pointer"
+                                title="Edit Trip Schedule"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSchedule(sched)}
+                                className={`p-1.5 rounded-lg text-xs font-bold border cursor-pointer ${
+                                  sched.is_active
+                                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
+                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                                }`}
+                                title={sched.is_active ? 'Disable' : 'Enable'}
+                              >
+                                {sched.is_active ? <ToggleLeft className="w-3.5 h-3.5" /> : <ToggleRight className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSchedule(sched.id)}
+                                className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold cursor-pointer"
+                                title="Delete Trip Schedule"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Add / Edit Trip Form */}
+              <div className="lg:col-span-5 bg-slate-50/80 p-5 rounded-2xl border border-slate-200 space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    {editingScheduleId ? 'Edit Trip Schedule' : 'Add New Trip Schedule'}
+                  </h4>
+                  {editingScheduleId && (
+                    <button
+                      type="button"
+                      onClick={handleResetScheduleForm}
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
+
+                <form onSubmit={handleSaveSchedule} className="space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Trip / Dispatch Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={scheduleForm.trip_name}
+                      onChange={(e) => setScheduleForm(prev => ({ ...prev, trip_name: e.target.value }))}
+                      required
+                      placeholder="e.g. Morning Dispatch, Evening Run, Friday Express"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Frequency Type *
+                    </label>
+                    <select
+                      value={scheduleForm.frequency}
+                      onChange={(e) => setScheduleForm(prev => ({ ...prev, frequency: e.target.value }))}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                    >
+                      <option value="DAILY">Daily (Runs every day)</option>
+                      <option value="WEEKLY_SPECIFIC_DAYS">Specific Days of Week (e.g. Mon, Thu)</option>
+                      <option value="ON_DEMAND">On-Demand (Triggered on backlog / urgency)</option>
+                      <option value="CUSTOM_INTERVAL">Custom Interval</option>
+                    </select>
+                  </div>
+
+                  {/* Day Checkboxes if WEEKLY_SPECIFIC_DAYS */}
+                  {scheduleForm.frequency === 'WEEKLY_SPECIFIC_DAYS' && (
+                    <div className="space-y-1.5 bg-white p-3 rounded-xl border border-slate-200">
+                      <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
+                        Select Active Weekdays
+                      </label>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                          const active = (scheduleForm.selected_days || []).includes(day);
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => toggleDayInSchedule(day)}
+                              className={`px-2 py-1.5 rounded-lg text-xs font-bold text-center border transition-all cursor-pointer ${
+                                active
+                                  ? 'bg-[#003366] text-white border-[#003366]'
+                                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {day.slice(0, 3)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cutoff & Dispatch Times */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Cutoff Time (IST) *
+                      </label>
+                      <input
+                        type="time"
+                        value={scheduleForm.cutoff_time}
+                        onChange={(e) => setScheduleForm(prev => ({ ...prev, cutoff_time: e.target.value }))}
+                        required
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                      />
+                      <span className="text-[10px] text-slate-400 block mt-0.5">Order cut-off deadline</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Dispatch Time (IST) *
+                      </label>
+                      <input
+                        type="time"
+                        value={scheduleForm.dispatch_time}
+                        onChange={(e) => setScheduleForm(prev => ({ ...prev, dispatch_time: e.target.value }))}
+                        required
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                      />
+                      <span className="text-[10px] text-slate-400 block mt-0.5">Vehicle departure time</span>
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!scheduleForm.is_active}
+                      onChange={(e) => setScheduleForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                      className="w-4 h-4 accent-[#003366]"
+                    />
+                    <span className="text-xs font-bold text-slate-700">Trip is Active &amp; Operational</span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={savingSchedule}
+                    className="w-full py-2.5 bg-[#003366] hover:bg-[#004c8f] text-white text-xs font-extrabold rounded-xl shadow cursor-pointer transition-all disabled:opacity-50"
+                  >
+                    {savingSchedule ? 'Saving Schedule...' : editingScheduleId ? 'Update Trip Schedule' : '+ Add Trip Schedule'}
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
+              <span>All schedule updates are live and automatically sync with the Operations Console.</span>
+              <button
+                type="button"
+                onClick={() => setScheduleModalRoute(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

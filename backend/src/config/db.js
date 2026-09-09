@@ -241,6 +241,29 @@ async function initMySQLSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
+  // 3b. Route Schedules (Dynamic Dispatch & Cutoff Timers per Route)
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS route_schedules (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      route_id INT NOT NULL,
+      trip_name VARCHAR(255) NOT NULL,
+      dispatch_type VARCHAR(50) NOT NULL DEFAULT 'FIXED',
+      frequency VARCHAR(50) NOT NULL DEFAULT 'DAILY',
+      selected_days VARCHAR(255) DEFAULT '["Mon","Tue","Wed","Thu","Fri","Sat"]',
+      cutoff_time VARCHAR(20) DEFAULT '06:00',
+      dispatch_time VARCHAR(20) DEFAULT '08:00',
+      is_active TINYINT DEFAULT 1,
+      priority_order INT DEFAULT 1,
+      warehouse_id INT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (route_id) REFERENCES route_masters(id) ON DELETE CASCADE,
+      FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE CASCADE,
+      INDEX idx_rs_route (route_id),
+      INDEX idx_rs_wh (warehouse_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
   // 4. Parties (Customers - Isolated per warehouse)
   await dbAsync.exec(`
     CREATE TABLE IF NOT EXISTS parties (
@@ -613,6 +636,26 @@ async function initSQLiteSchema() {
   `);
 
   await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS route_schedules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      route_id INTEGER NOT NULL,
+      trip_name TEXT NOT NULL,
+      dispatch_type TEXT NOT NULL DEFAULT 'FIXED',
+      frequency TEXT NOT NULL DEFAULT 'DAILY',
+      selected_days TEXT DEFAULT '["Mon","Tue","Wed","Thu","Fri","Sat"]',
+      cutoff_time TEXT DEFAULT '06:00',
+      dispatch_time TEXT DEFAULT '08:00',
+      is_active INTEGER DEFAULT 1,
+      priority_order INTEGER DEFAULT 1,
+      warehouse_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (route_id) REFERENCES route_masters (id) ON DELETE CASCADE,
+      FOREIGN KEY (warehouse_id) REFERENCES warehouses (id) ON DELETE CASCADE
+    );
+  `);
+
+  await dbAsync.exec(`
     CREATE TABLE IF NOT EXISTS parties (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       party_code TEXT NOT NULL,
@@ -917,6 +960,45 @@ async function ensureDefaultSeed() {
       `, ['admin', 'admin@thessbuddy.com', pwdHash, 'System Super Admin', whId]);
 
       console.log('✅ Default SuperAdmin created: (Username: admin / Password: admin123)');
+    }
+
+    // Seed default route schedules if routes exist but have no schedules
+    const existingSchedules = await dbAsync.get('SELECT id FROM route_schedules LIMIT 1');
+    if (!existingSchedules) {
+      const routes = await dbAsync.all('SELECT * FROM route_masters');
+      for (const r of routes) {
+        const nameLower = (r.route_name || '').toLowerCase();
+        if (nameLower.includes('jaipur')) {
+          // Morning & Evening trips
+          await dbAsync.run(`
+            INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+            VALUES (?, 'Morning Trip', 'FIXED', 'DAILY', '["Mon","Tue","Wed","Thu","Fri","Sat"]', '06:00', '08:00', 1, 1, ?)
+          `, [r.id, r.warehouse_id]);
+          await dbAsync.run(`
+            INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+            VALUES (?, 'Evening Trip', 'FIXED', 'DAILY', '["Mon","Tue","Wed","Thu","Fri","Sat"]', '17:00', '19:00', 1, 2, ?)
+          `, [r.id, r.warehouse_id]);
+        } else if (nameLower.includes('kota')) {
+          // Mon & Thu
+          await dbAsync.run(`
+            INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+            VALUES (?, 'Morning Trip', 'FIXED', 'SELECTED_WEEKDAYS', '["Mon","Thu"]', '06:00', '08:00', 1, 1, ?)
+          `, [r.id, r.warehouse_id]);
+        } else if (nameLower.includes('delhi')) {
+          // On-Demand
+          await dbAsync.run(`
+            INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+            VALUES (?, 'On-Demand Dispatch', 'ON_DEMAND', 'ON_DEMAND', '[]', '', '', 1, 1, ?)
+          `, [r.id, r.warehouse_id]);
+        } else {
+          // Daily general schedule
+          await dbAsync.run(`
+            INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
+            VALUES (?, 'Main Trip', 'FIXED', 'DAILY', '["Mon","Tue","Wed","Thu","Fri","Sat"]', '10:00', '12:00', 1, 1, ?)
+          `, [r.id, r.warehouse_id]);
+        }
+      }
+      console.log('✅ Default route schedules seeded for existing routes.');
     }
   } catch (err) {
     console.warn('Seed check notice:', err.message);

@@ -87,7 +87,9 @@ app.post('/api/parties', partyController.createParty);
 app.put('/api/parties/:id', partyController.updateParty);
 app.delete('/api/parties/:id', partyController.deleteParty);
 
-// Dispatch Planning & Route Bill Status API
+// Dispatch Planning & Operations Console API
+app.get('/api/dispatch-planning/console-data', dispatchPlanningController.getOperationsConsole);
+app.post('/api/dispatch-planning/create-on-demand', dispatchPlanningController.createOnDemandDispatch);
 app.get('/api/dispatch-planning/data', dispatchPlanningController.getPlanningData);
 app.post('/api/dispatch-planning/create-trip', dispatchPlanningController.createTrip);
 app.get('/api/dispatch-planning/bill-status', dispatchPlanningController.getPartyBillStatus);
@@ -108,7 +110,7 @@ app.get('/api/ewaybill', ewaybillController.getEWayBills);
 app.post('/api/ewaybill/upload', upload.single('file'), ewaybillController.uploadExcel);
 app.get('/api/ewaybill/export-json', ewaybillController.exportJson);
 
-// Master Registries API (Full CRUD for All 8 Sub-Masters)
+// Master Registries API (Full CRUD for All Sub-Masters & Route Schedules)
 app.get('/api/masters/warehouses', masterController.getWarehouses);
 app.post('/api/masters/warehouses', masterController.createWarehouse);
 app.put('/api/masters/warehouses/:id', masterController.updateWarehouse);
@@ -118,6 +120,12 @@ app.get('/api/masters/routes', masterController.getRoutes);
 app.post('/api/masters/routes', masterController.createRoute);
 app.put('/api/masters/routes/:id', masterController.updateRoute);
 app.delete('/api/masters/routes/:id', masterController.deleteRoute);
+
+// Route Schedules Sub-Master API
+app.get('/api/masters/routes/:routeId/schedules', masterController.getRouteSchedules);
+app.post('/api/masters/routes/schedules', masterController.createRouteSchedule);
+app.put('/api/masters/routes/schedules/:scheduleId', masterController.updateRouteSchedule);
+app.delete('/api/masters/routes/schedules/:scheduleId', masterController.deleteRouteSchedule);
 
 app.get('/api/masters/workers', masterController.getWorkers);
 app.post('/api/masters/workers', masterController.createWorker);
