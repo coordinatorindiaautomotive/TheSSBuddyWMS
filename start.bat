@@ -1,9 +1,0 @@
-@echo off
-echo =========================================================
-echo  Starting WMS Enterprise Node.js & React Full Stack App
-echo =========================================================
-echo Starting Backend (Node.js Express + Socket.io) on port 5000...
-start cmd /k "cd backend && npm start"
-echo Starting Frontend (Vite + React) on port 5173...
-start cmd /k "cd frontend && npm run dev"
-echo App servers launching in separate windows...
