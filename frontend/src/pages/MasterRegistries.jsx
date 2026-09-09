@@ -980,9 +980,9 @@ export default function MasterRegistries() {
           <div className="bg-[#003366] border-b-4 border-[#ed1c24] px-6 py-4 flex items-center justify-between">
             <div>
               <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <RouteIcon className="w-4 h-4 text-emerald-400" /> Route Master &amp; Dispatch Schedules
+                <RouteIcon className="w-4 h-4 text-emerald-400" /> Route Master &amp; Shift Schedules
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Single source of truth for route frequency, dispatch timings, cutoffs, and customer party allocations</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Define which routes have Morning, Evening, or Specific-Day dispatches with custom cut-off and departure timings</p>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <span className="bg-emerald-900/40 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg font-bold">
@@ -997,27 +997,23 @@ export default function MasterRegistries() {
                   <TH>Route Details</TH>
                   <TH>🌅 Morning Dispatch</TH>
                   <TH>🌆 Evening Dispatch</TH>
-                  <TH>🌙 Other Trips / On-Demand</TH>
                   <TH>Assigned Parties</TH>
                   <TH>Actions</TH>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td colSpan={6} className="text-center py-12 text-slate-400 text-sm font-semibold">Loading delivery routes...</td></tr>
+                  <tr><td colSpan={5} className="text-center py-12 text-slate-400 text-sm font-semibold">Loading delivery routes...</td></tr>
                 ) : filtered(routes, ['route_code', 'route_name']).length === 0 ? (
-                  <EmptyTable colSpan={6} message="No routes found" />
+                  <EmptyTable colSpan={5} message="No routes found" />
                 ) : paginate(filtered(routes, ['route_code', 'route_name'])).map(r => {
                   const scheds = Array.isArray(r.schedules) ? r.schedules : [];
                   
-                  // Find Morning trip (trip name contains morning, or dispatch before 12:00)
+                  // Find Morning trip
                   const morningTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('morning') || (s.dispatch_time && parseInt(s.dispatch_time.split(':')[0], 10) < 12 && s.dispatch_type !== 'ON_DEMAND'));
                   
-                  // Find Evening trip (trip name contains evening, or dispatch >= 12:00)
+                  // Find Evening trip
                   const eveningTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('evening') || (s.dispatch_time && parseInt(s.dispatch_time.split(':')[0], 10) >= 12 && parseInt(s.dispatch_time.split(':')[0], 10) < 21 && s.dispatch_type !== 'ON_DEMAND'));
-                  
-                  // Other trips (Night, on-demand, or extra custom trips)
-                  const otherTrips = scheds.filter(s => s.id !== morningTrip?.id && s.id !== eveningTrip?.id);
 
                   return (
                     <tr key={r.id} className="hover:bg-blue-50/40 transition-colors">
@@ -1038,37 +1034,31 @@ export default function MasterRegistries() {
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-extrabold bg-amber-50 text-amber-900 border border-amber-200">
                                 <Sunrise className="w-3 h-3 text-amber-600" />
-                                {morningTrip.trip_name}
+                                Active
                               </span>
                               {morningTrip.frequency === 'WEEKLY_SPECIFIC_DAYS' && morningTrip.selected_days ? (
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
                                   {(() => {
                                     try {
                                       const d = typeof morningTrip.selected_days === 'string' ? JSON.parse(morningTrip.selected_days) : morningTrip.selected_days;
-                                      return Array.isArray(d) ? d.map(x => x.slice(0, 3)).join(', ') : 'Custom Days';
-                                    } catch(e) { return 'Custom Days'; }
+                                      return Array.isArray(d) && d.length < 7 ? d.map(x => x.slice(0, 3)).join(', ') : 'Daily';
+                                    } catch(e) { return 'Custom'; }
                                   })()}
                                 </span>
                               ) : (
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
-                                  Daily
+                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-700">
+                                  Daily (All Days)
                                 </span>
                               )}
-                              <span className={`w-2 h-2 rounded-full ${morningTrip.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`} title={morningTrip.is_active ? 'Active' : 'Disabled'}></span>
                             </div>
                             <div className="text-[11px] font-mono text-slate-600">
                               Cutoff: <strong className="text-amber-800">{fmtTime12(morningTrip.cutoff_time)}</strong> • Disp: <strong className="text-blue-800">{fmtTime12(morningTrip.dispatch_time)}</strong>
                             </div>
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => { openScheduleModal(r); applyPreset('MORNING'); }}
-                            className="px-2.5 py-1.5 rounded-lg border border-dashed border-amber-300 bg-amber-50/40 hover:bg-amber-100 text-amber-900 text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
-                          >
-                            <Sunrise className="w-3.5 h-3.5 text-amber-600" />
-                            <span>+ Set Morning</span>
-                          </button>
+                          <span className="text-slate-400 text-xs font-semibold italic bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                            No Morning Shift
+                          </span>
                         )}
                       </TD>
 
@@ -1079,55 +1069,31 @@ export default function MasterRegistries() {
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-extrabold bg-indigo-50 text-indigo-900 border border-indigo-200">
                                 <Sunset className="w-3 h-3 text-indigo-600" />
-                                {eveningTrip.trip_name}
+                                Active
                               </span>
                               {eveningTrip.frequency === 'WEEKLY_SPECIFIC_DAYS' && eveningTrip.selected_days ? (
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
                                   {(() => {
                                     try {
                                       const d = typeof eveningTrip.selected_days === 'string' ? JSON.parse(eveningTrip.selected_days) : eveningTrip.selected_days;
-                                      return Array.isArray(d) ? d.map(x => x.slice(0, 3)).join(', ') : 'Custom Days';
-                                    } catch(e) { return 'Custom Days'; }
+                                      return Array.isArray(d) && d.length < 7 ? d.map(x => x.slice(0, 3)).join(', ') : 'Daily';
+                                    } catch(e) { return 'Custom'; }
                                   })()}
                                 </span>
                               ) : (
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
-                                  Daily
+                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-700">
+                                  Daily (All Days)
                                 </span>
                               )}
-                              <span className={`w-2 h-2 rounded-full ${eveningTrip.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`} title={eveningTrip.is_active ? 'Active' : 'Disabled'}></span>
                             </div>
                             <div className="text-[11px] font-mono text-slate-600">
                               Cutoff: <strong className="text-amber-800">{fmtTime12(eveningTrip.cutoff_time)}</strong> • Disp: <strong className="text-blue-800">{fmtTime12(eveningTrip.dispatch_time)}</strong>
                             </div>
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => { openScheduleModal(r); applyPreset('EVENING'); }}
-                            className="px-2.5 py-1.5 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/40 hover:bg-indigo-100 text-indigo-900 text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
-                          >
-                            <Sunset className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>+ Set Evening</span>
-                          </button>
-                        )}
-                      </TD>
-
-                      {/* 🌙 Other Trips / On-Demand */}
-                      <TD>
-                        {otherTrips.length === 0 ? (
-                          <span className="text-slate-400 text-xs">—</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {otherTrips.map(ot => (
-                              <span
-                                key={ot.id}
-                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200"
-                              >
-                                {ot.trip_name} ({ot.dispatch_time || 'On-Demand'})
-                              </span>
-                            ))}
-                          </div>
+                          <span className="text-slate-400 text-xs font-semibold italic bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                            No Evening Shift
+                          </span>
                         )}
                       </TD>
 
@@ -1141,17 +1107,9 @@ export default function MasterRegistries() {
                       {/* Actions */}
                       <TD>
                         <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => openScheduleModal(r)}
-                            className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
-                            title="Configure Full Trip Schedules"
-                          >
-                            <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Configure ({scheds.length})</span>
-                          </button>
                           <button onClick={() => openEdit(r)}
-                            className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
-                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                            className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs">
+                            <Edit2 className="w-3.5 h-3.5" /> Edit Shift &amp; Days
                           </button>
                           <button onClick={() => setDeleteItem(r)}
                             className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
