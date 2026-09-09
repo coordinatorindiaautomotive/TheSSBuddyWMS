@@ -1,0 +1,10 @@
+{
+  "name": "thesssystem-wms-portal",
+  "version": "1.0.0",
+  "description": "TheSSBuddy Enterprise Warehouse & Dispatch Management System",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "cd backend && npm start",
+    "prod": "npm run build && npm start"
+  }
+}
