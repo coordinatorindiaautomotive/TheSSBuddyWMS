@@ -5,7 +5,8 @@ import {
   Store, MapPin, UserCheck, Briefcase, Truck, Warehouse as WarehouseIcon,
   Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, ToggleLeft, ToggleRight,
   User, Phone, FileText, Route as RouteIcon, ShieldCheck, Lock,
-  Calendar, Clock, AlertTriangle, PlayCircle, Settings2, Sparkles, Check
+  Calendar, Clock, AlertTriangle, PlayCircle, Settings2, Sparkles, Check,
+  Sun, Moon, Sunrise, Sunset, Zap
 } from 'lucide-react';
 
 const TABS = [
@@ -328,7 +329,7 @@ export default function MasterRegistries() {
   const handleResetScheduleForm = () => {
     setEditingScheduleId(null);
     setScheduleForm({
-      trip_name: '',
+      trip_name: 'Morning Dispatch',
       dispatch_type: 'FIXED_TIME',
       frequency: 'DAILY',
       selected_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
@@ -337,6 +338,96 @@ export default function MasterRegistries() {
       priority_order: (routeSchedules?.length || 0) + 1,
       is_active: true
     });
+  };
+
+  const applyPreset = (presetType) => {
+    if (presetType === 'MORNING') {
+      setScheduleForm(prev => ({
+        ...prev,
+        trip_name: 'Morning Dispatch',
+        dispatch_type: 'FIXED_TIME',
+        cutoff_time: '08:00',
+        dispatch_time: '09:30'
+      }));
+    } else if (presetType === 'EVENING') {
+      setScheduleForm(prev => ({
+        ...prev,
+        trip_name: 'Evening Dispatch',
+        dispatch_type: 'FIXED_TIME',
+        cutoff_time: '18:00',
+        dispatch_time: '19:30'
+      }));
+    } else if (presetType === 'NIGHT') {
+      setScheduleForm(prev => ({
+        ...prev,
+        trip_name: 'Night Express Run',
+        dispatch_type: 'FIXED_TIME',
+        cutoff_time: '21:00',
+        dispatch_time: '22:30'
+      }));
+    } else if (presetType === 'ON_DEMAND') {
+      setScheduleForm(prev => ({
+        ...prev,
+        trip_name: 'On-Demand Dispatch',
+        dispatch_type: 'ON_DEMAND',
+        frequency: 'ON_DEMAND',
+        cutoff_time: '',
+        dispatch_time: ''
+      }));
+    }
+  };
+
+  const handle1ClickAddMorningAndEvening = async () => {
+    if (!scheduleModalRoute) return;
+    setSavingSchedule(true);
+    try {
+      const allDays = JSON.stringify(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+      
+      // Add Morning Trip (08:00 cutoff / 09:30 dispatch)
+      await axios.post(`/api/masters/routes/${scheduleModalRoute.id}/schedules`, {
+        trip_name: 'Morning Dispatch',
+        dispatch_type: 'FIXED_TIME',
+        frequency: 'DAILY',
+        selected_days: allDays,
+        cutoff_time: '08:00',
+        dispatch_time: '09:30',
+        priority_order: 1,
+        is_active: true
+      });
+
+      // Add Evening Trip (18:00 cutoff / 19:30 dispatch)
+      await axios.post(`/api/masters/routes/${scheduleModalRoute.id}/schedules`, {
+        trip_name: 'Evening Dispatch',
+        dispatch_type: 'FIXED_TIME',
+        frequency: 'DAILY',
+        selected_days: allDays,
+        cutoff_time: '18:00',
+        dispatch_time: '19:30',
+        priority_order: 2,
+        is_active: true
+      });
+
+      toast.success('Successfully added standard Morning & Evening daily trips!');
+      const res = await axios.get(`/api/masters/routes/${scheduleModalRoute.id}/schedules`);
+      setRouteSchedules(Array.isArray(res.data) ? res.data : []);
+      fetchAll();
+    } catch (err) {
+      toast.error('Failed to auto-add morning and evening trips.');
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
+
+  const fmtTime12 = (t24) => {
+    if (!t24) return '';
+    const parts = String(t24).split(':');
+    if (parts.length < 2) return t24;
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m)) return t24;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
   };
 
   const handleSaveSchedule = async (e) => {
@@ -1794,7 +1885,7 @@ export default function MasterRegistries() {
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Left Column: List of Configured Trips */}
-              <div className="lg:col-span-7 space-y-3">
+              <div className="lg:col-span-6 space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     <Clock className="w-4 h-4 text-indigo-600" />
@@ -1809,6 +1900,18 @@ export default function MasterRegistries() {
                   </button>
                 </div>
 
+                {/* 1-Click Quick Preset: Add Standard Morning & Evening Dispatches */}
+                <button
+                  type="button"
+                  onClick={handle1ClickAddMorningAndEvening}
+                  disabled={savingSchedule}
+                  className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-600 hover:opacity-95 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                  title="Automatically adds Morning (08:00) and Evening (18:00) departures for this route"
+                >
+                  <Zap className="w-4 h-4 fill-current" />
+                  <span>+ 1-Click Setup: Morning &amp; Evening Daily Dispatches</span>
+                </button>
+
                 {loadingSchedules ? (
                   <div className="py-12 text-center text-xs text-slate-400 font-semibold">
                     Loading dispatch schedules...
@@ -1818,7 +1921,7 @@ export default function MasterRegistries() {
                     <Clock className="w-8 h-8 text-slate-400 mx-auto" />
                     <p className="text-xs font-bold text-slate-700">No scheduled trips configured for this route.</p>
                     <p className="text-[11px] text-slate-400">
-                      Orders for this route will default to On-Demand trigger until a schedule is added.
+                      Select Morning or Evening on the right to add a schedule, or click the 1-Click Setup button above.
                     </p>
                   </div>
                 ) : (
@@ -1838,6 +1941,8 @@ export default function MasterRegistries() {
                       }
 
                       const isSelected = editingScheduleId === sched.id;
+                      const isMorning = sched.trip_name?.toLowerCase().includes('morning') || (sched.dispatch_time && parseInt(sched.dispatch_time.split(':')[0], 10) < 12);
+                      const isEvening = sched.trip_name?.toLowerCase().includes('evening') || (sched.dispatch_time && parseInt(sched.dispatch_time.split(':')[0], 10) >= 12);
 
                       return (
                         <div
@@ -1851,8 +1956,13 @@ export default function MasterRegistries() {
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1 flex-1">
+                            <div className="space-y-1.5 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`p-1 rounded-md text-xs font-bold ${
+                                  isMorning ? 'bg-amber-100 text-amber-800' : isEvening ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'
+                                }`}>
+                                  {isMorning ? <Sunrise className="w-3.5 h-3.5 inline" /> : isEvening ? <Sunset className="w-3.5 h-3.5 inline" /> : <Clock className="w-3.5 h-3.5 inline" />}
+                                </span>
                                 <strong className="text-sm font-extrabold text-slate-900">
                                   {sched.trip_name}
                                 </strong>
@@ -1876,12 +1986,12 @@ export default function MasterRegistries() {
                               <div className="text-xs text-slate-500 font-medium">
                                 {daysSummary}
                               </div>
-                              <div className="flex items-center gap-4 text-xs font-mono pt-1">
-                                <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                                  ⏱ Cutoff: <strong>{sched.cutoff_time || '—'}</strong>
+                              <div className="flex items-center gap-3 text-xs font-mono pt-1">
+                                <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                  ⏱ Cutoff: <strong>{sched.cutoff_time ? `${sched.cutoff_time} (${fmtTime12(sched.cutoff_time)})` : '—'}</strong>
                                 </span>
-                                <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                  🚛 Dispatch: <strong>{sched.dispatch_time || '—'}</strong>
+                                <span className="text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                  🚛 Disp: <strong>{sched.dispatch_time ? `${sched.dispatch_time} (${fmtTime12(sched.dispatch_time)})` : '—'}</strong>
                                 </span>
                               </div>
                             </div>
@@ -1925,12 +2035,12 @@ export default function MasterRegistries() {
                 )}
               </div>
 
-              {/* Right Column: Add / Edit Trip Form */}
-              <div className="lg:col-span-5 bg-slate-50/80 p-5 rounded-2xl border border-slate-200 space-y-4">
+              {/* Right Column: Add / Edit Trip Form with Morning & Evening Selectors */}
+              <div className="lg:col-span-6 bg-slate-50/80 p-5 rounded-2xl border border-slate-200 space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-emerald-600" />
-                    {editingScheduleId ? 'Edit Trip Schedule' : 'Add New Trip Schedule'}
+                    {editingScheduleId ? 'Edit Trip Schedule' : 'Configure Trip Schedule'}
                   </h4>
                   {editingScheduleId && (
                     <button
@@ -1943,7 +2053,91 @@ export default function MasterRegistries() {
                   )}
                 </div>
 
-                <form onSubmit={handleSaveSchedule} className="space-y-3.5">
+                {/* ── Selectable Shift / Slot Presets (Morning, Evening, Night, On-Demand) ── */}
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                    Select Departure Slot / Shift Preset:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Morning Button */}
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('MORNING')}
+                      className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                        scheduleForm.trip_name?.toLowerCase().includes('morning')
+                          ? 'border-amber-500 bg-amber-50/80 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-amber-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-extrabold text-xs text-amber-900">
+                        <Sunrise className="w-4 h-4 text-amber-600" />
+                        <span>🌅 Morning Trip</span>
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-600 mt-1">
+                        Cutoff: 08:00 AM | Disp: 09:30 AM
+                      </div>
+                    </button>
+
+                    {/* Evening Button */}
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('EVENING')}
+                      className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                        scheduleForm.trip_name?.toLowerCase().includes('evening')
+                          ? 'border-indigo-600 bg-indigo-50/80 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-extrabold text-xs text-indigo-950">
+                        <Sunset className="w-4 h-4 text-indigo-600" />
+                        <span>🌆 Evening Trip</span>
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-600 mt-1">
+                        Cutoff: 06:00 PM | Disp: 07:30 PM
+                      </div>
+                    </button>
+
+                    {/* Night Button */}
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('NIGHT')}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        scheduleForm.trip_name?.toLowerCase().includes('night')
+                          ? 'border-purple-600 bg-purple-50 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-purple-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-extrabold text-xs text-purple-900">
+                        <Moon className="w-3.5 h-3.5 text-purple-600" />
+                        <span>🌙 Night Express</span>
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                        Cutoff: 09:00 PM | Disp: 10:30 PM
+                      </div>
+                    </button>
+
+                    {/* On-Demand Button */}
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('ON_DEMAND')}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        scheduleForm.dispatch_type === 'ON_DEMAND'
+                          ? 'border-blue-600 bg-blue-50 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-extrabold text-xs text-blue-900">
+                        <Zap className="w-3.5 h-3.5 text-blue-600" />
+                        <span>⚡ On-Demand</span>
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                        Manual trigger / No fixed time
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSaveSchedule} className="space-y-3.5 pt-1">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Trip / Dispatch Name *
@@ -2002,36 +2196,52 @@ export default function MasterRegistries() {
                     </div>
                   )}
 
-                  {/* Cutoff & Dispatch Times */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Cutoff Time (IST) *
-                      </label>
-                      <input
-                        type="time"
-                        value={scheduleForm.cutoff_time}
-                        onChange={(e) => setScheduleForm(prev => ({ ...prev, cutoff_time: e.target.value }))}
-                        required
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
-                      />
-                      <span className="text-[10px] text-slate-400 block mt-0.5">Order cut-off deadline</span>
-                    </div>
+                  {/* Cutoff & Dispatch Times (with 12h AM/PM preview) */}
+                  {scheduleForm.frequency !== 'ON_DEMAND' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-slate-700">
+                            Cutoff Time (IST) *
+                          </label>
+                          {scheduleForm.cutoff_time && (
+                            <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                              {fmtTime12(scheduleForm.cutoff_time)}
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="time"
+                          value={scheduleForm.cutoff_time}
+                          onChange={(e) => setScheduleForm(prev => ({ ...prev, cutoff_time: e.target.value }))}
+                          required
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                        />
+                        <span className="text-[10px] text-slate-400 block mt-0.5">Order intake deadline</span>
+                      </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Dispatch Time (IST) *
-                      </label>
-                      <input
-                        type="time"
-                        value={scheduleForm.dispatch_time}
-                        onChange={(e) => setScheduleForm(prev => ({ ...prev, dispatch_time: e.target.value }))}
-                        required
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
-                      />
-                      <span className="text-[10px] text-slate-400 block mt-0.5">Vehicle departure time</span>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-slate-700">
+                            Dispatch Time (IST) *
+                          </label>
+                          {scheduleForm.dispatch_time && (
+                            <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                              {fmtTime12(scheduleForm.dispatch_time)}
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="time"
+                          value={scheduleForm.dispatch_time}
+                          onChange={(e) => setScheduleForm(prev => ({ ...prev, dispatch_time: e.target.value }))}
+                          required
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
+                        />
+                        <span className="text-[10px] text-slate-400 block mt-0.5">Vehicle departure time</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200 cursor-pointer">
                     <input
