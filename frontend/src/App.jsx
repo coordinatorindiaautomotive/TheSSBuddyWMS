@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ToastProvider } from './context/ToastContext';
@@ -40,7 +40,7 @@ export default function App() {
     <AuthProvider>
       <SocketProvider>
         <ToastProvider>
-          <BrowserRouter>
+          <HashRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
 
@@ -78,7 +78,7 @@ export default function App() {
                 }
               />
             </Routes>
-          </BrowserRouter>
+          </HashRouter>
         </ToastProvider>
       </SocketProvider>
     </AuthProvider>
