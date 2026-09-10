@@ -217,7 +217,43 @@ export default function MasterRegistries() {
     }
   };
 
-  const openAdd  = () => { setEditingItem(null); setForm(defaultForm()); setConfirmPassword(''); setShowModal(true); };
+  const getNextWorkerCode = () => {
+    if (!Array.isArray(workers) || workers.length === 0) return 'EMP-001';
+    let maxNum = 0;
+    workers.forEach(w => {
+      const code = w?.employee_code || `EMP-${w?.id || 1}`;
+      const match = String(code).match(/EMP-(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    });
+    return `EMP-${String(maxNum + 1).padStart(3, '0')}`;
+  };
+
+  const getNextRouteCode = () => {
+    if (!Array.isArray(routes) || routes.length === 0) return 'RT-01';
+    let maxNum = 0;
+    routes.forEach(r => {
+      const code = r?.route_code || `RT-${r?.id || 1}`;
+      const match = String(code).match(/(?:RT|ROUTE)-?(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    });
+    return `RT-${String(maxNum + 1).padStart(2, '0')}`;
+  };
+
+  const openAdd  = () => { 
+    setEditingItem(null); 
+    const df = defaultForm();
+    if (activeTab === 'worker') df.employee_code = getNextWorkerCode();
+    if (activeTab === 'route') df.route_code = getNextRouteCode();
+    setForm(df); 
+    setConfirmPassword(''); 
+    setShowModal(true); 
+  };
   const openEdit = (item) => { 
     if (activeTab === 'route') {
       const scheds = Array.isArray(item.schedules) ? item.schedules : [];
@@ -262,27 +298,13 @@ export default function MasterRegistries() {
     setShowModal(true); 
   };
 
-  const getNextWorkerCode = () => {
-    if (!Array.isArray(workers) || workers.length === 0) return 'EMP-1';
-    let maxNum = 0;
-    workers.forEach(w => {
-      const code = w?.employee_code || `EMP-${w?.id || 1}`;
-      const match = String(code).match(/EMP-(\d+)/i);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (num > maxNum) maxNum = num;
-      }
-    });
-    return `EMP-${maxNum + 1}`;
-  };
-
   const defaultForm = () => {
     if (activeTab === 'party')     return { party_code:'', party_name:'', route_name:'', salesman:'', phone:'', gstin:'', credit_limit:'', is_active:true };
     if (activeTab === 'worker')    return { employee_code: getNextWorkerCode(), name:'', phone:'', role:'Picker', is_active:true };
     if (activeTab === 'driver')    return { name:'', phone:'', license_no:'', emergency_contact:'', route:'', is_active:true };
     if (activeTab === 'vehicle')   return { vehicle_number:'', vehicle_type:'Truck', capacity:'', registration_no:'', is_active:true };
     if (activeTab === 'route')     return { 
-      route_code: '', 
+      route_code: getNextRouteCode(), 
       route_name: '',
       morning_enabled: true,
       morning_cutoff: '08:00',
@@ -337,29 +359,37 @@ export default function MasterRegistries() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      let payload = { ...form };
+      if (activeTab === 'worker' && (!payload.employee_code || payload.employee_code.trim() === '')) {
+        payload.employee_code = getNextWorkerCode();
+      }
+      if (activeTab === 'route' && (!payload.route_code || payload.route_code.trim() === '')) {
+        payload.route_code = getNextRouteCode();
+      }
+
       if (editingItem) {
-        if (activeTab === 'party')         await axios.put(`/api/parties/${editingItem.id}`, form);
-        else if (activeTab === 'worker')    await axios.put(`/api/masters/workers/${editingItem.id}`, form);
-        else if (activeTab === 'driver')    await axios.put(`/api/masters/drivers/${editingItem.id}`, form);
-        else if (activeTab === 'vehicle')   await axios.put(`/api/masters/vehicles/${editingItem.id}`, form);
-        else if (activeTab === 'route')     await axios.put(`/api/masters/routes/${editingItem.id}`, form);
-        else if (activeTab === 'salesman')  await axios.put(`/api/masters/salesmen/${editingItem.id}`, form);
-        else if (activeTab === 'warehouse') await axios.put(`/api/masters/warehouses/${editingItem.id}`, form);
-        else if (activeTab === 'user')      await axios.put(`/api/masters/users/${editingItem.id}`, form);
+        if (activeTab === 'party')         await axios.put(`/api/parties/${editingItem.id}`, payload);
+        else if (activeTab === 'worker')    await axios.put(`/api/masters/workers/${editingItem.id}`, payload);
+        else if (activeTab === 'driver')    await axios.put(`/api/masters/drivers/${editingItem.id}`, payload);
+        else if (activeTab === 'vehicle')   await axios.put(`/api/masters/vehicles/${editingItem.id}`, payload);
+        else if (activeTab === 'route')     await axios.put(`/api/masters/routes/${editingItem.id}`, payload);
+        else if (activeTab === 'salesman')  await axios.put(`/api/masters/salesmen/${editingItem.id}`, payload);
+        else if (activeTab === 'warehouse') await axios.put(`/api/masters/warehouses/${editingItem.id}`, payload);
+        else if (activeTab === 'user')      await axios.put(`/api/masters/users/${editingItem.id}`, payload);
         toast.success('Record updated successfully!');
       } else {
         // password confirm check for users
-        if (activeTab === 'user' && form.password !== confirmPassword) {
+        if (activeTab === 'user' && payload.password !== confirmPassword) {
           toast.warning('Passwords do not match!'); setSubmitting(false); return;
         }
-        if (activeTab === 'party')         await axios.post('/api/parties', form);
-        else if (activeTab === 'worker')    await axios.post('/api/masters/workers', form);
-        else if (activeTab === 'driver')    await axios.post('/api/masters/drivers', form);
-        else if (activeTab === 'vehicle')   await axios.post('/api/masters/vehicles', form);
-        else if (activeTab === 'route')     await axios.post('/api/masters/routes', form);
-        else if (activeTab === 'salesman')  await axios.post('/api/masters/salesmen', form);
-        else if (activeTab === 'warehouse') await axios.post('/api/masters/warehouses', form);
-        else if (activeTab === 'user')      await axios.post('/api/masters/users', form);
+        if (activeTab === 'party')         await axios.post('/api/parties', payload);
+        else if (activeTab === 'worker')    await axios.post('/api/masters/workers', payload);
+        else if (activeTab === 'driver')    await axios.post('/api/masters/drivers', payload);
+        else if (activeTab === 'vehicle')   await axios.post('/api/masters/vehicles', payload);
+        else if (activeTab === 'route')     await axios.post('/api/masters/routes', payload);
+        else if (activeTab === 'salesman')  await axios.post('/api/masters/salesmen', payload);
+        else if (activeTab === 'warehouse') await axios.post('/api/masters/warehouses', payload);
+        else if (activeTab === 'user')      await axios.post('/api/masters/users', payload);
         toast.success('Record created successfully!');
       }
       setShowModal(false);
@@ -1706,9 +1736,21 @@ export default function MasterRegistries() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Employee Code / ID <span className="text-red-500 font-bold ml-0.5">*</span></label>
-                      <input value={f('employee_code')} onChange={e => sf('employee_code', e.target.value.toUpperCase())} required placeholder="e.g. EMP-10492"
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-slate-900 uppercase focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                          Employee Code / ID <span className="text-red-500 font-bold ml-0.5">*</span>
+                        </label>
+                        <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-200/70 px-2 py-0.5 rounded-md">
+                          🔒 Auto-Generated (Read-Only)
+                        </span>
+                      </div>
+                      <input 
+                        value={f('employee_code') || (editingItem ? '' : getNextWorkerCode())} 
+                        readOnly 
+                        required 
+                        placeholder="e.g. EMP-001"
+                        className="w-full bg-slate-100 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-slate-700 uppercase cursor-not-allowed select-none focus:outline-none" 
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Worker Full Name <span className="text-red-500 font-bold ml-0.5">*</span></label>
@@ -1827,9 +1869,21 @@ export default function MasterRegistries() {
                   {/* Route Basic Details */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Route Code <span className="text-red-500 font-bold ml-0.5">*</span></label>
-                      <input value={f('route_code')} onChange={e => sf('route_code', e.target.value.toUpperCase())} required placeholder="e.g. BHIWADI / MAN-01"
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono font-bold uppercase text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                          Route Code <span className="text-red-500 font-bold ml-0.5">*</span>
+                        </label>
+                        <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-200/70 px-2 py-0.5 rounded-md">
+                          🔒 Auto-Generated (Read-Only)
+                        </span>
+                      </div>
+                      <input 
+                        value={f('route_code') || (editingItem ? '' : getNextRouteCode())} 
+                        readOnly 
+                        required 
+                        placeholder="e.g. RT-01"
+                        className="w-full bg-slate-100 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono font-bold uppercase text-slate-700 cursor-not-allowed select-none focus:outline-none" 
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Route Name <span className="text-red-500 font-bold ml-0.5">*</span></label>

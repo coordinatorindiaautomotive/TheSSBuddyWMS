@@ -76,7 +76,7 @@ async function getRoutes(req, res) {
 async function createRoute(req, res) {
   try {
     const whId = req.activeWarehouseId;
-    const { 
+    let { 
       route_code, 
       route_name,
       morning_enabled,
@@ -89,6 +89,20 @@ async function createRoute(req, res) {
       evening_days,
       selected_days
     } = req.body;
+
+    if (!route_code || route_code.trim() === '') {
+      const allRoutes = await dbAsync.all('SELECT route_code, id FROM route_masters');
+      let maxNum = 0;
+      allRoutes.forEach(r => {
+        const c = r.route_code || `RT-${r.id}`;
+        const match = String(c).match(/(?:RT|ROUTE)-?(\d+)/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      });
+      route_code = `RT-${String(maxNum + 1).padStart(2, '0')}`;
+    }
 
     const result = await dbAsync.run(`
       INSERT INTO route_masters (route_code, route_name, warehouse_id)
