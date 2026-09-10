@@ -122,15 +122,21 @@ async function importExcel(req, res) {
           if (billNo && ticketId) {
             const exBill = await dbAsync.get('SELECT id FROM billings WHERE bill_no = ? AND warehouse_id = ?', [billNo, activeWhId]);
             if (!exBill) {
-              const billedQty = parseInt(r['Billed Qty'], 10) || pickQty;
+              const billedQty = parseInt(r['Billed Qty'], 10) || 0;
               const invAmount = parseFloat(r['Invoice Amount (Rs.)']) || 0;
               const billDate = r['Billing Date'] ? String(r['Billing Date']).trim() : pickDate;
               const billTime = r['Bill Created Timestamp'] ? String(r['Bill Created Timestamp']).split(' ')[1] || '12:00:00' : '12:00:00';
 
+              // Calculate Short / Excess / Damage based on Pick Qty vs Billed Qty
+              const diff = pickQty - billedQty;
+              const shortQty = diff > 0 ? diff : 0;
+              const excessQty = diff < 0 ? Math.abs(diff) : 0;
+              const damageQty = parseInt(r['Damage Qty'] || r['Damage'] || 0, 10);
+
               await dbAsync.run(`
-                INSERT INTO billings (pick_ticket_id, bill_no, billed_qty, invoice_amount, checker_id, helper_id, billing_date, billing_time, warehouse_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-              `, [ticketId, billNo, billedQty, invAmount, r['Checker'] || '-', r['Helper'] || '-', billDate, billTime, activeWhId]);
+                INSERT INTO billings (pick_ticket_id, bill_no, billed_qty, invoice_amount, short_qty, excess_qty, damage_qty, checker_id, helper_id, billing_date, billing_time, warehouse_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `, [ticketId, billNo, billedQty, invAmount, shortQty, excessQty, damageQty, r['Checker'] || '-', r['Helper'] || '-', billDate, billTime, activeWhId]);
             }
           }
 
