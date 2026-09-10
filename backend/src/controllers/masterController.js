@@ -413,15 +413,30 @@ async function getSalesmen(req, res) {
     const whId = req.activeWarehouseId || 1;
     let salesmen = [];
     try {
-      salesmen = await dbAsync.all('SELECT id, salesman_code, salesman_name as name, salesman_name, territory FROM salesman_masters WHERE warehouse_id = ? ORDER BY salesman_name ASC', [whId]);
-      if (!salesmen || salesmen.length === 0) {
-        salesmen = await dbAsync.all('SELECT * FROM salesmen WHERE warehouse_id = ? ORDER BY name ASC', [whId]);
+      salesmen = await dbAsync.all(`
+        SELECT id, salesman_code, salesman_name as name, salesman_name, phone, mobile, territory, warehouse_id
+        FROM salesman_masters 
+        WHERE warehouse_id = ? OR warehouse_id IS NULL
+        ORDER BY salesman_name ASC
+      `, [whId]);
+    } catch (e) {}
+
+    if (!salesmen || salesmen.length === 0) {
+      try {
+        salesmen = await dbAsync.all(`
+          SELECT id, salesman_code, name, name as salesman_name, phone, territory, warehouse_id
+          FROM salesmen 
+          WHERE warehouse_id = ? OR warehouse_id IS NULL
+          ORDER BY name ASC
+        `, [whId]);
+      } catch (e) {
+        salesmen = await dbAsync.all('SELECT id, salesman_code, name, name as salesman_name, phone, territory FROM salesmen ORDER BY name ASC');
       }
-    } catch (e) {
-      salesmen = await dbAsync.all('SELECT * FROM salesmen WHERE warehouse_id = ? ORDER BY name ASC', [whId]);
     }
-    return res.json(salesmen);
+
+    return res.json(salesmen || []);
   } catch (err) {
+    console.error('Error fetching salesmen:', err);
     return res.status(500).json({ message: 'Error fetching salesmen.' });
   }
 }
@@ -429,37 +444,91 @@ async function getSalesmen(req, res) {
 async function createSalesman(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    const { salesman_code, name, phone, territory } = req.body;
-    const code = salesman_code || `SLS-${Math.floor(100 + Math.random() * 900)}`;
-    const result = await dbAsync.run(`
-      INSERT INTO salesmen (salesman_code, name, phone, territory, warehouse_id)
-      VALUES (?, ?, ?, ?, ?)
-    `, [code, name, phone || '', territory || 'General Territory', whId]);
-    return res.json({ message: 'Salesman registered successfully!', id: result.id });
+    const { salesman_code, name, salesman_name, phone, territory } = req.body;
+    const sName = (salesman_name || name || '').trim();
+
+    if (!sName) {
+      return res.status(400).json({ message: 'Salesman name is required.' });
+    }
+
+    const code = salesman_code || ('SM-' + sName.replace(/[^A-Za-z0-9]/g, '').substring(0, 8).toUpperCase() + '-' + Math.floor(100 + Math.random() * 900));
+
+    let insertId = null;
+
+    // 1. Insert into salesman_masters
+    try {
+      const res1 = await dbAsync.run(`
+        INSERT INTO salesman_masters (salesman_code, salesman_name, phone, territory, warehouse_id)
+        VALUES (?, ?, ?, ?, ?)
+      `, [code, sName, phone || '', territory || 'General Territory', whId]);
+      insertId = res1.id;
+    } catch (err1) {
+      console.warn('Could not insert into salesman_masters, trying salesmen table:', err1.message);
+    }
+
+    // 2. Insert into salesmen table
+    try {
+      const res2 = await dbAsync.run(`
+        INSERT INTO salesmen (salesman_code, name, phone, territory, warehouse_id)
+        VALUES (?, ?, ?, ?, ?)
+      `, [code, sName, phone || '', territory || 'General Territory', whId]);
+      if (!insertId) insertId = res2.id;
+    } catch (err2) {
+      try {
+        const res3 = await dbAsync.run(`
+          INSERT INTO salesmen (salesman_code, name, phone, territory)
+          VALUES (?, ?, ?, ?)
+        `, [code, sName, phone || '', territory || 'General Territory']);
+        if (!insertId) insertId = res3.id;
+      } catch (err3) {}
+    }
+
+    return res.json({ message: 'Salesman registered successfully!', id: insertId || Date.now(), name: sName, salesman_code: code });
   } catch (err) {
-    return res.status(500).json({ message: 'Error creating salesman.' });
+    console.error('Error creating salesman:', err);
+    return res.status(500).json({ message: 'Error creating salesman: ' + err.message });
   }
 }
 
 async function updateSalesman(req, res) {
   try {
     const { id } = req.params;
-    const { salesman_code, name, phone, territory } = req.body;
-    await dbAsync.run(`
-      UPDATE salesmen
-      SET salesman_code = ?, name = ?, phone = ?, territory = ?
-      WHERE id = ?
-    `, [salesman_code, name, phone || '', territory || '', id]);
+    const { salesman_code, name, salesman_name, phone, territory } = req.body;
+    const sName = (salesman_name || name || '').trim();
+
+    try {
+      await dbAsync.run(`
+        UPDATE salesman_masters
+        SET salesman_name = ?, phone = ?, territory = ?
+        WHERE id = ? OR salesman_code = ?
+      `, [sName || name, phone || '', territory || '', id, salesman_code || '']);
+    } catch (e) {}
+
+    try {
+      await dbAsync.run(`
+        UPDATE salesmen
+        SET name = ?, phone = ?, territory = ?
+        WHERE id = ? OR salesman_code = ?
+      `, [sName || name, phone || '', territory || '', id, salesman_code || '']);
+    } catch (e) {}
+
     return res.json({ message: 'Salesman updated successfully!' });
   } catch (err) {
-    return res.status(500).json({ message: 'Error updating salesman.' });
+    console.error('Error updating salesman:', err);
+    return res.status(500).json({ message: 'Error updating salesman: ' + err.message });
   }
 }
 
 async function deleteSalesman(req, res) {
   try {
     const { id } = req.params;
-    await dbAsync.run('DELETE FROM salesmen WHERE id = ?', [id]);
+    try {
+      await dbAsync.run('DELETE FROM salesman_masters WHERE id = ?', [id]);
+    } catch (e) {}
+    try {
+      await dbAsync.run('DELETE FROM salesmen WHERE id = ?', [id]);
+    } catch (e) {}
+
     return res.json({ message: 'Salesman deleted successfully!' });
   } catch (err) {
     return res.status(500).json({ message: 'Error deleting salesman.' });

@@ -401,9 +401,14 @@ async function initMySQLSchema() {
       name VARCHAR(255) NOT NULL,
       phone VARCHAR(100),
       territory VARCHAR(255),
+      warehouse_id INT NULL DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  try {
+    await dbAsync.exec('ALTER TABLE salesmen ADD COLUMN warehouse_id INT NULL DEFAULT 1;');
+  } catch (e) {}
 
   // 10. Pick Tickets
   await dbAsync.exec(`
