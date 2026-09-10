@@ -60,135 +60,142 @@ app.use((req, res, next) => {
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+const apiRouter = express.Router();
+
 // Public Routes
-app.post('/api/auth/login', authController.login);
-app.post('/api/mobile/auth/login', mobileApiController.mobileLogin);
+apiRouter.post('/auth/login', authController.login);
+apiRouter.post('/mobile/auth/login', mobileApiController.mobileLogin);
 
 // Protected Routes Middleware
-app.use('/api', authenticate);
+apiRouter.use(authenticate);
 
 // Auth & User Profile
-app.get('/api/auth/me', authController.me);
-app.post('/api/auth/switch-warehouse', authController.switchWarehouse);
+apiRouter.get('/auth/me', authController.me);
+apiRouter.post('/auth/switch-warehouse', authController.switchWarehouse);
 
 // Dashboard
-app.get('/api/dashboard/stats', dashboardController.getStats);
+apiRouter.get('/dashboard/stats', dashboardController.getStats);
 
 // Pick Tickets API
-app.get('/api/pick-tickets', pickTicketController.getPickTickets);
-app.get('/api/pick-tickets/suggest-next-no', pickTicketController.suggestNextNo);
-app.get('/api/pick-tickets/validate-number', pickTicketController.validateNumber);
-app.get('/api/pick-tickets/:id', pickTicketController.getPickTicketById);
-app.post('/api/pick-tickets', pickTicketController.createPickTicket);
-app.put('/api/pick-tickets/:id', pickTicketController.updatePickTicket);
-app.delete('/api/pick-tickets/:id', pickTicketController.deletePickTicket);
+apiRouter.get('/pick-tickets', pickTicketController.getPickTickets);
+apiRouter.get('/pick-tickets/suggest-next-no', pickTicketController.suggestNextNo);
+apiRouter.get('/pick-tickets/validate-number', pickTicketController.validateNumber);
+apiRouter.get('/pick-tickets/:id', pickTicketController.getPickTicketById);
+apiRouter.post('/pick-tickets', pickTicketController.createPickTicket);
+apiRouter.put('/pick-tickets/:id', pickTicketController.updatePickTicket);
+apiRouter.delete('/pick-tickets/:id', pickTicketController.deletePickTicket);
 
-// Billings API
-app.get('/api/billings', billingController.getBillings);
-app.get('/api/billings/pending-tickets', billingController.getPendingTickets);
-app.get('/api/billings/suggest-next-no', billingController.suggestNextBillNo);
-app.post('/api/billings', billingController.createBilling);
-app.put('/api/billings/:id', billingController.updateBilling);
-app.delete('/api/billings/:id', billingController.deleteBilling);
+// Billing & Invoicing API
+apiRouter.get('/billing/bills', billingController.getBills);
+apiRouter.get('/billing/suggest-next-no', billingController.suggestNextNo);
+apiRouter.get('/billing/pending-tickets', billingController.getPendingTickets);
+apiRouter.post('/billing/generate', billingController.generateBill);
+apiRouter.get('/billing/bills/:id', billingController.getBillById);
+apiRouter.put('/billing/bills/:id', billingController.updateBill);
+apiRouter.delete('/billing/bills/:id', billingController.deleteBill);
+apiRouter.post('/billing/bulk-approve', billingController.bulkApproveBills);
+apiRouter.post('/billing/cancel', billingController.cancelBill);
 
-// Parties API
-app.get('/api/parties', partyController.getParties);
-app.get('/api/parties/code/:code', partyController.getPartyByCode);
-app.post('/api/parties', partyController.createParty);
-app.put('/api/parties/:id', partyController.updateParty);
-app.delete('/api/parties/:id', partyController.deleteParty);
+// Route-Bill Status Matrix API
+apiRouter.get('/route-bill-status/matrix', dispatchPlanningController.getMatrix);
 
-// Dispatch Planning & Operations Console API
-app.get('/api/dispatch-planning/console-data', dispatchPlanningController.getOperationsConsole);
-app.post('/api/dispatch-planning/create-on-demand', dispatchPlanningController.createOnDemandDispatch);
-app.get('/api/dispatch-planning/data', dispatchPlanningController.getPlanningData);
-app.post('/api/dispatch-planning/create-trip', dispatchPlanningController.createTrip);
-app.get('/api/dispatch-planning/bill-status', dispatchPlanningController.getPartyBillStatus);
-app.post('/api/dispatch-planning/mark-dispatched', dispatchPlanningController.markTicketsDispatched);
+// Dispatch Planning API
+apiRouter.get('/dispatch/available-bills', dispatchPlanningController.getAvailableBills);
+apiRouter.post('/dispatch/plan', dispatchPlanningController.createPlan);
+apiRouter.post('/dispatch/auto-plan', dispatchPlanningController.autoPlan);
 
-// Dispatches API
-app.get('/api/dispatches', dispatchController.getDispatches);
-app.get('/api/dispatches/:id', dispatchController.getDispatchById);
-app.post('/api/dispatches/:id/scan', dispatchController.scanCarton);
-app.put('/api/dispatches/:id/status', dispatchController.updateDispatchStatus);
+// Dispatch Execution API
+apiRouter.get('/dispatch', dispatchController.getDispatches);
+apiRouter.get('/dispatch/:id', dispatchController.getDispatchById);
+apiRouter.post('/dispatch/:id/update-stage', dispatchController.updateStage);
+apiRouter.post('/dispatch/:id/assign-staff', dispatchController.assignStaff);
+apiRouter.post('/dispatch/:id/mark-ready', dispatchController.markReady);
+apiRouter.post('/dispatch/:id/verify-driver', dispatchController.verifyDriver);
+apiRouter.post('/dispatch/:id/complete-loading', dispatchController.completeLoading);
+apiRouter.post('/dispatch/:id/out-for-delivery', dispatchController.outForDelivery);
+apiRouter.post('/dispatch/:id/complete-dispatch', dispatchController.completeDispatch);
 
-// Delivery Board API
-app.get('/api/delivery', deliveryController.getDeliveryBoard);
-app.put('/api/delivery/:id/status', deliveryController.updateDeliveryStatus);
+// Delivery Tracking & ePOD API
+apiRouter.get('/delivery/board', deliveryController.getDeliveryBoard);
+apiRouter.post('/delivery/:id/epod', upload.single('podPhoto'), deliveryController.submitEpod);
+apiRouter.post('/delivery/:id/mark-delivered', deliveryController.markDelivered);
 
-// E-Way Bills API
-app.get('/api/ewaybill', ewaybillController.getEWayBills);
-app.post('/api/ewaybill/upload', upload.single('file'), ewaybillController.uploadExcel);
-app.get('/api/ewaybill/export-json', ewaybillController.exportJson);
+// E-Way Bill Integration API
+apiRouter.get('/ewaybill/status', ewaybillController.getStatuses);
+apiRouter.post('/ewaybill/generate', ewaybillController.generateEWayBill);
+apiRouter.post('/ewaybill/bulk-generate', ewaybillController.bulkGenerate);
+apiRouter.post('/ewaybill/extend-validity', ewaybillController.extendValidity);
+apiRouter.post('/ewaybill/cancel', ewaybillController.cancelEWayBill);
 
-// Master Registries API (Full CRUD for All Sub-Masters & Route Schedules)
-app.get('/api/masters/warehouses', masterController.getWarehouses);
-app.post('/api/masters/warehouses', masterController.createWarehouse);
-app.put('/api/masters/warehouses/:id', masterController.updateWarehouse);
-app.delete('/api/masters/warehouses/:id', masterController.deleteWarehouse);
+// Master Registries API
+apiRouter.get('/parties', partyController.getParties);
+apiRouter.post('/parties', partyController.createParty);
+apiRouter.put('/parties/:id', partyController.updateParty);
+apiRouter.delete('/parties/:id', partyController.deleteParty);
 
-app.get('/api/masters/routes', masterController.getRoutes);
-app.post('/api/masters/routes', masterController.createRoute);
-app.put('/api/masters/routes/:id', masterController.updateRoute);
-app.delete('/api/masters/routes/:id', masterController.deleteRoute);
+apiRouter.get('/masters/warehouses', masterController.getWarehouses);
+apiRouter.post('/masters/warehouses', masterController.createWarehouse);
+apiRouter.put('/masters/warehouses/:id', masterController.updateWarehouse);
+apiRouter.delete('/masters/warehouses/:id', masterController.deleteWarehouse);
 
-// Route Schedules Sub-Master API
-app.get('/api/masters/routes/:routeId/schedules', masterController.getRouteSchedules);
-app.post('/api/masters/routes/:routeId/schedules', masterController.createRouteSchedule);
-app.post('/api/masters/routes/schedules', masterController.createRouteSchedule);
-app.put('/api/masters/routes/:routeId/schedules/:scheduleId', masterController.updateRouteSchedule);
-app.put('/api/masters/routes/schedules/:scheduleId', masterController.updateRouteSchedule);
-app.delete('/api/masters/routes/:routeId/schedules/:scheduleId', masterController.deleteRouteSchedule);
-app.delete('/api/masters/routes/schedules/:scheduleId', masterController.deleteRouteSchedule);
+apiRouter.get('/masters/workers', masterController.getWorkers);
+apiRouter.post('/masters/workers', masterController.createWorker);
+apiRouter.put('/masters/workers/:id', masterController.updateWorker);
+apiRouter.delete('/masters/workers/:id', masterController.deleteWorker);
 
-app.get('/api/masters/workers', masterController.getWorkers);
-app.post('/api/masters/workers', masterController.createWorker);
-app.put('/api/masters/workers/:id', masterController.updateWorker);
-app.delete('/api/masters/workers/:id', masterController.deleteWorker);
+apiRouter.get('/masters/routes', masterController.getRoutes);
+apiRouter.post('/masters/routes', masterController.createRoute);
+apiRouter.put('/masters/routes/:id', masterController.updateRoute);
+apiRouter.delete('/masters/routes/:id', masterController.deleteRoute);
+apiRouter.post('/masters/routes/:id/schedules', masterController.saveRouteSchedules);
 
-app.get('/api/masters/salesmen', masterController.getSalesmen);
-app.post('/api/masters/salesmen', masterController.createSalesman);
-app.put('/api/masters/salesmen/:id', masterController.updateSalesman);
-app.delete('/api/masters/salesmen/:id', masterController.deleteSalesman);
+apiRouter.get('/masters/salesmen', masterController.getSalesmen);
+apiRouter.post('/masters/salesmen', masterController.createSalesman);
+apiRouter.put('/masters/salesmen/:id', masterController.updateSalesman);
+apiRouter.delete('/masters/salesmen/:id', masterController.deleteSalesman);
 
-app.get('/api/masters/drivers', masterController.getDrivers);
-app.post('/api/masters/drivers', masterController.createDriver);
-app.put('/api/masters/drivers/:id', masterController.updateDriver);
-app.delete('/api/masters/drivers/:id', masterController.deleteDriver);
+apiRouter.get('/masters/drivers', masterController.getDrivers);
+apiRouter.post('/masters/drivers', masterController.createDriver);
+apiRouter.put('/masters/drivers/:id', masterController.updateDriver);
+apiRouter.delete('/masters/drivers/:id', masterController.deleteDriver);
 
-app.get('/api/masters/vehicles', masterController.getVehicles);
-app.post('/api/masters/vehicles', masterController.createVehicle);
-app.put('/api/masters/vehicles/:id', masterController.updateVehicle);
-app.delete('/api/masters/vehicles/:id', masterController.deleteVehicle);
+apiRouter.get('/masters/vehicles', masterController.getVehicles);
+apiRouter.post('/masters/vehicles', masterController.createVehicle);
+apiRouter.put('/masters/vehicles/:id', masterController.updateVehicle);
+apiRouter.delete('/masters/vehicles/:id', masterController.deleteVehicle);
 
-app.get('/api/masters/users', masterController.getUsers);
-app.post('/api/masters/users', masterController.createUser);
-app.put('/api/masters/users/:id', masterController.updateUser);
-app.delete('/api/masters/users/:id', masterController.deleteUser);
+apiRouter.get('/masters/users', masterController.getUsers);
+apiRouter.post('/masters/users', masterController.createUser);
+apiRouter.put('/masters/users/:id', masterController.updateUser);
+apiRouter.delete('/masters/users/:id', masterController.deleteUser);
 
 // Bulk Import
-app.post('/api/import/upload', upload.single('file'), importController.importExcel);
+apiRouter.post('/import/upload', upload.single('file'), importController.importExcel);
 
 // Leaderboard, Audit Logs & Reports
-app.get('/api/leaderboard', leaderboardController.getLeaderboard);
-app.get('/api/reports/lifecycle', reportController.getEndToEndLifecycleReport);
-app.get('/api/reports/detailed-lifecycle', reportController.getGranularAuditReport);
-app.get('/api/audit-logs', auditLogController.getAuditLogs);
-app.get('/api/reports/dispatch', reportController.getDispatchReport);
-app.get('/api/reports/billing', reportController.getBillingReport);
+apiRouter.get('/leaderboard', leaderboardController.getLeaderboard);
+apiRouter.get('/reports/lifecycle', reportController.getEndToEndLifecycleReport);
+apiRouter.get('/reports/detailed-lifecycle', reportController.getGranularAuditReport);
+apiRouter.get('/audit-logs', auditLogController.getAuditLogs);
+apiRouter.get('/reports/dispatch', reportController.getDispatchReport);
+apiRouter.get('/reports/billing', reportController.getBillingReport);
 
 // Live Tracking
-app.get('/api/tracking/active', trackingController.getActiveTracking);
-app.post('/api/tracking/update-location', trackingController.updateLocation);
+apiRouter.get('/tracking/active', trackingController.getActiveTracking);
+apiRouter.post('/tracking/update-location', trackingController.updateLocation);
 
 // Mobile Driver App Routes
-app.get('/api/mobile/dispatches', mobileApiController.getAssignedDispatches);
+apiRouter.get('/mobile/dispatches', mobileApiController.getAssignedDispatches);
 
 // System Settings & 1-Click Database Auto-Sync
-app.get('/api/system/config', systemSettingsController.getSystemConfig);
-app.post('/api/system/config', systemSettingsController.updateSystemConfig);
-app.post('/api/system/test-db', systemSettingsController.testDatabaseConnection);
-app.post('/api/system/sync-db', systemSettingsController.autoSyncDatabase);
+apiRouter.get('/system/config', systemSettingsController.getSystemConfig);
+apiRouter.post('/system/config', systemSettingsController.updateSystemConfig);
+apiRouter.post('/system/test-db', systemSettingsController.testDatabaseConnection);
+apiRouter.post('/system/sync-db', systemSettingsController.autoSyncDatabase);
+
+// Mount API on all possible prefixes
+app.use('/api', apiRouter);
+app.use('/TheSSBuddyWMS/api', apiRouter);
 
 // Socket.io Realtime Events
 io.on('connection', (socket) => {
