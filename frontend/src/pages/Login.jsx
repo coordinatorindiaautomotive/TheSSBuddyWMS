@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Truck, Lock, User, ArrowRight, Shield } from 'lucide-react';
+import { Lock, User, ArrowRight } from 'lucide-react';
 import thessbuddyLogo from '/thessbuddy_logo.png?url';
 
 export default function Login() {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -24,11 +24,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const setQuickCreds = (u, p) => {
-    setUsername(u);
-    setPassword(p);
   };
 
   return (
@@ -80,7 +75,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-[#004c8f] hover:bg-[#003a6d] text-white font-bold text-sm tracking-wide shadow-md flex items-center justify-center gap-2 transition-all mt-6"
+            className="w-full py-3 rounded-xl bg-[#004c8f] hover:bg-[#003a6d] text-white font-bold text-sm tracking-wide shadow-md flex items-center justify-center gap-2 transition-all mt-6 cursor-pointer"
           >
             {loading ? 'Authenticating...' : (
               <>
@@ -91,26 +86,7 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Demo Quick Logins */}
-        <div className="mt-8 pt-6 border-t border-slate-200 text-center">
-          <p className="text-[10px] text-slate-500 mb-3 font-bold uppercase tracking-wider">Quick Demo Presets</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => setQuickCreds('admin', 'admin123')}
-              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-xs font-bold text-[#004c8f] border border-slate-200"
-            >
-              Super Admin
-            </button>
-            <button
-              onClick={() => setQuickCreds('dispatcher1', 'admin123')}
-              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-xs font-bold text-[#004c8f] border border-slate-200"
-            >
-              Dispatcher
-            </button>
-          </div>
-        </div>
-
-        <div className="text-center mt-6 text-[10px] text-slate-400 font-semibold">
+        <div className="text-center mt-8 pt-6 border-t border-slate-200 text-[10px] text-slate-400 font-semibold">
           Designed By Shailendra Singh
         </div>
       </div>
