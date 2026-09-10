@@ -4,7 +4,7 @@ async function getParties(req, res) {
   try {
     const whId = req.activeWarehouseId;
     const parties = await dbAsync.all(`
-      SELECT p.*, rm.route_name
+      SELECT p.*, COALESCE(rm.route_name, p.route_name, p.address) as route_name
       FROM parties p
       LEFT JOIN route_masters rm ON p.route_id = rm.id
       WHERE p.warehouse_id = ?
