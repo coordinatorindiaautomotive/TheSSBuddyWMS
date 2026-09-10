@@ -42,6 +42,16 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Normalize subpath prefix for cPanel deployments (e.g. /TheSSBuddyWMS/api -> /api)
+app.use((req, res, next) => {
+  if (req.url.startsWith('/TheSSBuddyWMS/')) {
+    req.url = req.url.substring('/TheSSBuddyWMS'.length);
+  } else if (req.url === '/TheSSBuddyWMS') {
+    req.url = '/';
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   req.io = io;
   next();
