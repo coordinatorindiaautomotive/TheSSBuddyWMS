@@ -1736,14 +1736,9 @@ export default function MasterRegistries() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                          Employee Code / ID <span className="text-red-500 font-bold ml-0.5">*</span>
-                        </label>
-                        <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-200/70 px-2 py-0.5 rounded-md">
-                          🔒 Auto-Generated (Read-Only)
-                        </span>
-                      </div>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Employee Code / ID <span className="text-red-500 font-bold ml-0.5">*</span>
+                      </label>
                       <input 
                         value={f('employee_code') || (editingItem ? '' : getNextWorkerCode())} 
                         readOnly 
@@ -1869,14 +1864,9 @@ export default function MasterRegistries() {
                   {/* Route Basic Details */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                          Route Code <span className="text-red-500 font-bold ml-0.5">*</span>
-                        </label>
-                        <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-200/70 px-2 py-0.5 rounded-md">
-                          🔒 Auto-Generated (Read-Only)
-                        </span>
-                      </div>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Route Code <span className="text-red-500 font-bold ml-0.5">*</span>
+                      </label>
                       <input 
                         value={f('route_code') || (editingItem ? '' : getNextRouteCode())} 
                         readOnly 
