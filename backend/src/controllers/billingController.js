@@ -6,11 +6,11 @@ async function getBillings(req, res) {
     const whId = req.activeWarehouseId;
     const billings = await dbAsync.all(`
       SELECT b.*, pt.ticket_no, pt.customer_order_no, pt.party_code, pt.party_name, pt.route, pt.salesman, pt.qty_in_pick_ticket, pt.status as ticket_status,
-             ch.name as checker_name, hl.name as helper_name
+             COALESCE(ch.name, b.checker_id) as checker_name, COALESCE(hl.name, b.helper_id) as helper_name
       FROM billings b
       JOIN pick_tickets pt ON b.pick_ticket_id = pt.id
-      LEFT JOIN picker_checker_helpers ch ON b.checker_id = ch.id OR b.checker_id = ch.employee_code
-      LEFT JOIN picker_checker_helpers hl ON b.helper_id = hl.id OR b.helper_id = hl.employee_code
+      LEFT JOIN picker_checker_helpers ch ON b.checker_id = ch.id OR b.checker_id = ch.employee_code OR LOWER(b.checker_id) = LOWER(ch.name)
+      LEFT JOIN picker_checker_helpers hl ON b.helper_id = hl.id OR b.helper_id = hl.employee_code OR LOWER(b.helper_id) = LOWER(hl.name)
       WHERE b.warehouse_id = ?
       ORDER BY b.created_at DESC
     `, [whId]);

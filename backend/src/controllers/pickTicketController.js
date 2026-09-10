@@ -5,9 +5,9 @@ async function getPickTickets(req, res) {
   try {
     const whId = req.activeWarehouseId;
     const tickets = await dbAsync.all(`
-      SELECT pt.*, pkh.name as picker_name, pkh.employee_code as picker_employee_code
+      SELECT pt.*, COALESCE(pkh.name, pt.picker_id) as picker_name, pkh.employee_code as picker_employee_code
       FROM pick_tickets pt
-      LEFT JOIN picker_checker_helpers pkh ON pt.picker_id = pkh.id OR pt.picker_id = pkh.employee_code
+      LEFT JOIN picker_checker_helpers pkh ON pt.picker_id = pkh.id OR pt.picker_id = pkh.employee_code OR LOWER(pt.picker_id) = LOWER(pkh.name)
       WHERE pt.warehouse_id = ?
       ORDER BY pt.created_at DESC
     `, [whId]);
