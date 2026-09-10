@@ -42,8 +42,8 @@ export default function RouteBillStatus() {
 
   const setDefaultDates = () => {
     const today = new Date();
-    const fifteenDaysAgo = new Date();
-    fifteenDaysAgo.setDate(today.getDate() - 15);
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(today.getDate() - 3);
 
     const formatDate = (d) => {
       const month = '' + (d.getMonth() + 1);
@@ -52,7 +52,7 @@ export default function RouteBillStatus() {
       return [year, month.padStart(2, '0'), day.padStart(2, '0')].join('-');
     };
 
-    setFromDate(formatDate(fifteenDaysAgo));
+    setFromDate(formatDate(threeDaysAgo));
     setToDate(formatDate(today));
   };
 
