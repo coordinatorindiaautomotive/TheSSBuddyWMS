@@ -75,6 +75,11 @@ async function connectMySQL(cfg) {
 }
 
 function connectSQLite(cfg) {
+  if (!sqlite3) {
+    console.warn('⚠️ SQLite3 driver not loaded (native addon missing). Running in Memory Fallback mode until MySQL is configured in UI.');
+    isConnected = false;
+    return;
+  }
   const dbPath = path.resolve(__dirname, '../../', cfg.sqlite.dbPath || 'data/wms_enterprise.db');
   const dataDir = path.dirname(dbPath);
   if (!fs.existsSync(dataDir)) {
@@ -190,13 +195,15 @@ async function initDatabase() {
     connectSQLite(cfg);
   }
 
-  if (activeDbType === 'MYSQL') {
+  if (activeDbType === 'MYSQL' && isConnected) {
     await initMySQLSchema();
-  } else {
+    await ensureDefaultSeed();
+  } else if (activeDbType === 'SQLITE' && isConnected) {
     await initSQLiteSchema();
+    await ensureDefaultSeed();
+  } else {
+    console.log('ℹ️ Server waiting for MySQL credentials to be configured via System Configuration / UI.');
   }
-
-  await ensureDefaultSeed();
 }
 
 async function initMySQLSchema() {
