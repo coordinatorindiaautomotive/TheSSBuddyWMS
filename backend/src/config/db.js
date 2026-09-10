@@ -1,5 +1,10 @@
 const mysql = require('mysql2/promise');
-const sqlite3 = require('sqlite3').verbose();
+let sqlite3 = null;
+try {
+  sqlite3 = require('sqlite3').verbose();
+} catch (e) {
+  // SQLite native bindings not installed/needed when running on MySQL in cPanel
+}
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');

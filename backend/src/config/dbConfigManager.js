@@ -1,9 +1,15 @@
 const fs = require('fs');
 const path = require('path');
-const mssql = require('mssql');
-const sqlite3 = require('sqlite3').verbose();
-const { Client: PgClient } = require('pg');
 const mysql = require('mysql2/promise');
+
+let mssql = null;
+try { mssql = require('mssql'); } catch (e) {}
+
+let sqlite3 = null;
+try { sqlite3 = require('sqlite3').verbose(); } catch (e) {}
+
+let PgClient = null;
+try { PgClient = require('pg').Client; } catch (e) {}
 
 const configPath = path.join(__dirname, '../../config.json');
 
