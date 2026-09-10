@@ -211,21 +211,35 @@ for (const p of possibleDistPaths) {
 if (activeDistPath) {
   console.log(`📦 Serving Frontend Static Assets from: ${activeDistPath}`);
   
-  // Explicitly serve assets directory first
+  // Explicitly handle all assets requests directly
   const assetsDir = path.join(activeDistPath, 'assets');
-  if (fs.existsSync(assetsDir)) {
-    app.use('/assets', express.static(assetsDir, { maxAge: '1d' }));
-    app.use('/TheSSBuddyWMS/assets', express.static(assetsDir, { maxAge: '1d' }));
-  }
+  
+  app.get(['/assets/:file', '/TheSSBuddyWMS/assets/:file'], (req, res) => {
+    const filePath = path.join(assetsDir, req.params.file);
+    if (fs.existsSync(filePath)) {
+      if (filePath.endsWith('.js')) {
+        res.type('application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.type('text/css');
+      }
+      return res.sendFile(filePath);
+    }
+    res.status(404).send('Asset not found');
+  });
 
-  app.use('/TheSSBuddyWMS', express.static(activeDistPath, { index: 'index.html' }));
-  app.use(express.static(activeDistPath, { index: 'index.html' }));
+  app.use('/assets', express.static(assetsDir));
+  app.use('/TheSSBuddyWMS/assets', express.static(assetsDir));
+  app.use('/TheSSBuddyWMS', express.static(activeDistPath));
+  app.use(express.static(activeDistPath));
 
-  // SPA fallback for non-API and non-asset requests
-  app.use((req, res, next) => {
-    if (req.method !== 'GET') return next();
-    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
-    if (req.path.includes('/assets/') || req.path.includes('.')) return next();
+  // SPA fallback for all GET navigation routes
+  app.get(['/', '/TheSSBuddyWMS', '/TheSSBuddyWMS/*'], (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.includes('/assets/')) return next();
+    res.sendFile(path.join(activeDistPath, 'index.html'));
+  });
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.includes('/assets/')) return next();
     res.sendFile(path.join(activeDistPath, 'index.html'));
   });
 }
