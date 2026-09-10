@@ -26,10 +26,12 @@ import {
 } from 'lucide-react';
 
 export default function Layout({ children }) {
-  const { user, activeWarehouse, warehouses, switchWarehouse, logout } = useAuth();
+  const { user, activeWarehouse, warehouses, switchWarehouse, logout, isSuperAdmin } = useAuth();
   const { notifications } = useSocket();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const isSuper = isSuperAdmin || user?.role_name === 'Super Admin' || user?.is_super_admin;
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -54,7 +56,7 @@ export default function Layout({ children }) {
     { label: 'Billing Entry', path: '/billing', icon: Receipt, iconColor: 'text-emerald-600', badgeBg: 'bg-emerald-50' },
     { label: 'Route Bill Status', path: '/route-bill-status', icon: Route, iconColor: 'text-purple-600', badgeBg: 'bg-purple-50' },
     { label: 'E-Way Bill System', path: '/ewaybill', icon: FileSpreadsheet, iconColor: 'text-teal-600', badgeBg: 'bg-teal-50' },
-    { label: 'CSV Excel Import', path: '/import', icon: Upload, iconColor: 'text-pink-600', badgeBg: 'bg-pink-50' }
+    ...(isSuper ? [{ label: 'CSV Excel Import', path: '/import', icon: Upload, iconColor: 'text-pink-600', badgeBg: 'bg-pink-50' }] : [])
   ];
 
   const mastersNav = [

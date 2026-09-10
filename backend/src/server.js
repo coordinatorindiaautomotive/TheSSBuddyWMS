@@ -163,7 +163,7 @@ apiRouter.put('/masters/users/:id', requireSuperAdmin, masterController.updateUs
 apiRouter.delete('/masters/users/:id', requireSuperAdmin, masterController.deleteUser);
 
 // Bulk Import
-apiRouter.post('/import/upload', upload.single('file'), importController.importExcel);
+apiRouter.post('/import/upload', requireSuperAdmin, upload.single('file'), importController.importExcel);
 
 // Leaderboard, Audit Logs & Reports
 apiRouter.get('/leaderboard', leaderboardController.getLeaderboard);

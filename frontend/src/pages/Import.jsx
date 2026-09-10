@@ -1,13 +1,31 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Upload, FileSpreadsheet, CheckCircle2, Download, HelpCircle } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle2, Download, HelpCircle, ShieldAlert } from 'lucide-react';
 
 export default function Import() {
+  const { user, isSuperAdmin } = useAuth();
   const toast = useToast();
   const [entityType, setEntityType] = useState('PickTickets');
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  const isSuper = isSuperAdmin || user?.role_name === 'Super Admin' || user?.is_super_admin;
+
+  if (!isSuper) {
+    return (
+      <div className="max-w-xl mx-auto my-12 p-8 bg-white rounded-3xl border border-red-200 shadow-xl text-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto shadow-inner">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-lg font-black text-slate-900">Access Restricted</h2>
+        <p className="text-xs text-slate-500 font-medium leading-relaxed">
+          The CSV / Excel Bulk Import tool is restricted exclusively to <strong>Super Administrator</strong> accounts. Please contact your system administrator if you require data ingestion access.
+        </p>
+      </div>
+    );
+  }
 
   const handleImport = async (e) => {
     e.preventDefault();
