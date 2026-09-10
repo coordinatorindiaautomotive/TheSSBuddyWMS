@@ -119,11 +119,18 @@ async function me(req, res) {
       };
     }
 
+    const isSuperAdmin = ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user.role) || (user.username && user.username.toLowerCase() === 'admin');
+
     let warehouse = null;
     let warehouses = [];
     try {
-      warehouse = await dbAsync.get('SELECT * FROM warehouses WHERE id = ?', [req.activeWarehouseId]);
-      warehouses = await dbAsync.all('SELECT * FROM warehouses WHERE is_active = 1');
+      const activeWhId = isSuperAdmin ? (req.activeWarehouseId || user.warehouse_id || 1) : (user.warehouse_id || 1);
+      warehouse = await dbAsync.get('SELECT * FROM warehouses WHERE id = ?', [activeWhId]);
+      if (isSuperAdmin) {
+        warehouses = await dbAsync.all('SELECT * FROM warehouses WHERE is_active = 1 ORDER BY warehouse_name ASC');
+      } else {
+        warehouses = warehouse ? [warehouse] : [];
+      }
     } catch (e) {}
 
     if (!warehouse) {
@@ -134,7 +141,8 @@ async function me(req, res) {
     return res.json({
       user: { ...user, warehouse },
       activeWarehouse: warehouse,
-      warehouses
+      warehouses,
+      isSuperAdmin
     });
   } catch (err) {
     console.error('Fetch me error:', err);
@@ -144,6 +152,11 @@ async function me(req, res) {
 
 async function switchWarehouse(req, res) {
   try {
+    const isSuperAdmin = ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(req.user?.role) || (req.user?.username && req.user?.username.toLowerCase() === 'admin');
+    if (!isSuperAdmin) {
+      return res.status(403).json({ message: 'Permission denied: Only Super Admin can switch warehouse domain.' });
+    }
+
     const { warehouse_id } = req.body;
     const warehouse = await dbAsync.get('SELECT * FROM warehouses WHERE id = ?', [warehouse_id]);
     if (!warehouse) {

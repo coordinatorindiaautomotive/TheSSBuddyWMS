@@ -7,7 +7,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { initDatabase, dbAsync } = require('./config/db');
-const { authenticate } = require('./middleware/authMiddleware');
+const { authenticate, requireSuperAdmin } = require('./middleware/authMiddleware');
 const { startDispatchMonitor } = require('./services/dispatchMonitorService');
 
 // Controllers
@@ -124,9 +124,9 @@ apiRouter.post('/ewaybill/upload', upload.single('file'), ewaybillController.upl
 apiRouter.get('/ewaybill/export-json', ewaybillController.exportJson);
 
 apiRouter.get('/masters/warehouses', masterController.getWarehouses);
-apiRouter.post('/masters/warehouses', masterController.createWarehouse);
-apiRouter.put('/masters/warehouses/:id', masterController.updateWarehouse);
-apiRouter.delete('/masters/warehouses/:id', masterController.deleteWarehouse);
+apiRouter.post('/masters/warehouses', requireSuperAdmin, masterController.createWarehouse);
+apiRouter.put('/masters/warehouses/:id', requireSuperAdmin, masterController.updateWarehouse);
+apiRouter.delete('/masters/warehouses/:id', requireSuperAdmin, masterController.deleteWarehouse);
 
 apiRouter.get('/masters/workers', masterController.getWorkers);
 apiRouter.post('/masters/workers', masterController.createWorker);
@@ -157,10 +157,10 @@ apiRouter.post('/masters/vehicles', masterController.createVehicle);
 apiRouter.put('/masters/vehicles/:id', masterController.updateVehicle);
 apiRouter.delete('/masters/vehicles/:id', masterController.deleteVehicle);
 
-apiRouter.get('/masters/users', masterController.getUsers);
-apiRouter.post('/masters/users', masterController.createUser);
-apiRouter.put('/masters/users/:id', masterController.updateUser);
-apiRouter.delete('/masters/users/:id', masterController.deleteUser);
+apiRouter.get('/masters/users', requireSuperAdmin, masterController.getUsers);
+apiRouter.post('/masters/users', requireSuperAdmin, masterController.createUser);
+apiRouter.put('/masters/users/:id', requireSuperAdmin, masterController.updateUser);
+apiRouter.delete('/masters/users/:id', requireSuperAdmin, masterController.deleteUser);
 
 // Bulk Import
 apiRouter.post('/import/upload', upload.single('file'), importController.importExcel);
@@ -180,11 +180,11 @@ apiRouter.post('/tracking/update-location', trackingController.updateLocation);
 // Mobile Driver App Routes
 apiRouter.get('/mobile/dispatches', mobileApiController.getAssignedDispatches);
 
-// System Settings & 1-Click Database Auto-Sync
-apiRouter.get('/system/config', systemSettingsController.getSystemConfig);
-apiRouter.post('/system/config', systemSettingsController.updateSystemConfig);
-apiRouter.post('/system/test-db', systemSettingsController.testDatabaseConnection);
-apiRouter.post('/system/sync-db', systemSettingsController.autoSyncDatabase);
+// System Settings & 1-Click Database Auto-Sync (Super Admin Only)
+apiRouter.get('/system/config', requireSuperAdmin, systemSettingsController.getSystemConfig);
+apiRouter.post('/system/config', requireSuperAdmin, systemSettingsController.updateSystemConfig);
+apiRouter.post('/system/test-db', requireSuperAdmin, systemSettingsController.testDatabaseConnection);
+apiRouter.post('/system/sync-db', requireSuperAdmin, systemSettingsController.autoSyncDatabase);
 
 // Mount API on all possible prefixes
 app.use('/api', apiRouter);

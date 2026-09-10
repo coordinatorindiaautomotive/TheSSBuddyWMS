@@ -53,8 +53,8 @@ async function deleteWarehouse(req, res) {
 async function getRoutes(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    const routes = await dbAsync.all('SELECT * FROM route_masters WHERE warehouse_id = ? OR warehouse_id IS NULL ORDER BY route_name ASC', [whId]);
-    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE warehouse_id = ? OR warehouse_id IS NULL ORDER BY priority_order ASC, dispatch_time ASC', [whId]);
+    const routes = await dbAsync.all('SELECT * FROM route_masters WHERE warehouse_id = ? ORDER BY route_name ASC', [whId]);
+    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE warehouse_id = ? ORDER BY priority_order ASC, dispatch_time ASC', [whId]);
     
     const routesWithSchedules = routes.map(r => {
       const rScheds = schedules.filter(s => s.route_id === r.id);
@@ -410,7 +410,16 @@ async function deleteWorker(req, res) {
 // 4. Salesmen CRUD
 async function getSalesmen(req, res) {
   try {
-    const salesmen = await dbAsync.all('SELECT * FROM salesmen ORDER BY name ASC');
+    const whId = req.activeWarehouseId || 1;
+    let salesmen = [];
+    try {
+      salesmen = await dbAsync.all('SELECT id, salesman_code, salesman_name as name, salesman_name, territory FROM salesman_masters WHERE warehouse_id = ? ORDER BY salesman_name ASC', [whId]);
+      if (!salesmen || salesmen.length === 0) {
+        salesmen = await dbAsync.all('SELECT * FROM salesmen WHERE warehouse_id = ? ORDER BY name ASC', [whId]);
+      }
+    } catch (e) {
+      salesmen = await dbAsync.all('SELECT * FROM salesmen WHERE warehouse_id = ? ORDER BY name ASC', [whId]);
+    }
     return res.json(salesmen);
   } catch (err) {
     return res.status(500).json({ message: 'Error fetching salesmen.' });
@@ -419,12 +428,13 @@ async function getSalesmen(req, res) {
 
 async function createSalesman(req, res) {
   try {
+    const whId = req.activeWarehouseId || 1;
     const { salesman_code, name, phone, territory } = req.body;
     const code = salesman_code || `SLS-${Math.floor(100 + Math.random() * 900)}`;
     const result = await dbAsync.run(`
-      INSERT INTO salesmen (salesman_code, name, phone, territory)
-      VALUES (?, ?, ?, ?)
-    `, [code, name, phone || '', territory || 'General Territory']);
+      INSERT INTO salesmen (salesman_code, name, phone, territory, warehouse_id)
+      VALUES (?, ?, ?, ?, ?)
+    `, [code, name, phone || '', territory || 'General Territory', whId]);
     return res.json({ message: 'Salesman registered successfully!', id: result.id });
   } catch (err) {
     return res.status(500).json({ message: 'Error creating salesman.' });

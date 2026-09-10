@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import {
   Store, MapPin, UserCheck, Briefcase, Truck, Warehouse as WarehouseIcon,
   Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, ToggleLeft, ToggleRight,
@@ -39,6 +40,21 @@ const TD = ({ children, className = '' }) => (
 
 export default function MasterRegistries() {
   const toast = useToast();
+  const { user } = useAuth();
+  const isSuperAdmin = Boolean(
+    user && (
+      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user.role) ||
+      (user.username && user.username.toLowerCase() === 'admin')
+    )
+  );
+
+  const visibleTabs = TABS.filter(tab => {
+    if (['warehouse', 'user', 'system'].includes(tab.id)) {
+      return isSuperAdmin;
+    }
+    return true;
+  });
+
   const [activeTab, setActiveTab] = useState('party');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -100,9 +116,17 @@ export default function MasterRegistries() {
   const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
+    if (!isSuperAdmin && ['warehouse', 'user', 'system'].includes(activeTab)) {
+      setActiveTab('party');
+    }
+  }, [isSuperAdmin, activeTab]);
+
+  useEffect(() => {
     fetchAll();
-    fetchSysConfig();
-  }, []);
+    if (isSuperAdmin) {
+      fetchSysConfig();
+    }
+  }, [isSuperAdmin]);
 
   const fetchSysConfig = async () => {
     try {
@@ -155,29 +179,39 @@ export default function MasterRegistries() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const results = await Promise.allSettled([
+      const promises = [
         axios.get('/api/parties'),
         axios.get('/api/masters/workers'),
         axios.get('/api/masters/drivers'),
         axios.get('/api/masters/vehicles'),
         axios.get('/api/masters/routes'),
         axios.get('/api/masters/salesmen'),
-        axios.get('/api/masters/warehouses'),
-        axios.get('/api/masters/users'),
-      ]);
+      ];
 
-      const [pR, wR, dR, vR, rR, sR, whR, uR] = results;
+      if (isSuperAdmin) {
+        promises.push(axios.get('/api/masters/warehouses'));
+        promises.push(axios.get('/api/masters/users'));
+      }
 
-      setParties(pR.status === 'fulfilled' && Array.isArray(pR.value?.data) ? pR.value.data : []);
-      setWorkers(wR.status === 'fulfilled' && Array.isArray(wR.value?.data) ? wR.value.data : []);
-      setDrivers(dR.status === 'fulfilled' && Array.isArray(dR.value?.data) ? dR.value.data : []);
-      setVehicles(vR.status === 'fulfilled' && Array.isArray(vR.value?.data) ? vR.value.data : []);
-      setRoutes(rR.status === 'fulfilled' && Array.isArray(rR.value?.data) ? rR.value.data : []);
-      setSalesmen(sR.status === 'fulfilled' && Array.isArray(sR.value?.data) ? sR.value.data : []);
-      setWarehouses(whR.status === 'fulfilled' && Array.isArray(whR.value?.data) ? whR.value.data : []);
-      setUsers(uR.status === 'fulfilled' && Array.isArray(uR.value?.data) ? uR.value.data : []);
+      const results = await Promise.allSettled(promises);
+
+      const [pR, wR, dR, vR, rR, sR] = results;
+
+      if (pR.status === 'fulfilled') setParties(Array.isArray(pR.value.data) ? pR.value.data : []);
+      if (wR.status === 'fulfilled') setWorkers(Array.isArray(wR.value.data) ? wR.value.data : []);
+      if (dR.status === 'fulfilled') setDrivers(Array.isArray(dR.value.data) ? dR.value.data : []);
+      if (vR.status === 'fulfilled') setVehicles(Array.isArray(vR.value.data) ? vR.value.data : []);
+      if (rR.status === 'fulfilled') setRoutes(Array.isArray(rR.value.data) ? rR.value.data : []);
+      if (sR.status === 'fulfilled') setSalesmen(Array.isArray(sR.value.data) ? sR.value.data : []);
+
+      if (isSuperAdmin) {
+        const whR = results[6];
+        const uR = results[7];
+        if (whR && whR.status === 'fulfilled') setWarehouses(Array.isArray(whR.value.data) ? whR.value.data : []);
+        if (uR && uR.status === 'fulfilled') setUsers(Array.isArray(uR.value.data) ? uR.value.data : []);
+      }
     } catch (e) {
-      console.error('Error fetching master data:', e);
+      toast.error('Failed to load some master records.');
     } finally {
       setLoading(false);
     }
@@ -717,7 +751,7 @@ export default function MasterRegistries() {
 
       {/* ── Navigation Tabs ── */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full bg-white border border-slate-200 rounded-2xl p-2 shadow-sm">
-        {TABS.map(tab => {
+        {visibleTabs.map(tab => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
           return (

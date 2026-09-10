@@ -50,12 +50,22 @@ export function AuthProvider({ children }) {
     return userData;
   };
 
+  const isSuperAdmin = Boolean(
+    user && (
+      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user.role) ||
+      (user.username && user.username.toLowerCase() === 'admin')
+    )
+  );
+
   const switchWarehouse = async (warehouseId) => {
+    if (!isSuperAdmin) return;
     const wh = warehouses.find(w => w.id === parseInt(warehouseId, 10));
     if (wh) {
       setActiveWarehouse(wh);
       axios.defaults.headers.common['x-warehouse-id'] = wh.id;
-      await axios.post('/api/auth/switch-warehouse', { warehouse_id: wh.id });
+      try {
+        await axios.post('/api/auth/switch-warehouse', { warehouse_id: wh.id });
+      } catch (e) {}
     }
   };
 
@@ -72,6 +82,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user,
       token,
+      isSuperAdmin,
       activeWarehouse,
       warehouses,
       loading,

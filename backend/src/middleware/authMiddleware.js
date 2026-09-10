@@ -20,22 +20,33 @@ function authenticate(req, res, next) {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
 
-    // Role-Based Warehouse Isolation Context
-    const isAdmin = ['Admin', 'Super Admin', 'Warehouse Admin', 'ADMIN', 'SUPER_ADMIN', 'WAREHOUSE_ADMIN'].includes(decoded.role);
+    // Check if user is Super Admin
+    const isSuperAdmin = ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(decoded.role) || (decoded.username && decoded.username.toLowerCase() === 'admin');
     const headerWhId = req.headers['x-warehouse-id'];
 
-    if (isAdmin) {
-      // Admin roles can switch warehouse context via header or default to assigned warehouse
+    if (isSuperAdmin) {
+      // ONLY Super Admin can switch warehouse context via header or default to warehouse 1
       req.activeWarehouseId = headerWhId ? parseInt(headerWhId, 10) : (decoded.warehouse_id || 1);
     } else {
-      // Non-Admin staff (Picker, Checker, Helper, Operator) are STRICTLY isolated to their assigned warehouse_id
-      req.activeWarehouseId = decoded.warehouse_id || 1;
+      // All other roles (Warehouse Admin, Operator, Picker, Checker, Helper, Driver) are STRICTLY isolated to their assigned warehouse_id
+      req.activeWarehouseId = decoded.warehouse_id ? parseInt(decoded.warehouse_id, 10) : 1;
     }
 
     next();
   } catch (err) {
     return res.status(401).json({ message: 'Invalid or expired token.' });
   }
+}
+
+function requireSuperAdmin(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  const isSuperAdmin = ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(req.user.role) || (req.user.username && req.user.username.toLowerCase() === 'admin');
+  if (!isSuperAdmin) {
+    return res.status(403).json({ message: 'Forbidden: Super Admin privileges required.' });
+  }
+  next();
 }
 
 function authorizeRoles(...allowedRoles) {
@@ -53,5 +64,7 @@ function authorizeRoles(...allowedRoles) {
 module.exports = {
   JWT_SECRET,
   authenticate,
+  requireSuperAdmin,
   authorizeRoles
 };
+

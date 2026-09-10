@@ -282,11 +282,11 @@ export default function Layout({ children }) {
               </span>
             </div>
 
-            {/* Warehouse Switcher Dropdown in Header */}
-            <div className="flex items-center gap-1 sm:gap-2 bg-white/10 border border-white/20 rounded-xl px-2 sm:px-3 py-1.5 text-xs text-white max-w-[125px] sm:max-w-xs">
+            {/* Warehouse Switcher / Assigned Badge in Header */}
+            <div className="flex items-center gap-1 sm:gap-2 bg-white/10 border border-white/20 rounded-xl px-2 sm:px-3 py-1.5 text-xs text-white max-w-[150px] sm:max-w-xs">
               <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
               <span className="hidden sm:inline font-semibold text-slate-200 shrink-0">Warehouse:</span>
-              {['Admin', 'Super Admin', 'Warehouse Admin', 'ADMIN', 'SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'SuperAdmin'].includes(user?.role) ? (
+              {Boolean(user && (['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user?.role) || (user?.username && user?.username.toLowerCase() === 'admin')) && warehouses.length > 1) ? (
                 <select
                   value={activeWarehouse?.id || ''}
                   onChange={(e) => switchWarehouse(e.target.value)}
@@ -299,8 +299,8 @@ export default function Layout({ children }) {
                   ))}
                 </select>
               ) : (
-                <span className="font-extrabold text-cyan-200 font-mono truncate text-xs">
-                  {activeWarehouse?.warehouse_code || 'WH-01'}
+                <span className="font-extrabold text-cyan-200 truncate text-xs" title={`${activeWarehouse?.warehouse_name || 'Warehouse'} (${activeWarehouse?.warehouse_code || 'WH'})`}>
+                  {activeWarehouse?.warehouse_code || activeWarehouse?.warehouse_name || 'WH'}
                 </span>
               )}
             </div>
