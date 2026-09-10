@@ -56,6 +56,7 @@ export default function Import() {
                 onChange={(e) => setEntityType(e.target.value)}
                 className="input-enterprise text-xs font-semibold"
               >
+                <option value="FullReport">🌟 Full Pick-to-Delivery Master Report (Auto Routes, Salesmen, Parties, Tickets & Bills)</option>
                 <option value="PickTickets">Pick Tickets (.xlsx / .xls)</option>
                 <option value="Parties">Customer Parties (.xlsx / .xls)</option>
                 <option value="Drivers">Drivers Master (.xlsx / .xls)</option>
