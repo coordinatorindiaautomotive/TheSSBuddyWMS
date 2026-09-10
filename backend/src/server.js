@@ -191,12 +191,29 @@ io.on('connection', (socket) => {
 });
 
 // Serve Production Built Frontend Static Files
-const frontendDistPath = path.join(__dirname, '../../frontend/dist');
-if (fs.existsSync(frontendDistPath)) {
-  app.use(express.static(frontendDistPath));
+const possibleDistPaths = [
+  path.join(__dirname, '../../frontend/dist'),
+  path.join(__dirname, '../public'),
+  path.join(__dirname, '../../public'),
+  path.join(process.cwd(), 'frontend/dist'),
+  path.join(process.cwd(), 'public'),
+  process.cwd()
+];
+
+let activeDistPath = null;
+for (const p of possibleDistPaths) {
+  if (fs.existsSync(path.join(p, 'index.html')) && p !== path.join(__dirname, '..')) {
+    activeDistPath = p;
+    break;
+  }
+}
+
+if (activeDistPath) {
+  console.log(`📦 Serving Frontend Static Assets from: ${activeDistPath}`);
+  app.use(express.static(activeDistPath));
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next();
-    res.sendFile(path.join(frontendDistPath, 'index.html'));
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
+    res.sendFile(path.join(activeDistPath, 'index.html'));
   });
 }
 
