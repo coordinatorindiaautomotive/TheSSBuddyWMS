@@ -85,53 +85,43 @@ apiRouter.post('/pick-tickets', pickTicketController.createPickTicket);
 apiRouter.put('/pick-tickets/:id', pickTicketController.updatePickTicket);
 apiRouter.delete('/pick-tickets/:id', pickTicketController.deletePickTicket);
 
-// Billing & Invoicing API
-apiRouter.get('/billing/bills', billingController.getBills);
-apiRouter.get('/billing/suggest-next-no', billingController.suggestNextNo);
-apiRouter.get('/billing/pending-tickets', billingController.getPendingTickets);
-apiRouter.post('/billing/generate', billingController.generateBill);
-apiRouter.get('/billing/bills/:id', billingController.getBillById);
-apiRouter.put('/billing/bills/:id', billingController.updateBill);
-apiRouter.delete('/billing/bills/:id', billingController.deleteBill);
-apiRouter.post('/billing/bulk-approve', billingController.bulkApproveBills);
-apiRouter.post('/billing/cancel', billingController.cancelBill);
+// Billings API
+apiRouter.get('/billings', billingController.getBillings);
+apiRouter.get('/billings/pending-tickets', billingController.getPendingTickets);
+apiRouter.get('/billings/suggest-next-no', billingController.suggestNextBillNo);
+apiRouter.post('/billings', billingController.createBilling);
+apiRouter.put('/billings/:id', billingController.updateBilling);
+apiRouter.delete('/billings/:id', billingController.deleteBilling);
 
-// Route-Bill Status Matrix API
-apiRouter.get('/route-bill-status/matrix', dispatchPlanningController.getMatrix);
-
-// Dispatch Planning API
-apiRouter.get('/dispatch/available-bills', dispatchPlanningController.getAvailableBills);
-apiRouter.post('/dispatch/plan', dispatchPlanningController.createPlan);
-apiRouter.post('/dispatch/auto-plan', dispatchPlanningController.autoPlan);
-
-// Dispatch Execution API
-apiRouter.get('/dispatch', dispatchController.getDispatches);
-apiRouter.get('/dispatch/:id', dispatchController.getDispatchById);
-apiRouter.post('/dispatch/:id/update-stage', dispatchController.updateStage);
-apiRouter.post('/dispatch/:id/assign-staff', dispatchController.assignStaff);
-apiRouter.post('/dispatch/:id/mark-ready', dispatchController.markReady);
-apiRouter.post('/dispatch/:id/verify-driver', dispatchController.verifyDriver);
-apiRouter.post('/dispatch/:id/complete-loading', dispatchController.completeLoading);
-apiRouter.post('/dispatch/:id/out-for-delivery', dispatchController.outForDelivery);
-apiRouter.post('/dispatch/:id/complete-dispatch', dispatchController.completeDispatch);
-
-// Delivery Tracking & ePOD API
-apiRouter.get('/delivery/board', deliveryController.getDeliveryBoard);
-apiRouter.post('/delivery/:id/epod', upload.single('podPhoto'), deliveryController.submitEpod);
-apiRouter.post('/delivery/:id/mark-delivered', deliveryController.markDelivered);
-
-// E-Way Bill Integration API
-apiRouter.get('/ewaybill/status', ewaybillController.getStatuses);
-apiRouter.post('/ewaybill/generate', ewaybillController.generateEWayBill);
-apiRouter.post('/ewaybill/bulk-generate', ewaybillController.bulkGenerate);
-apiRouter.post('/ewaybill/extend-validity', ewaybillController.extendValidity);
-apiRouter.post('/ewaybill/cancel', ewaybillController.cancelEWayBill);
-
-// Master Registries API
+// Parties API
 apiRouter.get('/parties', partyController.getParties);
+apiRouter.get('/parties/code/:code', partyController.getPartyByCode);
 apiRouter.post('/parties', partyController.createParty);
 apiRouter.put('/parties/:id', partyController.updateParty);
 apiRouter.delete('/parties/:id', partyController.deleteParty);
+
+// Dispatch Planning & Operations Console API
+apiRouter.get('/dispatch-planning/console-data', dispatchPlanningController.getOperationsConsole);
+apiRouter.post('/dispatch-planning/create-on-demand', dispatchPlanningController.createOnDemandDispatch);
+apiRouter.get('/dispatch-planning/data', dispatchPlanningController.getPlanningData);
+apiRouter.post('/dispatch-planning/create-trip', dispatchPlanningController.createTrip);
+apiRouter.get('/dispatch-planning/bill-status', dispatchPlanningController.getPartyBillStatus);
+apiRouter.post('/dispatch-planning/mark-dispatched', dispatchPlanningController.markTicketsDispatched);
+
+// Dispatches API
+apiRouter.get('/dispatches', dispatchController.getDispatches);
+apiRouter.get('/dispatches/:id', dispatchController.getDispatchById);
+apiRouter.post('/dispatches/:id/scan', dispatchController.scanCarton);
+apiRouter.put('/dispatches/:id/status', dispatchController.updateDispatchStatus);
+
+// Delivery Board API
+apiRouter.get('/delivery', deliveryController.getDeliveryBoard);
+apiRouter.put('/delivery/:id/status', deliveryController.updateDeliveryStatus);
+
+// E-Way Bills API
+apiRouter.get('/ewaybill', ewaybillController.getEWayBills);
+apiRouter.post('/ewaybill/upload', upload.single('file'), ewaybillController.uploadExcel);
+apiRouter.get('/ewaybill/export-json', ewaybillController.exportJson);
 
 apiRouter.get('/masters/warehouses', masterController.getWarehouses);
 apiRouter.post('/masters/warehouses', masterController.createWarehouse);
@@ -147,7 +137,10 @@ apiRouter.get('/masters/routes', masterController.getRoutes);
 apiRouter.post('/masters/routes', masterController.createRoute);
 apiRouter.put('/masters/routes/:id', masterController.updateRoute);
 apiRouter.delete('/masters/routes/:id', masterController.deleteRoute);
-apiRouter.post('/masters/routes/:id/schedules', masterController.saveRouteSchedules);
+apiRouter.get('/masters/routes/:routeId/schedules', masterController.getRouteSchedules);
+apiRouter.post('/masters/routes/:routeId/schedules', masterController.createRouteSchedule);
+apiRouter.put('/masters/routes/:routeId/schedules/:scheduleId', masterController.updateRouteSchedule);
+apiRouter.delete('/masters/routes/:routeId/schedules/:scheduleId', masterController.deleteRouteSchedule);
 
 apiRouter.get('/masters/salesmen', masterController.getSalesmen);
 apiRouter.post('/masters/salesmen', masterController.createSalesman);
