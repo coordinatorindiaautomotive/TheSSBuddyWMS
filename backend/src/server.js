@@ -211,8 +211,11 @@ for (const p of possibleDistPaths) {
 if (activeDistPath) {
   console.log(`📦 Serving Frontend Static Assets from: ${activeDistPath}`);
   app.use(express.static(activeDistPath));
+  app.use('/TheSSBuddyWMS', express.static(activeDistPath));
+  app.use('/TheSSBuddyWMS/assets', express.static(path.join(activeDistPath, 'assets')));
+
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.startsWith('/assets') || req.path.startsWith('/TheSSBuddyWMS/assets')) return next();
     res.sendFile(path.join(activeDistPath, 'index.html'));
   });
 }
