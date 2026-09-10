@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import thessbuddyLogo from '/thessbuddy_logo.png?url';
 import {
   LayoutDashboard,
   Truck,
@@ -130,7 +131,7 @@ export default function Layout({ children }) {
           {/* Mobile Drawer Header */}
           <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
             <div className="flex items-center gap-3 overflow-hidden">
-              <img src="/thessbuddy_logo.png" alt="TheSSBuddy" className="h-9 w-auto object-contain rounded-lg shrink-0" />
+              <img src={thessbuddyLogo} alt="TheSSBuddy" className="h-9 w-auto object-contain rounded-lg shrink-0" />
               <div className="overflow-hidden">
                 <h1 className="font-black text-base text-[#003366] tracking-tight truncate">TheSSBuddy</h1>
                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block truncate">Business Companion</span>
@@ -190,7 +191,7 @@ export default function Layout({ children }) {
           {/* App Branding & Collapse Toggle */}
           <div className="p-4 border-b border-slate-200 flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 overflow-hidden">
-              <img src="/thessbuddy_logo.png" alt="TheSSBuddy" className="h-9 w-auto object-contain rounded-lg shrink-0" />
+              <img src={thessbuddyLogo} alt="TheSSBuddy" className="h-9 w-auto object-contain rounded-lg shrink-0" />
               {!collapsed && (
                 <div className="overflow-hidden">
                   <h1 className="font-black text-base text-[#003366] tracking-tight truncate">TheSSBuddy</h1>
@@ -265,7 +266,7 @@ export default function Layout({ children }) {
               <Menu className="w-5 h-5" />
             </button>
 
-            <img src="/thessbuddy_logo.png" alt="TheSSBuddy" className="h-6 sm:h-8 w-auto object-contain bg-white/10 p-0.5 sm:p-1 rounded-lg border border-white/20 shrink-0" />
+            <img src={thessbuddyLogo} alt="TheSSBuddy" className="h-6 sm:h-8 w-auto object-contain bg-white/10 p-0.5 sm:p-1 rounded-lg border border-white/20 shrink-0" />
             <h2 className="text-sm sm:text-xl font-black text-white tracking-wide truncate">
               TheSSBuddy
             </h2>

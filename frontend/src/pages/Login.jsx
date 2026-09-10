@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Truck, Lock, User, ArrowRight, Shield } from 'lucide-react';
+import thessbuddyLogo from '/thessbuddy_logo.png?url';
 
 export default function Login() {
   const [username, setUsername] = useState('admin');
@@ -34,7 +35,7 @@ export default function Login() {
     <div className="min-h-screen bg-[#f3f7fa] flex items-center justify-center p-4 relative overflow-hidden">
       <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200 relative z-10">
         <div className="text-center mb-8">
-          <img src="/thessbuddy_logo.png" alt="TheSSBuddy" className="h-16 w-auto object-contain mx-auto mb-3" />
+          <img src={thessbuddyLogo} alt="TheSSBuddy" className="h-16 w-auto object-contain mx-auto mb-3" />
           <h2 className="text-2xl font-black text-[#003366] tracking-tight">TheSSBuddy Portal</h2>
           <p className="text-xs text-slate-500 font-bold mt-1">Your Intelligent Business Companion</p>
         </div>
