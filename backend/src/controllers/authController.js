@@ -5,20 +5,23 @@ const { JWT_SECRET } = require('../middleware/authMiddleware');
 
 async function login(req, res) {
   try {
-    const { username, password } = req.body;
+    const username = (req.body?.username || '').trim();
+    const password = (req.body?.password || '').trim();
+
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password are required.' });
     }
 
     let user = null;
     try {
-      user = await dbAsync.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, username]);
+      user = await dbAsync.get('SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)', [username, username]);
     } catch (e) {
       console.warn('DB query failed during login (DB might not be configured yet):', e.message);
     }
 
     // Bootstrap Master Admin fallback when database is not initialized yet or empty
-    if (!user && (username === 'admin' || username === 'admin@thessbuddy.com') && password === 'admin123') {
+    const unameLower = username.toLowerCase();
+    if (!user && (unameLower === 'admin' || unameLower === 'admin@thessbuddy.com') && password === 'admin123') {
       user = {
         id: 1,
         username: 'admin',
