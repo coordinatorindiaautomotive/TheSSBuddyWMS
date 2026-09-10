@@ -45,7 +45,7 @@ async function importExcel(req, res) {
           if (checker) workerSet.add({ name: checker, role: 'Checker' });
           if (helper) workerSet.add({ name: helper, role: 'Helper' });
 
-          const pCode = r['Party Code'] && r['Party Code'] !== '-' ? String(r['Party Code']).trim() : '';
+          const pCode = r['Party Code'] && r['Party Code'] !== '-' ? String(r['Party Code']).trim().toUpperCase() : '';
           const pName = r['Party Name'] && r['Party Name'] !== '-' ? String(r['Party Name']).trim() : '';
           if (pCode && pName) {
             partyMap.set(pCode, { code: pCode, name: pName, route, salesman });
@@ -83,21 +83,22 @@ async function importExcel(req, res) {
           }
         }
 
-        // Insert Parties
+        // Insert Parties (Upper Case party_code)
         for (const [pCode, pData] of partyMap.entries()) {
-          const ex = await dbAsync.get('SELECT id FROM parties WHERE party_code = ? AND warehouse_id = ?', [pCode, activeWhId]);
+          const upperCode = pCode.toUpperCase();
+          const ex = await dbAsync.get('SELECT id FROM parties WHERE UPPER(party_code) = ? AND warehouse_id = ?', [upperCode, activeWhId]);
           if (!ex) {
             await dbAsync.run(
               'INSERT INTO parties (party_code, party_name, route_name, salesman, warehouse_id) VALUES (?, ?, ?, ?, ?)',
-              [pCode, pData.name, pData.route, pData.salesman, activeWhId]
+              [upperCode, pData.name, pData.route, pData.salesman, activeWhId]
             );
           }
         }
 
         // Insert Pick Tickets and linked Billings
         for (const r of rows) {
-          const ticketNo = r['Pick Ticket No'] && r['Pick Ticket No'] !== '-' ? String(r['Pick Ticket No']).trim() : `PKT-${Math.floor(1000 + Math.random() * 9000)}`;
-          const pCode = r['Party Code'] && r['Party Code'] !== '-' ? String(r['Party Code']).trim() : 'PTY-1001';
+          const ticketNo = r['Pick Ticket No'] && r['Pick Ticket No'] !== '-' ? String(r['Pick Ticket No']).trim().toUpperCase() : `PKT-${Math.floor(1000 + Math.random() * 9000)}`;
+          const pCode = r['Party Code'] && r['Party Code'] !== '-' ? String(r['Party Code']).trim().toUpperCase() : 'PTY-1001';
           const pName = r['Party Name'] && r['Party Name'] !== '-' ? String(r['Party Name']).trim() : 'Party';
           const route = r['Route'] && r['Route'] !== '-' ? String(r['Route']).trim() : 'Direct Route';
           const salesman = r['Salesman'] && r['Salesman'] !== '-' ? String(r['Salesman']).trim() : 'General Sales';

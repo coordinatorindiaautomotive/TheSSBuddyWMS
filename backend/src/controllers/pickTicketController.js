@@ -128,14 +128,14 @@ async function createPickTicket(req, res) {
       return res.status(400).json({ message: 'Party Code or Party Name is required.' });
     }
 
-    let finalPartyCode = party_code || 'PRT-GEN';
+    let finalPartyCode = (party_code || 'PRT-GEN').trim().toUpperCase();
     let finalPartyName = party_name;
     let finalRoute = route;
     let finalSalesman = salesman;
 
     // Auto lookup party info if party_code is provided but party_name is missing
     if (finalPartyCode && !finalPartyName) {
-      const pMatch = await dbAsync.get('SELECT party_name, route_name, salesman FROM parties WHERE party_code = ? AND warehouse_id = ?', [finalPartyCode, whId]);
+      const pMatch = await dbAsync.get('SELECT party_name, route_name, salesman FROM parties WHERE UPPER(party_code) = ? AND warehouse_id = ?', [finalPartyCode, whId]);
       if (pMatch) {
         finalPartyName = pMatch.party_name;
         finalRoute = finalRoute || pMatch.route_name || 'Direct Route';
