@@ -48,7 +48,7 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Username</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Username <span className="text-red-500 font-bold ml-0.5">*</span></label>
             <div className="relative">
               <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
               <input
@@ -63,7 +63,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Password</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Password <span className="text-red-500 font-bold ml-0.5">*</span></label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
               <input

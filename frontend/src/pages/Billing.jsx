@@ -520,7 +520,7 @@ export default function Billing() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Select Pending Ticket</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Select Pending Ticket <span className="text-red-500 font-bold ml-0.5">*</span></label>
                     <select
                       value={formData.pick_ticket_id}
                       onChange={(e) => handleTicketSelect(e.target.value)}
@@ -562,7 +562,7 @@ export default function Billing() {
                   {/* Row 1: Billing Date & Time */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Billing Date</label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Billing Date <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input
                         type="date"
                         value={formData.billing_date}
@@ -573,7 +573,7 @@ export default function Billing() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Billing Time</label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Billing Time <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input
                         type="text"
                         value={formData.billing_time}
@@ -586,7 +586,7 @@ export default function Billing() {
 
                   {/* Row 2: Invoice Bill No with Prefix Selector */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Invoice Bill No</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Invoice Bill No <span className="text-red-500 font-bold ml-0.5">*</span></label>
                     <div className="flex gap-2">
                       <select
                         value={formData.prefix}
@@ -617,7 +617,7 @@ export default function Billing() {
                   {/* Row 3: Checker, Helper, Billed Qty */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Checker</label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Checker <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <select
                         value={formData.checker_id}
                         onChange={(e) => setFormData({ ...formData, checker_id: e.target.value })}
@@ -632,7 +632,7 @@ export default function Billing() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Helper</label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Helper <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <select
                         value={formData.helper_id}
                         onChange={(e) => setFormData({ ...formData, helper_id: e.target.value })}
@@ -647,7 +647,7 @@ export default function Billing() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Billed Quantity</label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Billed Quantity <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input
                         type="number"
                         value={formData.billed_qty}
@@ -661,7 +661,7 @@ export default function Billing() {
                   {/* Row 4: Timings & Invoice Amount */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Checking Start Time</label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Checking Start Time <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input
                         type="datetime-local"
                         value={formData.start_time}
@@ -672,7 +672,7 @@ export default function Billing() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Checking End Time</label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Checking End Time <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input
                         type="datetime-local"
                         value={formData.end_time}
@@ -683,7 +683,7 @@ export default function Billing() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Invoice Amount (₹)</label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Invoice Amount (₹) <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input
                         type="number"
                         step="0.01"

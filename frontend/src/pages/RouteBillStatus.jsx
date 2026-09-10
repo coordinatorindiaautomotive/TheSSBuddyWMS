@@ -278,7 +278,7 @@ export default function RouteBillStatus() {
           {/* Route Filter */}
           <div className="space-y-1">
             <label className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1">
-              <RouteIcon className="w-3.5 h-3.5 text-indigo-600" /> Route <span className="text-red-500">*</span>
+              <RouteIcon className="w-3.5 h-3.5 text-indigo-600" /> Route <span className="text-red-500 font-bold ml-0.5">*</span>
             </label>
             <select
               value={selectedRoute}

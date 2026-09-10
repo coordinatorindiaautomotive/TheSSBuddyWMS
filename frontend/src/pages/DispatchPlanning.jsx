@@ -987,7 +987,7 @@ export default function DispatchPlanning() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                  Assigned Driver <span className="text-red-500">*</span>
+                  Assigned Driver <span className="text-red-500 font-bold ml-0.5">*</span>
                 </label>
                 <select
                   value={driverId}
@@ -1005,7 +1005,7 @@ export default function DispatchPlanning() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                  Assigned Vehicle <span className="text-red-500">*</span>
+                  Assigned Vehicle <span className="text-red-500 font-bold ml-0.5">*</span>
                 </label>
                 <select
                   value={vehicleId}

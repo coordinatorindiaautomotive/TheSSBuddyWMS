@@ -49,7 +49,7 @@ export default function Import() {
           <form onSubmit={handleImport} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Select Data Category to Import <span className="text-red-500">*</span>
+                Select Data Category to Import <span className="text-red-500 font-bold ml-0.5">*</span>
               </label>
               <select
                 value={entityType}
@@ -66,7 +66,7 @@ export default function Import() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Select Excel Spreadsheet File <span className="text-red-500">*</span>
+                Select Excel Spreadsheet File <span className="text-red-500 font-bold ml-0.5">*</span>
               </label>
               <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center bg-slate-50 hover:bg-blue-50/30 transition-colors">
                 <Upload className="w-8 h-8 text-[#004C8F] mx-auto mb-2" />

@@ -612,7 +612,7 @@ export default function PickTickets() {
             <div>
               <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1">
                 <MessageSquare className="w-3.5 h-3.5 text-amber-500" />
-                Cancellation Reason / Remark <span className="text-red-500">*</span>
+                Cancellation Reason / Remark <span className="text-red-500 font-bold ml-0.5">*</span>
               </label>
               <textarea
                 rows={3}
@@ -678,7 +678,9 @@ export default function PickTickets() {
               {/* Row 1: Date, Time, Priority (Equal 3-column grid) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Date *</label>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Date <span className="text-red-500 font-bold ml-0.5">*</span>
+                  </label>
                   <input
                     type="date"
                     value={formData.date}
@@ -689,7 +691,9 @@ export default function PickTickets() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Time *</label>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Time <span className="text-red-500 font-bold ml-0.5">*</span>
+                  </label>
                   <input
                     type="text"
                     value={formData.time}
@@ -700,7 +704,9 @@ export default function PickTickets() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Order Priority *</label>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Order Priority <span className="text-red-500 font-bold ml-0.5">*</span>
+                  </label>
                   <select
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
@@ -717,7 +723,9 @@ export default function PickTickets() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
-                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">Pick Ticket No *</label>
+                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                      Pick Ticket No <span className="text-red-500 font-bold ml-0.5">*</span>
+                    </label>
                     {ticketNoValid === true && <span className="text-[10px] text-emerald-600 font-bold">✓ Available</span>}
                     {ticketNoValid === false && <span className="text-[10px] text-red-600 font-bold">✕ Already Exists</span>}
                   </div>
@@ -751,7 +759,7 @@ export default function PickTickets() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Party Code *
+                    Party Code <span className="text-red-500 font-bold ml-0.5">*</span>
                   </label>
                   <SearchablePartySelect
                     parties={parties}
@@ -807,7 +815,7 @@ export default function PickTickets() {
 
                 <div>
                   <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Picker *
+                    Picker <span className="text-red-500 font-bold ml-0.5">*</span>
                   </label>
                   <select
                     value={formData.picker_id}
@@ -826,7 +834,9 @@ export default function PickTickets() {
               {/* Row 5: Quantity & Remarks */}
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Quantity *</label>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Quantity <span className="text-red-500 font-bold ml-0.5">*</span>
+                  </label>
                   <input
                     type="number"
                     min="1"

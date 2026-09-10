@@ -1633,7 +1633,7 @@ export default function MasterRegistries() {
                   <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
                     {editingItem ? 'Edit' : 'Register New'} {TABS.find(t => t.id === activeTab)?.label}
                   </h3>
-                  <p className="text-[11px] sm:text-xs text-slate-400 font-medium">Fill in all required fields marked with *</p>
+                  <p className="text-[11px] sm:text-xs text-slate-400 font-medium">Fill in all required fields marked with <span className="text-red-500 font-bold">*</span></p>
                 </div>
               </div>
               <button
@@ -1653,19 +1653,19 @@ export default function MasterRegistries() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Party Code / ID *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Party Code / ID <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('party_code')} onChange={e => sf('party_code', e.target.value.toUpperCase())} required placeholder="e.g. PTY-001"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-slate-900 uppercase focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Party / Client Business Name *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Party / Client Business Name <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('party_name')} onChange={e => sf('party_name', e.target.value)} required placeholder="e.g. Acme SuperMarkets"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Delivery Route *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Delivery Route <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <select value={f('route_name')} onChange={e => sf('route_name', e.target.value)} required
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
                         <option value="">-- Select Route --</option>
@@ -1673,7 +1673,7 @@ export default function MasterRegistries() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Assigned Salesman *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Assigned Salesman <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <select value={f('salesman')} onChange={e => sf('salesman', e.target.value)} required
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
                         <option value="">-- Select Salesman --</option>
@@ -1706,12 +1706,12 @@ export default function MasterRegistries() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Employee Code / ID *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Employee Code / ID <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('employee_code')} onChange={e => sf('employee_code', e.target.value.toUpperCase())} required placeholder="e.g. EMP-10492"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-slate-900 uppercase focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Worker Full Name *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Worker Full Name <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('name')} onChange={e => sf('name', e.target.value)} required placeholder="e.g. Ramesh Kumar"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
@@ -1723,7 +1723,7 @@ export default function MasterRegistries() {
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Operational Floor Role *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Operational Floor Role <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <select value={f('role')} onChange={e => sf('role', e.target.value)} required
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
                         <option value="Picker">Picker (Fulfillment)</option>
@@ -1747,19 +1747,19 @@ export default function MasterRegistries() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Driver Name *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Driver Name <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('name')} onChange={e => sf('name', e.target.value)} required placeholder="e.g. Ravi Kumar"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Mobile Number *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Mobile Number <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('phone')} onChange={e => sf('phone', e.target.value)} required placeholder="+91 98765 43210" type="tel"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">License Number *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">License Number <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('license_no')} onChange={e => sf('license_no', e.target.value.toUpperCase())} required placeholder="MH14-20110012345"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono uppercase text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
@@ -1786,12 +1786,12 @@ export default function MasterRegistries() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Vehicle Number *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Vehicle Number <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('vehicle_number')} onChange={e => sf('vehicle_number', e.target.value.toUpperCase())} required placeholder="TX-TRUCK-01"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold uppercase text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Vehicle Type *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Vehicle Type <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <select value={f('vehicle_type')} onChange={e => sf('vehicle_type', e.target.value)} required
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
                         <option value="Truck">🚛 Truck</option>
@@ -1827,12 +1827,12 @@ export default function MasterRegistries() {
                   {/* Route Basic Details */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Route Code *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Route Code <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('route_code')} onChange={e => sf('route_code', e.target.value.toUpperCase())} required placeholder="e.g. BHIWADI / MAN-01"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono font-bold uppercase text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Route Name *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Route Name <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('route_name')} onChange={e => sf('route_name', e.target.value)} required placeholder="e.g. Bhiwadi Industrial Route"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
@@ -2061,7 +2061,7 @@ export default function MasterRegistries() {
               {/* ── SALESMAN FORM ── */}
               {activeTab === 'salesman' && (
                 <div>
-                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Salesman Full Name *</label>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Salesman Full Name <span className="text-red-500 font-bold ml-0.5">*</span></label>
                   <input value={f('name')} onChange={e => sf('name', e.target.value)} required placeholder="e.g. Rajesh Kumar"
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                 </div>
@@ -2072,44 +2072,44 @@ export default function MasterRegistries() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Warehouse Code *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Warehouse Code <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('warehouse_code')} onChange={e => sf('warehouse_code', e.target.value.toUpperCase())} required placeholder="e.g. WH03"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold uppercase text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Warehouse Name *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Warehouse Name <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('warehouse_name')} onChange={e => sf('warehouse_name', e.target.value)} required placeholder="e.g. Delhi North Hub"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Prefix Logic *
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Prefix Logic <span className="text-red-500 font-bold ml-0.5">*</span>
                         <span className="ml-1 text-[10px] text-slate-400 normal-case font-normal">(auto-prepended to pick ticket numbers)</span>
                       </label>
                       <input value={f('prefix_logic')} onChange={e => sf('prefix_logic', e.target.value.toUpperCase())} required placeholder="e.g. PIK26-"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold uppercase text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Contact Person *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Contact Person <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('contact_person')} onChange={e => sf('contact_person', e.target.value)} required placeholder="e.g. Ramesh Sharma"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Mobile Number *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Mobile Number <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('phone')} onChange={e => sf('phone', e.target.value)} required placeholder="+91 98765 43210" type="tel"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Email Address *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Email Address <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('email')} onChange={e => sf('email', e.target.value)} required placeholder="admin@warehouse.com" type="email"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Physical Address *</label>
+                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Physical Address <span className="text-red-500 font-bold ml-0.5">*</span></label>
                     <input value={f('address')} onChange={e => sf('address', e.target.value)} required placeholder="e.g. 104 Industrial Area, Building B, New Delhi"
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                   </div>
@@ -2125,12 +2125,12 @@ export default function MasterRegistries() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Full Name *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Full Name <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('full_name')} onChange={e => sf('full_name', e.target.value)} required placeholder="e.g. Liam Johnson"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Email Address (Login ID) *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Email Address (Login ID) <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <input value={f('email')} onChange={e => sf('email', e.target.value)} required placeholder="e.g. liam@wmsenterprise.com" type="email"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
@@ -2138,12 +2138,12 @@ export default function MasterRegistries() {
                   {!editingItem && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Login Password *</label>
+                        <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Login Password <span className="text-red-500 font-bold ml-0.5">*</span></label>
                         <input value={f('password')} onChange={e => sf('password', e.target.value)} required placeholder="Password" type="password"
                           className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                       </div>
                       <div>
-                        <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Confirm Password *</label>
+                        <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Confirm Password <span className="text-red-500 font-bold ml-0.5">*</span></label>
                         <input value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Confirm Password" type="password"
                           className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                       </div>
@@ -2151,7 +2151,7 @@ export default function MasterRegistries() {
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Security Access Role *</label>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Security Access Role <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <select value={f('role_name')} onChange={e => sf('role_name', e.target.value)} required
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
                         <option value="Super Admin">Super Admin</option>
@@ -2471,7 +2471,7 @@ export default function MasterRegistries() {
                     {/* Trip Name */}
                     <div>
                       <label className="block text-[11px] font-extrabold text-slate-700 uppercase mb-1">
-                        Trip Label *
+                        Trip Label <span className="text-red-500 font-bold ml-0.5">*</span>
                       </label>
                       <input
                         type="text"
@@ -2486,7 +2486,7 @@ export default function MasterRegistries() {
                     {/* Frequency */}
                     <div>
                       <label className="block text-[11px] font-extrabold text-slate-700 uppercase mb-1">
-                        Frequency *
+                        Frequency <span className="text-red-500 font-bold ml-0.5">*</span>
                       </label>
                       <select
                         value={scheduleForm.frequency}
