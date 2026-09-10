@@ -70,6 +70,19 @@ async function importExcel(req, res) {
           }
         }
 
+        // Insert Floor Workers (Pickers, Checkers, Helpers)
+        for (const w of workerSet) {
+          if (!w.name || w.name === '-') continue;
+          const ex = await dbAsync.get('SELECT id FROM picker_checker_helpers WHERE LOWER(name) = LOWER(?) AND warehouse_id = ?', [w.name, activeWhId]);
+          if (!ex) {
+            const empCode = 'EMP-' + w.name.replace(/[^A-Za-z0-9]/g, '').substring(0, 8).toUpperCase();
+            await dbAsync.run(
+              'INSERT INTO picker_checker_helpers (employee_code, name, role, role_type, warehouse_id, is_active) VALUES (?, ?, ?, ?, ?, 1)',
+              [empCode, w.name, w.role, w.role, activeWhId]
+            );
+          }
+        }
+
         // Insert Parties
         for (const [pCode, pData] of partyMap.entries()) {
           const ex = await dbAsync.get('SELECT id FROM parties WHERE party_code = ? AND warehouse_id = ?', [pCode, activeWhId]);
