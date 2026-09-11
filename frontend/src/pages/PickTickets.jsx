@@ -17,7 +17,8 @@ import {
   Ban,
   MessageSquare,
   ChevronDown,
-  Check
+  Check,
+  X
 } from 'lucide-react';
 
 function SearchablePartySelect({ parties = [], selectedCode, onSelect }) {
