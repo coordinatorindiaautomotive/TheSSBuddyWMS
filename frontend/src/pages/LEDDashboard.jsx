@@ -175,14 +175,11 @@ export default function LEDDashboard() {
     return String(r).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   };
 
-  const checkRoutesMatch = (r1, r2, code1, code2) => {
+  const checkRoutesMatch = (r1, r2) => {
     const k1 = normalizeRouteKey(r1);
     const k2 = normalizeRouteKey(r2);
-    const c1 = normalizeRouteKey(code1);
-    const c2 = normalizeRouteKey(code2);
-    if (!k1 && !c1) return false;
-    if (!k2 && !c2) return false;
-    return (k1 && (k1 === k2 || k1 === c2)) || (c1 && (c1 === k2 || c1 === c2)) || (k2 && (k2 === k1 || k2 === c1));
+    if (!k1 || !k2) return false;
+    return k1 === k2;
   };
 
   // Extract all tickets
@@ -226,7 +223,7 @@ export default function LEDDashboard() {
 
     // From loaded Pick Tickets
     rawTickets.forEach(t => {
-      const name = String(t.route_name || t.party_route || t.ticket_route || t.route || '').trim();
+      const name = String(t.route_name || t.ticket_route || t.party_route || t.route || '').trim();
       const k = normalizeRouteKey(name);
       if (k && k !== 'unassigned' && !routesMap.has(k)) {
         routesMap.set(k, {
@@ -242,7 +239,7 @@ export default function LEDDashboard() {
     // Calculate live counts for each route
     routesMap.forEach(r => {
       const rTickets = rawTickets.filter(t =>
-        checkRoutesMatch(t.route_name, r.route_name, null, r.route_code)
+        checkRoutesMatch(t.route_name, r.route_name)
       );
       r.total_count = rTickets.length;
       r.unbilled_count = rTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;
@@ -255,7 +252,7 @@ export default function LEDDashboard() {
   }, [masterRoutes, data, rawTickets]);
 
   const selectedRouteObj = selectedRoute !== 'ALL'
-    ? routesList.find(r => String(r.route_name || r.id).toLowerCase() === String(selectedRoute).toLowerCase() || checkRoutesMatch(r.route_name, selectedRoute, r.route_code, selectedRoute))
+    ? routesList.find(r => checkRoutesMatch(r.route_name, selectedRoute))
     : null;
 
   // Filter tickets based on selection
@@ -263,12 +260,8 @@ export default function LEDDashboard() {
     return rawTickets.filter(t => {
       // Route Filter
       if (selectedRoute !== 'ALL') {
-        const isMatch = checkRoutesMatch(
-          t.route_name,
-          selectedRouteObj ? selectedRouteObj.route_name : selectedRoute,
-          null,
-          selectedRouteObj ? selectedRouteObj.route_code : selectedRoute
-        );
+        const targetRouteName = selectedRouteObj ? selectedRouteObj.route_name : selectedRoute;
+        const isMatch = checkRoutesMatch(t.route_name, targetRouteName);
         if (!isMatch) return false;
       }
 
@@ -280,11 +273,19 @@ export default function LEDDashboard() {
 
       // Stage Filter
       if (selectedStage !== 'ALL') {
-        if (selectedStage === 'Pending' && t.is_billed) return false;
-        if (selectedStage === 'Picking' && t.current_stage !== 'Picking') return false;
-        if (selectedStage === 'Billing' && (t.current_stage !== 'Billing' && !t.billing_id)) return false;
-        if (selectedStage === 'Ready' && (!t.is_billed || t.current_stage === 'Dispatched')) return false;
-        if (selectedStage === 'Dispatched' && t.current_stage !== 'Dispatched') return false;
+        if (selectedStage === 'Pending') {
+          if (t.is_billed || t.current_stage === 'Ready' || t.current_stage === 'Dispatched' || t.current_stage === 'Cancelled' || t.bill_no) {
+            return false;
+          }
+        } else if (selectedStage === 'Ready') {
+          if (!t.is_billed || t.current_stage === 'Dispatched' || t.current_stage === 'Cancelled') {
+            return false;
+          }
+        } else if (selectedStage === 'Dispatched') {
+          if (t.current_stage !== 'Dispatched') {
+            return false;
+          }
+        }
       }
 
       // Unbilled Only Filter

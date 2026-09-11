@@ -258,8 +258,14 @@ if (activeDistPath) {
   app.use(express.static(activeDistPath));
 
   // SPA fallback for all GET navigation routes
-  app.get(['/', '/TheSSBuddyWMS', '/TheSSBuddyWMS/*'], (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.includes('/assets/')) return next();
+  app.get('*', (req, res) => {
+    // Avoid capturing API routes
+    if (req.url.startsWith('/api') || req.url.startsWith('/TheSSBuddyWMS/api')) {
+      return res.status(404).json({ message: 'API endpoint not found' });
+    }
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(activeDistPath, 'index.html'));
   });
 

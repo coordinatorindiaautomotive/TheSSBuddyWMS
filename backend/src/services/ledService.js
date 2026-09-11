@@ -121,14 +121,11 @@ function normalizeRouteKey(r) {
   return String(r).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function routesMatch(rName1, rName2, rCode1, rCode2) {
+function routesMatch(rName1, rName2) {
   const k1 = normalizeRouteKey(rName1);
   const k2 = normalizeRouteKey(rName2);
-  const c1 = normalizeRouteKey(rCode1);
-  const c2 = normalizeRouteKey(rCode2);
-  if (!k1 && !c1) return false;
-  if (!k2 && !c2) return false;
-  return (k1 && (k1 === k2 || k1 === c2)) || (c1 && (c1 === k2 || c1 === c2)) || (k2 && (k2 === k1 || k2 === c1));
+  if (!k1 || !k2) return false;
+  return k1 === k2;
 }
 
 function determineTicketStage(ticket, billing, dispatchParty) {
@@ -377,8 +374,16 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   `, [whId, whId, whId]);
 
   if (!pickTicketsRaw) pickTicketsRaw = [];
+  const seenTicketIds = new Set();
+  const pickTicketsDeduped = [];
+  for (const t of pickTicketsRaw) {
+    if (!seenTicketIds.has(t.id)) {
+      seenTicketIds.add(t.id);
+      pickTicketsDeduped.push(t);
+    }
+  }
 
-  const pickTickets = pickTicketsRaw.filter(t => {
+  const pickTickets = pickTicketsDeduped.filter(t => {
     const isPendingTicket = !t.billing_id && t.status !== 'Billed' && t.status !== 'Dispatched' && t.status !== 'Completed';
     if (isPendingTicket) {
       return true;
