@@ -5,6 +5,7 @@ import { SocketProvider } from './context/SocketContext';
 import { ToastProvider } from './context/ToastContext';
 
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ControlTower from './pages/ControlTower';
@@ -38,52 +39,56 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SocketProvider>
-        <ToastProvider>
-          <HashRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <SocketProvider>
+          <ToastProvider>
+            <HashRouter>
+              <Routes>
+                <Route path="/login" element={<Login />} />
 
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Routes>
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/pick-tickets" element={<PickTickets />} />
-                        <Route path="/billing" element={<Billing />} />
-                        <Route path="/route-bill-status" element={<RouteBillStatus />} />
-                        <Route path="/dispatch-planning" element={<DispatchPlanning />} />
-                        <Route path="/dispatch" element={<DispatchList />} />
-                        <Route path="/dispatch/plan" element={<DispatchPlanning />} />
-                        <Route path="/dispatch/:id" element={<DispatchDetail />} />
-                        <Route path="/tracking/:id" element={<Tracking />} />
-                        <Route path="/delivery" element={<DeliveryBoard />} />
-                        <Route path="/control-tower" element={<LEDDashboard />} />
-                        <Route path="/led" element={<LEDDashboard />} />
-                        <Route path="/ewaybill" element={<EWayBill />} />
-                        <Route path="/masters" element={<MasterRegistries />} />
-                        <Route path="/parties" element={<MasterRegistries />} />
-                        <Route path="/vehicles" element={<MasterRegistries />} />
-                        <Route path="/drivers" element={<MasterRegistries />} />
-                        <Route path="/warehouses" element={<MasterRegistries />} />
-                        <Route path="/users" element={<MasterRegistries />} />
-                        <Route path="/import" element={<Import />} />
-                        <Route path="/leaderboard" element={<Leaderboard />} />
-                        <Route path="/reports" element={<Reports />} />
-                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                      </Routes>
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </HashRouter>
-        </ToastProvider>
-      </SocketProvider>
-    </AuthProvider>
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <ErrorBoundary>
+                          <Routes>
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/pick-tickets" element={<PickTickets />} />
+                            <Route path="/billing" element={<Billing />} />
+                            <Route path="/route-bill-status" element={<RouteBillStatus />} />
+                            <Route path="/dispatch-planning" element={<DispatchPlanning />} />
+                            <Route path="/dispatch" element={<DispatchList />} />
+                            <Route path="/dispatch/plan" element={<DispatchPlanning />} />
+                            <Route path="/dispatch/:id" element={<DispatchDetail />} />
+                            <Route path="/tracking/:id" element={<Tracking />} />
+                            <Route path="/delivery" element={<DeliveryBoard />} />
+                            <Route path="/control-tower" element={<LEDDashboard />} />
+                            <Route path="/led" element={<LEDDashboard />} />
+                            <Route path="/ewaybill" element={<EWayBill />} />
+                            <Route path="/masters" element={<MasterRegistries />} />
+                            <Route path="/parties" element={<MasterRegistries />} />
+                            <Route path="/vehicles" element={<MasterRegistries />} />
+                            <Route path="/drivers" element={<MasterRegistries />} />
+                            <Route path="/warehouses" element={<MasterRegistries />} />
+                            <Route path="/users" element={<MasterRegistries />} />
+                            <Route path="/import" element={<Import />} />
+                            <Route path="/leaderboard" element={<Leaderboard />} />
+                            <Route path="/reports" element={<Reports />} />
+                            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                          </Routes>
+                        </ErrorBoundary>
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </HashRouter>
+          </ToastProvider>
+        </SocketProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
