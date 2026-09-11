@@ -173,12 +173,11 @@ export default function LEDDashboard() {
     return String(r).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   };
 
-  const checkRoutesMatch = (r1, r2) => {
-    if (!r1 || !r2) return false;
-    const k1 = normalizeRouteKey(r1);
-    const k2 = normalizeRouteKey(r2);
-    if (!k1 || !k2 || k1 === 'unassigned' || k2 === 'unassigned') return false;
-    return k1 === k2;
+  const checkRoutesMatch = (r1, r2, code1, code2) => {
+    const keys1 = [normalizeRouteKey(r1), normalizeRouteKey(code1)].filter(k => k && k !== 'unassigned');
+    const keys2 = [normalizeRouteKey(r2), normalizeRouteKey(code2)].filter(k => k && k !== 'unassigned');
+    if (keys1.length === 0 || keys2.length === 0) return false;
+    return keys1.some(k1 => keys2.includes(k1));
   };
 
   // Aggregate all available routes to ensure dropdown has valid routes
@@ -234,7 +233,10 @@ export default function LEDDashboard() {
   const routesList = Array.from(routesMap.values()).sort((a, b) => a.route_name.localeCompare(b.route_name));
 
   const selectedRouteObj = selectedRouteId !== 'ALL' 
-    ? routesList.find(r => String(r.id) === String(selectedRouteId) || checkRoutesMatch(r.route_name, selectedRouteId))
+    ? routesList.find(r => 
+        String(r.id) === String(selectedRouteId) || 
+        checkRoutesMatch(r.route_name, selectedRouteId, r.route_code, selectedRouteId)
+      )
     : null;
 
   // Extract selected route object and slot cycles
@@ -242,20 +244,23 @@ export default function LEDDashboard() {
   const eveningCycle = data?.eveningDispatch?.cycles?.[0] || null;
 
   // Determine available slots for the selected route
-  const selectedMasterRoute = masterRoutes.find(mr => String(mr.id) === String(selectedRouteId) || checkRoutesMatch(mr.route_name, selectedRouteId));
+  const selectedMasterRoute = masterRoutes.find(mr => 
+    String(mr.id) === String(selectedRouteId) || 
+    checkRoutesMatch(mr.route_name, selectedRouteId, mr.route_code, selectedRouteId)
+  );
   
   const hasMorningConfigured = selectedRouteId === 'ALL'
     ? true
     : (selectedMasterRoute && Array.isArray(selectedMasterRoute.schedules) && selectedMasterRoute.schedules.length > 0
         ? selectedMasterRoute.schedules.some(s => ((s.trip_name || '').toLowerCase().includes('morning') || s.priority_order === 1) && !!s.is_active && !(s.trip_name || '').toLowerCase().includes('evening'))
-        : (data?.morningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || checkRoutesMatch(c.route_name, selectedRouteObj?.route_name)) && String(c.slot).toLowerCase() === 'morning')
+        : (data?.morningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || checkRoutesMatch(c.route_name, selectedRouteObj?.route_name, c.route_code, selectedRouteObj?.route_code)) && String(c.slot).toLowerCase() === 'morning')
       );
 
   const hasEveningConfigured = selectedRouteId === 'ALL'
     ? true
     : (selectedMasterRoute && Array.isArray(selectedMasterRoute.schedules) && selectedMasterRoute.schedules.length > 0
         ? selectedMasterRoute.schedules.some(s => ((s.trip_name || '').toLowerCase().includes('evening') || s.priority_order === 2) && !!s.is_active && !(s.trip_name || '').toLowerCase().includes('morning'))
-        : (data?.eveningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || checkRoutesMatch(c.route_name, selectedRouteObj?.route_name)) && String(c.slot).toLowerCase() === 'evening')
+        : (data?.eveningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || checkRoutesMatch(c.route_name, selectedRouteObj?.route_name, c.route_code, selectedRouteObj?.route_code)) && String(c.slot).toLowerCase() === 'evening')
       );
 
   // Fallback if route has no explicit schedule configuration in DB
@@ -278,9 +283,21 @@ export default function LEDDashboard() {
   const filteredTickets = allTickets.filter((t) => {
     // Route Filter
     if (selectedRouteId !== 'ALL') {
-      const targetRoute = selectedRouteObj?.route_name || selectedRouteId;
-      const ticketRoute = t.route_name || t.party_route || t.route;
-      if (!checkRoutesMatch(ticketRoute, targetRoute)) {
+      const targetKeys = [
+        normalizeRouteKey(selectedRouteObj?.route_name),
+        normalizeRouteKey(selectedRouteObj?.route_code),
+        normalizeRouteKey(selectedRouteId)
+      ].filter(k => k && k !== 'unassigned');
+
+      const ticketKeys = [
+        normalizeRouteKey(t.route_name),
+        normalizeRouteKey(t.party_route),
+        normalizeRouteKey(t.ticket_route),
+        normalizeRouteKey(t.route)
+      ].filter(k => k && k !== 'unassigned');
+
+      const isRouteMatch = targetKeys.some(tk => ticketKeys.includes(tk));
+      if (!isRouteMatch) {
         return false;
       }
     }
@@ -310,13 +327,24 @@ export default function LEDDashboard() {
   });
 
   // Calculate Metrics for Current View
-  const unbilledTickets = allTickets.filter(t => !t.is_billed);
+  const unbilledTickets = allTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled' && t.status !== 'Cancelled');
   const routeUnbilledTickets = selectedRouteId === 'ALL'
     ? unbilledTickets
     : unbilledTickets.filter(t => {
-        const targetRoute = (selectedRouteObj?.route_name || selectedRouteId).trim().toLowerCase();
-        const ticketRoute = String(t.route_name || t.route || '').trim().toLowerCase();
-        return ticketRoute === targetRoute || ticketRoute.includes(targetRoute) || targetRoute.includes(ticketRoute);
+        const targetKeys = [
+          normalizeRouteKey(selectedRouteObj?.route_name),
+          normalizeRouteKey(selectedRouteObj?.route_code),
+          normalizeRouteKey(selectedRouteId)
+        ].filter(k => k && k !== 'unassigned');
+
+        const ticketKeys = [
+          normalizeRouteKey(t.route_name),
+          normalizeRouteKey(t.party_route),
+          normalizeRouteKey(t.ticket_route),
+          normalizeRouteKey(t.route)
+        ].filter(k => k && k !== 'unassigned');
+
+        return targetKeys.some(tk => ticketKeys.includes(tk));
       });
 
   const unbilledCount = routeUnbilledTickets.length;
@@ -398,7 +426,22 @@ export default function LEDDashboard() {
               >
                 <option value="ALL">🌟 All Routes ({routesList.length} Routes)</option>
                 {routesList.map((r) => {
-                  const rUnbilled = allTickets.filter(t => !t.is_billed && String(t.route_name || t.route || '').trim().toLowerCase() === String(r.route_name || '').trim().toLowerCase()).length;
+                  const targetKeys = [
+                    normalizeRouteKey(r.route_name),
+                    normalizeRouteKey(r.route_code),
+                    normalizeRouteKey(r.id)
+                  ].filter(k => k && k !== 'unassigned');
+
+                  const rUnbilled = unbilledTickets.filter(t => {
+                    const ticketKeys = [
+                      normalizeRouteKey(t.route_name),
+                      normalizeRouteKey(t.party_route),
+                      normalizeRouteKey(t.ticket_route),
+                      normalizeRouteKey(t.route)
+                    ].filter(k => k && k !== 'unassigned');
+                    return targetKeys.some(tk => ticketKeys.includes(tk));
+                  }).length;
+
                   return (
                     <option key={r.id || r.route_name} value={String(r.route_name || r.id)}>
                       {r.route_name} {rUnbilled > 0 ? `(⏳ ${rUnbilled} Pending)` : '(✓ 0 Pending)'}

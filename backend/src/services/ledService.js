@@ -143,18 +143,10 @@ function normalizeRouteKey(r) {
 }
 
 function routesMatch(rName1, rName2, rCode1, rCode2) {
-  if (!rName1 || !rName2) return false;
-  const k1 = normalizeRouteKey(rName1);
-  const k2 = normalizeRouteKey(rName2);
-  if (!k1 || !k2 || k1 === 'unassigned' || k2 === 'unassigned') return false;
-  if (k1 === k2) return true;
-
-  if (rCode1 && rCode2) {
-    const c1 = normalizeRouteKey(rCode1);
-    const c2 = normalizeRouteKey(rCode2);
-    if (c1 && c2 && c1 === c2) return true;
-  }
-  return false;
+  const keys1 = [normalizeRouteKey(rName1), normalizeRouteKey(rCode1)].filter(k => k && k !== 'unassigned');
+  const keys2 = [normalizeRouteKey(rName2), normalizeRouteKey(rCode2)].filter(k => k && k !== 'unassigned');
+  if (keys1.length === 0 || keys2.length === 0) return false;
+  return keys1.some(k1 => keys2.includes(k1));
 }
 
 /**
@@ -334,18 +326,24 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       ORDER BY route_name ASC
     `, warehouseId ? [warehouseId, warehouseId] : [1, 1]);
 
-    const existingRouteNames = new Set(routes.map(r => (r.route_name || '').trim().toLowerCase()));
+    const existingRouteNames = new Set();
+    routes.forEach(r => {
+      if (r.route_name) existingRouteNames.add(normalizeRouteKey(r.route_name));
+      if (r.route_code) existingRouteNames.add(normalizeRouteKey(r.route_code));
+    });
+
     let tempId = 9000;
     for (const pr of (distinctPartyRoutes || [])) {
       const cleanRouteName = String(pr.route_name || '').trim();
-      if (cleanRouteName && !existingRouteNames.has(cleanRouteName.toLowerCase())) {
+      const k = normalizeRouteKey(cleanRouteName);
+      if (k && !existingRouteNames.has(k)) {
         routes.push({
           id: tempId++,
           route_code: cleanRouteName.substring(0, 10).toUpperCase(),
           route_name: cleanRouteName,
           warehouse_id: warehouseId
         });
-        existingRouteNames.add(cleanRouteName.toLowerCase());
+        existingRouteNames.add(k);
       }
     }
 
@@ -359,14 +357,15 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
     for (const tr of (distinctTicketRoutes || [])) {
       const cleanRouteName = String(tr.route || '').trim();
-      if (cleanRouteName && !existingRouteNames.has(cleanRouteName.toLowerCase())) {
+      const k = normalizeRouteKey(cleanRouteName);
+      if (k && !existingRouteNames.has(k)) {
         routes.push({
           id: tempId++,
           route_code: cleanRouteName.substring(0, 10).toUpperCase(),
           route_name: cleanRouteName,
           warehouse_id: warehouseId
         });
-        existingRouteNames.add(cleanRouteName.toLowerCase());
+        existingRouteNames.add(k);
       }
     }
   } catch (e) {}
@@ -443,7 +442,9 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
     // Assigned To
     const assignedTo = t.assigned_to || t.picker_name || (billing ? 'Billing Desk' : (t.salesman || 'Unassigned'));
-    const resolvedRoute = (t.party_route_name && t.party_route_name.trim()) || (t.route && t.route.trim()) || 'Unassigned';
+    const cleanTicketRoute = (t.route && t.route.trim() && t.route.trim() !== 'Direct Route' && t.route.trim() !== 'Unassigned') ? t.route.trim() : '';
+    const cleanPartyRoute = (t.party_route_name && t.party_route_name.trim()) ? t.party_route_name.trim() : '';
+    const resolvedRoute = cleanTicketRoute || cleanPartyRoute || (t.route && t.route.trim()) || 'Unassigned';
 
     return {
       id: t.id,
@@ -454,7 +455,8 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       party_address: t.party_address,
       party_city: t.party_city,
       party_phone: t.party_phone,
-      party_route: t.party_route_name || '',
+      party_route: cleanPartyRoute,
+      ticket_route: t.route || '',
       route_name: resolvedRoute,
       dispatch_slot: slot,
       date: t.date || dateStr,
@@ -484,6 +486,14 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     };
   });
 
+  // Calculate unbilled_count for each route
+  routes.forEach(r => {
+    r.unbilled_count = enrichedTickets.filter(t =>
+      !t.is_billed && t.current_stage !== 'Cancelled' &&
+      routesMatch(t.route_name, r.route_name, t.ticket_route || t.party_route, r.route_code)
+    ).length;
+  });
+
   // Generate Dispatch Cycles for each Route Master entry
   const morningCycles = [];
   const eveningCycles = [];
@@ -506,7 +516,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
     // Filter tickets belonging to route r
     const mTickets = enrichedTickets.filter(t =>
-      routesMatch(t.route_name, r.route_name, null, r.route_code) &&
+      routesMatch(t.route_name, r.route_name, t.ticket_route || t.party_route, r.route_code) &&
       (
         (!eveningSched && morningSched) ||
         (t.dispatch_slot && t.dispatch_slot.toLowerCase() === 'morning')
@@ -514,7 +524,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     );
 
     const eTickets = enrichedTickets.filter(t =>
-      routesMatch(t.route_name, r.route_name, null, r.route_code) &&
+      routesMatch(t.route_name, r.route_name, t.ticket_route || t.party_route, r.route_code) &&
       (
         (!morningSched && eveningSched) ||
         (t.dispatch_slot && t.dispatch_slot.toLowerCase() === 'evening')
@@ -615,10 +625,14 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   let filteredEveningCycles = eveningCycles;
 
   if (routeFilter && routeFilter !== 'ALL') {
-    const selectedRouteObj = routes.find(r => String(r.id) === String(routeFilter) || String(r.route_name).toLowerCase() === String(routeFilter).toLowerCase());
+    const selectedRouteObj = routes.find(r => 
+      String(r.id) === String(routeFilter) || 
+      String(r.route_name || '').trim().toLowerCase() === String(routeFilter).trim().toLowerCase() ||
+      String(r.route_code || '').trim().toLowerCase() === String(routeFilter).trim().toLowerCase()
+    );
     if (selectedRouteObj) {
-      filteredMorningCycles = morningCycles.filter(c => c.route_id === selectedRouteObj.id || routesMatch(c.route_name, selectedRouteObj.route_name));
-      filteredEveningCycles = eveningCycles.filter(c => c.route_id === selectedRouteObj.id || routesMatch(c.route_name, selectedRouteObj.route_name));
+      filteredMorningCycles = morningCycles.filter(c => c.route_id === selectedRouteObj.id || routesMatch(c.route_name, selectedRouteObj.route_name, c.route_code, selectedRouteObj.route_code));
+      filteredEveningCycles = eveningCycles.filter(c => c.route_id === selectedRouteObj.id || routesMatch(c.route_name, selectedRouteObj.route_name, c.route_code, selectedRouteObj.route_code));
     }
   } else {
     // Sort so routes with tickets are displayed first!
@@ -647,11 +661,11 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     );
     if (selectedRouteObj) {
       filteredTickets = filteredTickets.filter(t =>
-        routesMatch(t.route_name, selectedRouteObj.route_name, null, selectedRouteObj.route_code)
+        routesMatch(t.route_name, selectedRouteObj.route_name, t.ticket_route || t.party_route, selectedRouteObj.route_code)
       );
     } else {
       filteredTickets = filteredTickets.filter(t =>
-        routesMatch(t.route_name, routeFilter)
+        routesMatch(t.route_name, routeFilter, t.ticket_route || t.party_route, routeFilter)
       );
     }
   }
