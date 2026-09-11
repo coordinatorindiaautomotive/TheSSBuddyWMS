@@ -53,8 +53,8 @@ async function deleteWarehouse(req, res) {
 async function getRoutes(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    const routes = await dbAsync.all('SELECT * FROM route_masters WHERE warehouse_id = ? ORDER BY route_name ASC', [whId]);
-    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE warehouse_id = ? ORDER BY priority_order ASC, dispatch_time ASC', [whId]);
+    const routes = await dbAsync.all('SELECT * FROM route_masters WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY route_name ASC', [whId, whId]);
+    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY priority_order ASC, dispatch_time ASC', [whId, whId]);
     
     const routesWithSchedules = routes.map(r => {
       const rScheds = schedules.filter(s => s.route_id === r.id);
@@ -399,8 +399,8 @@ async function deleteRouteSchedule(req, res) {
 // 3. Workers CRUD
 async function getWorkers(req, res) {
   try {
-    const whId = req.activeWarehouseId;
-    const workers = await dbAsync.all('SELECT * FROM picker_checker_helpers WHERE warehouse_id = ? ORDER BY name ASC', [whId]);
+    const whId = req.activeWarehouseId || 1;
+    const workers = await dbAsync.all('SELECT * FROM picker_checker_helpers WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY name ASC', [whId, whId]);
     return res.json(workers);
   } catch (err) {
     return res.status(500).json({ message: 'Error fetching workers.' });
@@ -593,8 +593,8 @@ async function deleteSalesman(req, res) {
 // 5. Drivers CRUD
 async function getDrivers(req, res) {
   try {
-    const whId = req.activeWarehouseId;
-    const drivers = await dbAsync.all('SELECT * FROM drivers WHERE warehouse_id = ? ORDER BY name ASC', [whId]);
+    const whId = req.activeWarehouseId || 1;
+    const drivers = await dbAsync.all('SELECT * FROM drivers WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY name ASC', [whId, whId]);
     return res.json(drivers);
   } catch (err) {
     return res.status(500).json({ message: 'Error fetching drivers.' });
@@ -654,14 +654,14 @@ async function deleteDriver(req, res) {
 // 6. Vehicles CRUD
 async function getVehicles(req, res) {
   try {
-    const whId = req.activeWarehouseId;
+    const whId = req.activeWarehouseId || 1;
     const vehicles = await dbAsync.all(`
       SELECT v.*, d.name as driver_name
       FROM vehicles v
       LEFT JOIN drivers d ON v.driver_id = d.id
-      WHERE v.warehouse_id = ?
+      WHERE (v.warehouse_id = ? OR v.warehouse_id IS NULL OR ? = 1)
       ORDER BY v.vehicle_number ASC
-    `, [whId]);
+    `, [whId, whId]);
     return res.json(vehicles);
   } catch (err) {
     return res.status(500).json({ message: 'Error fetching vehicles.' });

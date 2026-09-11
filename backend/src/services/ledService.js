@@ -146,7 +146,7 @@ function routesMatch(rName1, rName2, rCode1, rCode2) {
   const keys1 = [normalizeRouteKey(rName1), normalizeRouteKey(rCode1)].filter(k => k && k !== 'unassigned');
   const keys2 = [normalizeRouteKey(rName2), normalizeRouteKey(rCode2)].filter(k => k && k !== 'unassigned');
   if (keys1.length === 0 || keys2.length === 0) return false;
-  return keys1.some(k1 => keys2.includes(k1));
+  return keys1.some(k1 => keys2.some(k2 => k1 === k2 || k1.includes(k2) || k2.includes(k1)));
 }
 
 /**
@@ -303,7 +303,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   const priorityFilter = params.priority && params.priority !== 'ALL' ? params.priority : null;
   const searchTerm = (params.search || '').trim().toLowerCase();
 
-  const whWhere = warehouseId ? 'WHERE (rm.warehouse_id = ? OR (rm.warehouse_id IS NULL AND ? = 1))' : 'WHERE 1=1';
+  const whWhere = warehouseId ? 'WHERE (rm.warehouse_id = ? OR rm.warehouse_id IS NULL OR ? = 1)' : 'WHERE 1=1';
   const whParams = warehouseId ? [warehouseId, warehouseId] : [];
 
   // 1. Fetch Routes for active warehouse
@@ -320,11 +320,11 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   try {
     const distinctPartyRoutes = await dbAsync.all(`
       SELECT DISTINCT route_name FROM parties 
-      WHERE (warehouse_id = ? OR (warehouse_id IS NULL AND ? = 1)) 
+      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) 
         AND route_name IS NOT NULL 
         AND TRIM(route_name) != ''
       ORDER BY route_name ASC
-    `, warehouseId ? [warehouseId, warehouseId] : [1, 1]);
+    `, whParams);
 
     const existingRouteNames = new Set();
     routes.forEach(r => {
@@ -349,11 +349,11 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
     const distinctTicketRoutes = await dbAsync.all(`
       SELECT DISTINCT route FROM pick_tickets 
-      WHERE (warehouse_id = ? OR (warehouse_id IS NULL AND ? = 1)) 
+      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) 
         AND route IS NOT NULL 
         AND TRIM(route) != ''
       ORDER BY route ASC
-    `, warehouseId ? [warehouseId, warehouseId] : [1, 1]);
+    `, whParams);
 
     for (const tr of (distinctTicketRoutes || [])) {
       const cleanRouteName = String(tr.route || '').trim();
@@ -375,7 +375,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     SELECT rs.*, rm.route_name, rm.route_code
     FROM route_schedules rs
     JOIN route_masters rm ON rs.route_id = rm.id
-    WHERE (rs.warehouse_id = ? OR (rs.warehouse_id IS NULL AND ? = 1)) AND rs.is_active = 1
+    WHERE (rs.warehouse_id = ? OR rs.warehouse_id IS NULL OR ? = 1) AND rs.is_active = 1
     ORDER BY rs.dispatch_time ASC, rs.priority_order ASC
   `, whParams);
   if (!schedules) schedules = [];
@@ -397,7 +397,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     LEFT JOIN dispatch_parties dp ON dp.billing_id = b.id
     LEFT JOIN dispatches d ON dp.dispatch_id = d.id
     LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code))) AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL)
-    WHERE (pt.warehouse_id = ? OR (pt.warehouse_id IS NULL AND ? = 1))
+    WHERE (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
       AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))
     ORDER BY pt.created_at ASC
   `, whParams);
@@ -519,6 +519,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       routesMatch(t.route_name, r.route_name, t.ticket_route || t.party_route, r.route_code) &&
       (
         (!eveningSched && morningSched) ||
+        (!morningSched && !eveningSched) ||
         (t.dispatch_slot && t.dispatch_slot.toLowerCase() === 'morning')
       )
     );
@@ -762,8 +763,8 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       cycles: filteredEveningCycles
     },
     routes: routes.map(r => {
-      const rTickets = enrichedTickets.filter(t => routesMatch(t.route_name, r.route_name, null, r.route_code));
-      const unbilled = rTickets.filter(t => !t.is_billed).length;
+      const rTickets = enrichedTickets.filter(t => routesMatch(t.route_name, r.route_name, t.ticket_route || t.party_route, r.route_code));
+      const unbilled = rTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;
       return {
         id: r.id,
         route_code: r.route_code,
@@ -905,8 +906,8 @@ async function getPickTicketDetailById(ticketId, warehouseId = 1) {
     LEFT JOIN drivers dr ON d.driver_id = dr.id
     LEFT JOIN vehicles v ON d.vehicle_id = v.id
     LEFT JOIN parties p ON pt.party_code = p.party_code AND p.warehouse_id = pt.warehouse_id
-    WHERE (pt.id = ? OR pt.ticket_no = ?) AND pt.warehouse_id = ?
-  `, [ticketId, ticketId, warehouseId]);
+    WHERE (pt.id = ? OR pt.ticket_no = ?) AND (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
+  `, [ticketId, ticketId, warehouseId, warehouseId]);
 
   if (!ticket) return null;
 

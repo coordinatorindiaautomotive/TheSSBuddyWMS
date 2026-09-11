@@ -118,7 +118,7 @@ export default function LEDDashboard() {
           route_id: selectedRouteId,
           dispatch_slot: selectedSlot,
           page: 1,
-          limit: 200
+          limit: 500
         }
       });
       setData(res.data);
@@ -177,7 +177,7 @@ export default function LEDDashboard() {
     const keys1 = [normalizeRouteKey(r1), normalizeRouteKey(code1)].filter(k => k && k !== 'unassigned');
     const keys2 = [normalizeRouteKey(r2), normalizeRouteKey(code2)].filter(k => k && k !== 'unassigned');
     if (keys1.length === 0 || keys2.length === 0) return false;
-    return keys1.some(k1 => keys2.includes(k1));
+    return keys1.some(k1 => keys2.some(k2 => k1 === k2 || k1.includes(k2) || k2.includes(k1)));
   };
 
   // Aggregate all available routes to ensure dropdown has valid routes
@@ -296,7 +296,7 @@ export default function LEDDashboard() {
         normalizeRouteKey(t.route)
       ].filter(k => k && k !== 'unassigned');
 
-      const isRouteMatch = targetKeys.some(tk => ticketKeys.includes(tk));
+      const isRouteMatch = targetKeys.some(tk => ticketKeys.some(rk => tk === rk || tk.includes(rk) || rk.includes(tk)));
       if (!isRouteMatch) {
         return false;
       }
@@ -304,7 +304,17 @@ export default function LEDDashboard() {
 
     // Slot Filter
     if (selectedSlot !== 'ALL') {
-      if (String(t.dispatch_slot || '').toLowerCase() !== selectedSlot.toLowerCase()) return false;
+      const isMorningSelected = selectedSlot.toLowerCase() === 'morning';
+      const isEveningSelected = selectedSlot.toLowerCase() === 'evening';
+      const ticketSlot = String(t.dispatch_slot || 'Morning').toLowerCase();
+
+      if (isMorningSelected && !showEveningSlot && showMorningSlot) {
+        // Allow all tickets for this route under Morning if only Morning is configured
+      } else if (isEveningSelected && !showMorningSlot && showEveningSlot) {
+        // Allow all tickets for this route under Evening if only Evening is configured
+      } else if (ticketSlot !== selectedSlot.toLowerCase()) {
+        return false;
+      }
     }
 
     // Unbilled filter
@@ -344,12 +354,16 @@ export default function LEDDashboard() {
           normalizeRouteKey(t.route)
         ].filter(k => k && k !== 'unassigned');
 
-        return targetKeys.some(tk => ticketKeys.includes(tk));
+        return targetKeys.some(tk => ticketKeys.some(rk => tk === rk || tk.includes(rk) || rk.includes(tk)));
       });
 
   const unbilledCount = routeUnbilledTickets.length;
-  const morningPendingCount = routeUnbilledTickets.filter(t => String(t.dispatch_slot || '').toLowerCase() === 'morning').length;
-  const eveningPendingCount = routeUnbilledTickets.filter(t => String(t.dispatch_slot || '').toLowerCase() === 'evening').length;
+  const morningPendingCount = (!showEveningSlot && showMorningSlot)
+    ? unbilledCount
+    : routeUnbilledTickets.filter(t => String(t.dispatch_slot || '').toLowerCase() === 'morning').length;
+  const eveningPendingCount = (!showMorningSlot && showEveningSlot)
+    ? unbilledCount
+    : routeUnbilledTickets.filter(t => String(t.dispatch_slot || '').toLowerCase() === 'evening').length;
 
   const billedCount = allTickets.filter(t => t.is_billed).length;
   const totalCartons = filteredTickets.reduce((sum, t) => sum + (t.cartons || 1), 0);
@@ -439,7 +453,7 @@ export default function LEDDashboard() {
                       normalizeRouteKey(t.ticket_route),
                       normalizeRouteKey(t.route)
                     ].filter(k => k && k !== 'unassigned');
-                    return targetKeys.some(tk => ticketKeys.includes(tk));
+                    return targetKeys.some(tk => ticketKeys.some(rk => tk === rk || tk.includes(rk) || rk.includes(tk)));
                   }).length;
 
                   return (

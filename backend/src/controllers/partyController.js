@@ -7,7 +7,7 @@ async function getParties(req, res) {
       SELECT p.*, COALESCE(rm.route_name, p.route_name, p.address) as route_name
       FROM parties p
       LEFT JOIN route_masters rm ON p.route_id = rm.id
-      WHERE (p.warehouse_id = ? OR (p.warehouse_id IS NULL AND ? = 1))
+      WHERE (p.warehouse_id = ? OR p.warehouse_id IS NULL OR ? = 1)
       ORDER BY p.party_name ASC
     `, [whId, whId]);
     return res.json(parties);
@@ -21,7 +21,7 @@ async function getPartyByCode(req, res) {
     const { code } = req.params;
     const whId = req.activeWarehouseId || 1;
     const party = await dbAsync.get(
-      'SELECT * FROM parties WHERE (party_code = ? OR party_code LIKE ?) AND (warehouse_id = ? OR (warehouse_id IS NULL AND ? = 1))',
+      'SELECT * FROM parties WHERE (party_code = ? OR party_code LIKE ?) AND (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1)',
       [code, `%${code}%`, whId, whId]
     );
     if (!party) {
