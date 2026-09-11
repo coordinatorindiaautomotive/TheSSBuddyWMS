@@ -494,8 +494,11 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       routesMatch(t.route_name, r.route_name, null, r.route_code)
     );
 
+    // Check which schedules are configured for this route
+    const hasConfiguredSchedules = routeSchedules.length > 0;
+
     // Morning Cycle
-    const mActive = morningSched ? isScheduleActive(morningSched, targetDate) : true;
+    const mActive = morningSched ? isScheduleActive(morningSched, targetDate) : (!hasConfiguredSchedules);
     if (mActive) {
       const mCutoff = morningSched ? morningSched.cutoff_time : '08:00';
       const mDispatch = morningSched ? morningSched.dispatch_time : '10:00';
@@ -537,7 +540,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     }
 
     // Evening Cycle
-    const eActive = eveningSched ? isScheduleActive(eveningSched, targetDate) : true;
+    const eActive = eveningSched ? isScheduleActive(eveningSched, targetDate) : (!hasConfiguredSchedules);
     if (eActive) {
       const eCutoff = eveningSched ? eveningSched.cutoff_time : '16:00';
       const eDispatch = eveningSched ? eveningSched.dispatch_time : '18:00';

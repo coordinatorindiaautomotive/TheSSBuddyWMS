@@ -216,8 +216,37 @@ export default function LEDDashboard() {
     ? routesList.find(r => String(r.id) === String(selectedRouteId) || String(r.route_name || '').toLowerCase() === String(selectedRouteId).toLowerCase())
     : null;
 
+  // Extract selected route object and slot cycles
   const morningCycle = data?.morningDispatch?.cycles?.[0] || null;
   const eveningCycle = data?.eveningDispatch?.cycles?.[0] || null;
+
+  // Determine available slots for the selected route
+  const selectedMasterRoute = masterRoutes.find(mr => String(mr.id) === String(selectedRouteId) || String(mr.route_name || '').toLowerCase() === String(selectedRouteId).toLowerCase());
+  
+  const hasMorningConfigured = selectedRouteId === 'ALL'
+    ? true
+    : (data?.morningDispatch?.cycles || []).some(c => String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) ||
+      (selectedMasterRoute ? (selectedMasterRoute.schedules || []).some(s => (s.trip_name || '').toLowerCase().includes('morning') || parseInt((s.cutoff_time || '0').split(':')[0], 10) < 13) : false);
+
+  const hasEveningConfigured = selectedRouteId === 'ALL'
+    ? true
+    : (data?.eveningDispatch?.cycles || []).some(c => String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) ||
+      (selectedMasterRoute ? (selectedMasterRoute.schedules || []).some(s => (s.trip_name || '').toLowerCase().includes('evening') || parseInt((s.cutoff_time || '0').split(':')[0], 10) >= 13) : false);
+
+  // Fallback if route has no explicit schedule configuration in DB
+  const showMorningSlot = hasMorningConfigured || (!hasMorningConfigured && !hasEveningConfigured);
+  const showEveningSlot = hasEveningConfigured || (!hasMorningConfigured && !hasEveningConfigured);
+
+  // Auto adjust selected slot if current selection is not available for this route
+  useEffect(() => {
+    if (selectedRouteId !== 'ALL') {
+      if (selectedSlot === 'Morning' && !showMorningSlot && showEveningSlot) {
+        setSelectedSlot('Evening');
+      } else if (selectedSlot === 'Evening' && !showEveningSlot && showMorningSlot) {
+        setSelectedSlot('Morning');
+      }
+    }
+  }, [selectedRouteId, showMorningSlot, showEveningSlot]);
 
   // Filter tickets list based on Search & Unbilled Toggle
   const allTickets = data?.tickets?.items || [];
@@ -252,7 +281,19 @@ export default function LEDDashboard() {
   });
 
   // Calculate Metrics for Current View
-  const unbilledCount = allTickets.filter(t => !t.is_billed).length;
+  const unbilledTickets = allTickets.filter(t => !t.is_billed);
+  const routeUnbilledTickets = selectedRouteId === 'ALL'
+    ? unbilledTickets
+    : unbilledTickets.filter(t => {
+        const targetRoute = (selectedRouteObj?.route_name || selectedRouteId).trim().toLowerCase();
+        const ticketRoute = String(t.route_name || t.route || '').trim().toLowerCase();
+        return ticketRoute === targetRoute || ticketRoute.includes(targetRoute) || targetRoute.includes(ticketRoute);
+      });
+
+  const unbilledCount = routeUnbilledTickets.length;
+  const morningPendingCount = routeUnbilledTickets.filter(t => String(t.dispatch_slot || '').toLowerCase() === 'morning').length;
+  const eveningPendingCount = routeUnbilledTickets.filter(t => String(t.dispatch_slot || '').toLowerCase() === 'evening').length;
+
   const billedCount = allTickets.filter(t => t.is_billed).length;
   const totalCartons = filteredTickets.reduce((sum, t) => sum + (t.cartons || 1), 0);
   const criticalDelayedCount = filteredTickets.filter(t => t.aging_level === 'Critical' || t.aging_minutes > 60).length;
@@ -327,21 +368,29 @@ export default function LEDDashboard() {
                 className="w-full bg-blue-50/50 border-2 border-blue-200 hover:border-[#004c8f] rounded-xl p-2.5 text-xs sm:text-sm font-extrabold text-[#003366] focus:border-[#004c8f] focus:bg-white focus:outline-none cursor-pointer transition-all shadow-xs"
               >
                 <option value="ALL">🌟 All Routes ({routesList.length} Routes)</option>
-                {routesList.map((r) => (
-                  <option key={r.id || r.route_name} value={String(r.id || r.route_name)}>
-                    {r.route_name} {r.unbilled_count > 0 ? `(⏳ ${r.unbilled_count} Pending)` : '(✓ 0 Pending)'}
-                  </option>
-                ))}
+                {routesList.map((r) => {
+                  const rUnbilled = allTickets.filter(t => !t.is_billed && String(t.route_name || t.route || '').trim().toLowerCase() === String(r.route_name || '').trim().toLowerCase()).length;
+                  return (
+                    <option key={r.id || r.route_name} value={String(r.route_name || r.id)}>
+                      {r.route_name} {rUnbilled > 0 ? `(⏳ ${rUnbilled} Pending)` : '(✓ 0 Pending)'}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
 
-          {/* Step 2: Slot Selection Buttons */}
+          {/* Step 2: Slot Selection Buttons (Dynamic based on route config) */}
           <div className="lg:col-span-8 space-y-1.5">
             <label className="text-xs font-extrabold text-[#003366] uppercase tracking-wider flex items-center gap-1.5">
               <Sun className="w-4 h-4 text-amber-500" /> Step 2: Select Dispatch Slot
+              {selectedRouteObj && (
+                <span className="text-[10px] text-slate-400 font-normal lowercase">
+                  ({showMorningSlot && showEveningSlot ? 'morning & evening configured' : (showEveningSlot ? 'evening only' : 'morning only')})
+                </span>
+              )}
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className={`grid grid-cols-1 ${showMorningSlot && showEveningSlot ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-2.5`}>
               {/* All Shifts Button */}
               <button
                 type="button"
@@ -362,55 +411,59 @@ export default function LEDDashboard() {
                 </span>
               </button>
 
-              {/* Morning Slot */}
-              <button
-                type="button"
-                onClick={() => { setSelectedSlot('Morning'); setCurrentPage(1); }}
-                className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center justify-between gap-2 border transition-all cursor-pointer ${
-                  selectedSlot === 'Morning'
-                    ? 'bg-amber-500 text-white border-amber-500 shadow-sm ring-2 ring-amber-300'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-amber-50/50'
-                }`}
-              >
-                <div className="flex flex-col text-left min-w-0">
-                  <span className="flex items-center gap-1.5 truncate">
-                    <Sun className="w-3.5 h-3.5 text-amber-200 shrink-0" /> Morning Slot
+              {/* Morning Slot (Only shown if configured for route) */}
+              {showMorningSlot && (
+                <button
+                  type="button"
+                  onClick={() => { setSelectedSlot('Morning'); setCurrentPage(1); }}
+                  className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center justify-between gap-2 border transition-all cursor-pointer ${
+                    selectedSlot === 'Morning'
+                      ? 'bg-amber-500 text-white border-amber-500 shadow-sm ring-2 ring-amber-300'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-amber-50/50'
+                  }`}
+                >
+                  <div className="flex flex-col text-left min-w-0">
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Sun className="w-3.5 h-3.5 text-amber-200 shrink-0" /> Morning Slot
+                    </span>
+                    <span className="text-[10px] font-normal opacity-90 truncate">
+                      {morningCycle ? `Cut: ${morningCycle.cutoff_time_formatted} | Disp: ${morningCycle.dispatch_time_formatted}` : '08:00 AM - 10:00 AM'}
+                    </span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                    selectedSlot === 'Morning' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {morningPendingCount} Pending
                   </span>
-                  <span className="text-[10px] font-normal opacity-90 truncate">
-                    {morningCycle ? `Cut: ${morningCycle.cutoff_time_formatted} | Disp: ${morningCycle.dispatch_time_formatted}` : '08:00 AM - 10:00 AM'}
-                  </span>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
-                  selectedSlot === 'Morning' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
-                }`}>
-                  {(morningCycle?.metrics?.pending || 0) + (morningCycle?.metrics?.picking || 0)} Pending
-                </span>
-              </button>
+                </button>
+              )}
 
-              {/* Evening Slot */}
-              <button
-                type="button"
-                onClick={() => { setSelectedSlot('Evening'); setCurrentPage(1); }}
-                className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center justify-between gap-2 border transition-all cursor-pointer ${
-                  selectedSlot === 'Evening'
-                    ? 'bg-indigo-700 text-white border-indigo-700 shadow-sm ring-2 ring-indigo-300'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-indigo-50/50'
-                }`}
-              >
-                <div className="flex flex-col text-left min-w-0">
-                  <span className="flex items-center gap-1.5 truncate">
-                    <Moon className="w-3.5 h-3.5 text-indigo-200 shrink-0" /> Evening Slot
+              {/* Evening Slot (Only shown if configured for route) */}
+              {showEveningSlot && (
+                <button
+                  type="button"
+                  onClick={() => { setSelectedSlot('Evening'); setCurrentPage(1); }}
+                  className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center justify-between gap-2 border transition-all cursor-pointer ${
+                    selectedSlot === 'Evening'
+                      ? 'bg-indigo-700 text-white border-indigo-700 shadow-sm ring-2 ring-indigo-300'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-indigo-50/50'
+                  }`}
+                >
+                  <div className="flex flex-col text-left min-w-0">
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Moon className="w-3.5 h-3.5 text-indigo-200 shrink-0" /> Evening Slot
+                    </span>
+                    <span className="text-[10px] font-normal opacity-90 truncate">
+                      {eveningCycle ? `Cut: ${eveningCycle.cutoff_time_formatted} | Disp: ${eveningCycle.dispatch_time_formatted}` : '04:00 PM - 06:00 PM'}
+                    </span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                    selectedSlot === 'Evening' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800'
+                  }`}>
+                    {eveningPendingCount} Pending
                   </span>
-                  <span className="text-[10px] font-normal opacity-90 truncate">
-                    {eveningCycle ? `Cut: ${eveningCycle.cutoff_time_formatted} | Disp: ${eveningCycle.dispatch_time_formatted}` : '04:00 PM - 06:00 PM'}
-                  </span>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
-                  selectedSlot === 'Evening' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800'
-                }`}>
-                  {(eveningCycle?.metrics?.pending || 0) + (eveningCycle?.metrics?.picking || 0)} Pending
-                </span>
-              </button>
+                </button>
+              )}
             </div>
           </div>
         </div>
