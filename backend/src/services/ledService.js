@@ -115,6 +115,39 @@ function isScheduleActive(schedule, targetDate) {
   return true;
 }
 
+function normalizeDateStr(d) {
+  if (!d) return '';
+  const clean = String(d).trim().split('T')[0].split(' ')[0];
+  // If DD-MM-YYYY or DD/MM/YYYY
+  if (/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/.test(clean)) {
+    const match = clean.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+    const day = String(match[1]).padStart(2, '0');
+    const month = String(match[2]).padStart(2, '0');
+    const year = match[3];
+    return `${year}-${month}-${day}`;
+  }
+  // If YYYY-MM-DD or YYYY/MM/DD
+  if (/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/.test(clean)) {
+    const match = clean.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+    const year = match[1];
+    const month = String(match[2]).padStart(2, '0');
+    const day = String(match[3]).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return clean;
+}
+
+function routesMatch(rName1, rName2, rCode1, rCode2) {
+  if (!rName1 && !rName2) return true;
+  if (!rName1 || !rName2) return false;
+  const n1 = String(rName1).trim().toLowerCase();
+  const n2 = String(rName2).trim().toLowerCase();
+  if (n1 === n2) return true;
+  if (n1.includes(n2) || n2.includes(n1)) return true;
+  if (rCode1 && rCode2 && String(rCode1).trim().toLowerCase() === String(rCode2).trim().toLowerCase()) return true;
+  return false;
+}
+
 /**
  * Determine dynamic stage of a pick ticket
  */
@@ -128,10 +161,13 @@ function determineTicketStage(ticket, billing, dispatchParty) {
   if (billing && billing.id) {
     return 'Ready'; // Billed and waiting for vehicle/dispatch
   }
+  if (ticket.status === 'Billed') {
+    return 'Ready';
+  }
   if (ticket.status === 'Billing') {
     return 'Billing';
   }
-  if (ticket.status === 'Picking' || ticket.picker_id) {
+  if (ticket.status === 'Picking' || ticket.status === 'Picked' || ticket.picker_id) {
     return 'Picking';
   }
   return 'Pending';
@@ -252,9 +288,10 @@ function calculateCycleStatus(metrics, cutoffTimeStr, dispatchTimeStr, targetDat
 async function getLedDashboardData(params = {}, warehouseId = 1) {
   const now = getNowIST();
   const dateStr = params.date || formatDateToYMD(now);
-  const targetDate = new Date(`${dateStr}T12:00:00`);
+  const normTargetDate = normalizeDateStr(dateStr);
+  const targetDate = new Date(`${normTargetDate || formatDateToYMD(now)}T12:00:00`);
 
-  const routeFilter = params.route_id && params.route_id !== 'ALL' ? params.route_id : null;
+  const routeFilter = params.route_id && params.route_id !== 'ALL' ? String(params.route_id).trim() : null;
   const slotFilter = params.dispatch_slot && params.dispatch_slot !== 'ALL' ? params.dispatch_slot : null;
   const stageFilter = params.stage && params.stage !== 'ALL' ? params.stage : null;
   const statusFilter = params.status && params.status !== 'ALL' ? params.status : null;
@@ -301,10 +338,11 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     ORDER BY pt.created_at ASC
   `, whParams);
 
-  // Filter pick tickets by date (matches pt.date or created_at date)
+  // Filter pick tickets by date (matches pt.date or created_at date with normalization)
   const pickTickets = pickTicketsRaw.filter(t => {
-    const tDate = t.date || (t.created_at ? String(t.created_at).substring(0, 10) : dateStr);
-    return tDate === dateStr;
+    if (!normTargetDate) return true;
+    const tDate = normalizeDateStr(t.date) || (t.created_at ? normalizeDateStr(t.created_at) : '');
+    return !tDate || tDate === normTargetDate;
   });
 
   // Map tickets into normalized structures
@@ -372,14 +410,6 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     };
   });
 
-  // Group tickets by Route + Slot
-  const ticketsByRouteSlot = new Map();
-  enrichedTickets.forEach(t => {
-    const key = `${(t.route_name || '').trim().toLowerCase()}_${t.dispatch_slot.toLowerCase()}`;
-    if (!ticketsByRouteSlot.has(key)) ticketsByRouteSlot.set(key, []);
-    ticketsByRouteSlot.get(key).push(t);
-  });
-
   // Generate Dispatch Cycles for each Route Master entry
   const morningCycles = [];
   const eveningCycles = [];
@@ -400,19 +430,28 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       (s.cutoff_time && parseInt(s.cutoff_time.split(':')[0], 10) >= 13)
     );
 
+    // Filter tickets belonging to route r
+    const mTickets = enrichedTickets.filter(t =>
+      t.dispatch_slot.toLowerCase() === 'morning' &&
+      routesMatch(t.route_name, r.route_name, null, r.route_code)
+    );
+
+    const eTickets = enrichedTickets.filter(t =>
+      t.dispatch_slot.toLowerCase() === 'evening' &&
+      routesMatch(t.route_name, r.route_name, null, r.route_code)
+    );
+
     // Morning Cycle
     const mActive = morningSched ? isScheduleActive(morningSched, targetDate) : true;
     if (mActive) {
       const mCutoff = morningSched ? morningSched.cutoff_time : '08:00';
       const mDispatch = morningSched ? morningSched.dispatch_time : '10:00';
-      const mKey = `${(r.route_name || '').trim().toLowerCase()}_morning`;
-      const mTickets = ticketsByRouteSlot.get(mKey) || [];
 
       const metrics = {
         total: mTickets.length,
         pending: mTickets.filter(t => t.current_stage === 'Pending').length,
         picking: mTickets.filter(t => t.current_stage === 'Picking').length,
-        billing: mTickets.filter(t => t.current_stage === 'Billing').length,
+        billing: mTickets.filter(t => t.current_stage === 'Billing' || t.billing_id).length,
         ready: mTickets.filter(t => t.current_stage === 'Ready').length,
         dispatched: mTickets.filter(t => t.current_stage === 'Dispatched').length,
         delayed: mTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed').length
@@ -449,14 +488,12 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     if (eActive) {
       const eCutoff = eveningSched ? eveningSched.cutoff_time : '16:00';
       const eDispatch = eveningSched ? eveningSched.dispatch_time : '18:00';
-      const eKey = `${(r.route_name || '').trim().toLowerCase()}_evening`;
-      const eTickets = ticketsByRouteSlot.get(eKey) || [];
 
       const metrics = {
         total: eTickets.length,
         pending: eTickets.filter(t => t.current_stage === 'Pending').length,
         picking: eTickets.filter(t => t.current_stage === 'Picking').length,
-        billing: eTickets.filter(t => t.current_stage === 'Billing').length,
+        billing: eTickets.filter(t => t.current_stage === 'Billing' || t.billing_id).length,
         ready: eTickets.filter(t => t.current_stage === 'Ready').length,
         dispatched: eTickets.filter(t => t.current_stage === 'Dispatched').length,
         delayed: eTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed').length
@@ -489,6 +526,22 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     }
   }
 
+  // Filter Morning & Evening cycles based on Route Filter
+  let filteredMorningCycles = morningCycles;
+  let filteredEveningCycles = eveningCycles;
+
+  if (routeFilter && routeFilter !== 'ALL') {
+    const selectedRouteObj = routes.find(r => String(r.id) === String(routeFilter) || String(r.route_name).toLowerCase() === String(routeFilter).toLowerCase());
+    if (selectedRouteObj) {
+      filteredMorningCycles = morningCycles.filter(c => c.route_id === selectedRouteObj.id || routesMatch(c.route_name, selectedRouteObj.route_name));
+      filteredEveningCycles = eveningCycles.filter(c => c.route_id === selectedRouteObj.id || routesMatch(c.route_name, selectedRouteObj.route_name));
+    }
+  } else {
+    // Sort so routes with tickets are displayed first!
+    filteredMorningCycles.sort((a, b) => (b.metrics.total || 0) - (a.metrics.total || 0));
+    filteredEveningCycles.sort((a, b) => (b.metrics.total || 0) - (a.metrics.total || 0));
+  }
+
   // Calculate Next Dispatch Banner
   let nextDispatch = allCycles
     .filter(c => c.metrics.total > 0 && c.metrics.dispatched < c.metrics.total && c.secondsToDispatch >= -3600)
@@ -501,35 +554,42 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   // Apply filters on pick tickets table
   let filteredTickets = [...enrichedTickets];
 
-  if (routeFilter) {
-    const selectedRouteObj = routes.find(r => String(r.id) === String(routeFilter));
+  if (routeFilter && routeFilter !== 'ALL') {
+    const selectedRouteObj = routes.find(r => String(r.id) === String(routeFilter) || String(r.route_name).toLowerCase() === String(routeFilter).toLowerCase());
     if (selectedRouteObj) {
       filteredTickets = filteredTickets.filter(t =>
-        (t.route_name || '').trim().toLowerCase() === (selectedRouteObj.route_name || '').trim().toLowerCase()
+        routesMatch(t.route_name, selectedRouteObj.route_name, null, selectedRouteObj.route_code)
       );
     }
   }
 
-  if (slotFilter) {
+  if (slotFilter && slotFilter !== 'ALL') {
     filteredTickets = filteredTickets.filter(t =>
       t.dispatch_slot.toLowerCase() === slotFilter.toLowerCase()
     );
   }
 
-  if (stageFilter) {
-    filteredTickets = filteredTickets.filter(t =>
-      t.current_stage.toLowerCase() === stageFilter.toLowerCase()
-    );
+  if (stageFilter && stageFilter !== 'ALL') {
+    const sf = stageFilter.toLowerCase();
+    if (sf === 'billing') {
+      filteredTickets = filteredTickets.filter(t => t.current_stage === 'Billing' || t.current_stage === 'Ready' || t.billing_id != null);
+    } else if (sf === 'ready') {
+      filteredTickets = filteredTickets.filter(t => t.current_stage === 'Ready' || t.billing_id != null);
+    } else {
+      filteredTickets = filteredTickets.filter(t => t.current_stage.toLowerCase() === sf);
+    }
   }
 
-  if (statusFilter) {
-    filteredTickets = filteredTickets.filter(t =>
-      t.status.toLowerCase() === statusFilter.toLowerCase() ||
-      (statusFilter.toLowerCase() === 'delayed' && t.aging_level === 'Critical')
-    );
+  if (statusFilter && statusFilter !== 'ALL') {
+    const stf = statusFilter.toLowerCase();
+    if (stf === 'delayed') {
+      filteredTickets = filteredTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed');
+    } else {
+      filteredTickets = filteredTickets.filter(t => t.status.toLowerCase() === stf);
+    }
   }
 
-  if (priorityFilter) {
+  if (priorityFilter && priorityFilter !== 'ALL') {
     filteredTickets = filteredTickets.filter(t =>
       t.priority.toLowerCase() === priorityFilter.toLowerCase()
     );
@@ -549,8 +609,8 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   const totalTicketsCount = enrichedTickets.length;
   const pendingCount = enrichedTickets.filter(t => t.current_stage === 'Pending').length;
   const pickingCount = enrichedTickets.filter(t => t.current_stage === 'Picking').length;
-  const billingCount = enrichedTickets.filter(t => t.current_stage === 'Billing').length;
-  const readyCount = enrichedTickets.filter(t => t.current_stage === 'Ready').length;
+  const billingCount = enrichedTickets.filter(t => t.current_stage === 'Billing' || t.billing_id != null).length;
+  const readyCount = enrichedTickets.filter(t => t.current_stage === 'Ready' || (t.billing_id != null && t.current_stage !== 'Dispatched')).length;
   const delayedCount = enrichedTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed').length;
   const activeRoutesCount = new Set(allCycles.filter(c => c.metrics.total > 0).map(c => c.route_id)).size || routes.length;
 
@@ -587,12 +647,12 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       status: nextDispatch.status
     } : null,
     morningDispatch: {
-      count: morningCycles.length,
-      cycles: morningCycles
+      count: filteredMorningCycles.length,
+      cycles: filteredMorningCycles
     },
     eveningDispatch: {
-      count: eveningCycles.length,
-      cycles: eveningCycles
+      count: filteredEveningCycles.length,
+      cycles: filteredEveningCycles
     },
     routes: routes.map(r => ({ id: r.id, route_code: r.route_code, route_name: r.route_name })),
     tickets: {
