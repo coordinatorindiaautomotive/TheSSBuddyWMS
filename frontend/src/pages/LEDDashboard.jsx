@@ -196,68 +196,48 @@ export default function LEDDashboard() {
   const paginatedTickets = filteredTickets.slice(startIndex, startIndex + pageSize);
 
   return (
-    <div ref={containerRef} className="space-y-3.5 w-full bg-slate-100/60 p-1 sm:p-2 rounded-2xl min-h-screen">
-      {/* ── Top Header Control Bar ──────────────────────────────────── */}
-      <div className="bg-[#003366] border-b-4 border-[#ed1c24] text-white p-3.5 sm:p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600/50 flex items-center justify-center text-white border border-blue-400/40 shrink-0">
-            <RouteIcon className="w-5 h-5" />
+    <div ref={containerRef} className="space-y-3 w-full p-1 sm:p-2 min-h-screen">
+      {/* ── Step 1 & 2: Route & Slot Selection Dashboard Bar (Compact) ── */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 shadow-sm space-y-3.5">
+        {/* Compact Title & Live Controls Row */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <span className="text-sm sm:text-base font-extrabold text-[#003366] flex items-center gap-1.5">
+              <RouteIcon className="w-4 h-4 text-[#004c8f]" />
+              Dispatch Control - Live Monitor
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> ALL PENDING
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-extrabold tracking-tight">Dispatch Control - Live Monitor</h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500 text-white tracking-wider flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> ALL PENDING LIVE
-              </span>
+
+          <div className="flex items-center gap-2 text-xs font-bold">
+            {/* Clock */}
+            <div className="hidden sm:flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-lg text-slate-700 font-mono text-[11px]">
+              <Clock className="w-3 h-3 text-amber-600" />
+              <span>{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
             </div>
-            <p className="text-xs text-blue-200/80 font-medium">Automatic Live Monitoring of All Pending Pick Tickets across Routes</p>
-          </div>
-        </div>
 
-        {/* Top Right: Real-time clock & Controls */}
-        <div className="flex items-center flex-wrap gap-2 sm:gap-3 self-end sm:self-auto text-xs font-bold">
-          {/* Optional Date Filter Dropdown */}
-          <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1.5 rounded-xl border border-white/15 text-white">
-            <Calendar className="w-3.5 h-3.5 text-blue-300" />
-            <select
-              value={date}
-              onChange={(e) => { setDate(e.target.value); setCurrentPage(1); }}
-              className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer"
+            {/* Refresh */}
+            <button
+              onClick={() => fetchDashboard()}
+              className="bg-[#004c8f] hover:bg-[#003a6d] text-white px-2.5 py-1 rounded-lg flex items-center gap-1 text-[11px] font-extrabold cursor-pointer transition-colors shadow-xs"
+              title="Refresh Data"
             >
-              <option value="ALL" className="text-slate-900 font-bold">All Pending Dates</option>
-              <option value={new Date().toISOString().split('T')[0]} className="text-slate-900 font-bold">Today ({new Date().toISOString().split('T')[0]})</option>
-            </select>
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh ({refreshCountdown}s)</span>
+            </button>
+
+            {/* Full Screen */}
+            <button
+              onClick={toggleFullScreen}
+              className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer"
+              title={isFullScreen ? 'Exit Full Screen' : 'Full Screen'}
+            >
+              {isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
           </div>
-
-          {/* Clock */}
-          <div className="hidden md:flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/15 text-white font-mono">
-            <Clock className="w-3.5 h-3.5 text-amber-300" />
-            <span>{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
-          </div>
-
-          {/* Auto Refresh & Manual Refresh */}
-          <button
-            onClick={() => fetchDashboard()}
-            className="bg-[#004c8f] hover:bg-[#003a6d] text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 border border-blue-400/30 shadow-xs cursor-pointer transition-all"
-            title="Refresh Data"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh ({refreshCountdown}s)</span>
-          </button>
-
-          {/* Full Screen Toggle */}
-          <button
-            onClick={toggleFullScreen}
-            className="p-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors cursor-pointer"
-            title={isFullScreen ? 'Exit Full Screen' : 'Full Screen Monitor'}
-          >
-            {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
         </div>
-      </div>
-
-      {/* ── Step 1 & 2: Route & Slot Selection Dashboard Bar ───────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
           {/* Step 1: Route Selector */}
           <div className="lg:col-span-4 space-y-1.5">
