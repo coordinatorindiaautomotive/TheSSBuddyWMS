@@ -301,26 +301,53 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   const whWhere = warehouseId ? 'WHERE rm.warehouse_id = ?' : 'WHERE 1=1';
   const whParams = warehouseId ? [warehouseId] : [];
 
-  // 1. Fetch Routes from Route Master
-  const routes = await dbAsync.all(`
+  // 1. Fetch Routes from Route Master and also distinct routes from Pick Tickets
+  let routes = await dbAsync.all(`
     SELECT rm.* 
     FROM route_masters rm
-    ${whWhere}
+    ${warehouseId ? 'WHERE rm.warehouse_id = ? OR rm.warehouse_id IS NULL' : ''}
     ORDER BY rm.route_name ASC
   `, whParams);
 
+  if (!routes || routes.length === 0) {
+    routes = await dbAsync.all('SELECT * FROM route_masters ORDER BY route_name ASC');
+  }
+  if (!routes) routes = [];
+
+  // Also discover any routes from pick_tickets that might not be in route_masters
+  try {
+    const distinctTicketRoutes = await dbAsync.all(`
+      SELECT DISTINCT route FROM pick_tickets WHERE route IS NOT NULL AND TRIM(route) != ''
+    `);
+    const existingRouteNames = new Set(routes.map(r => (r.route_name || '').trim().toLowerCase()));
+    let tempId = 9000;
+    for (const tr of (distinctTicketRoutes || [])) {
+      const cleanRouteName = String(tr.route || '').trim();
+      if (cleanRouteName && !existingRouteNames.has(cleanRouteName.toLowerCase())) {
+        routes.push({
+          id: tempId++,
+          route_code: cleanRouteName.substring(0, 10).toUpperCase(),
+          route_name: cleanRouteName,
+          warehouse_id: warehouseId
+        });
+        existingRouteNames.add(cleanRouteName.toLowerCase());
+      }
+    }
+  } catch (e) {}
+
   // 2. Fetch Route Schedules
-  const schedules = await dbAsync.all(`
+  let schedules = await dbAsync.all(`
     SELECT rs.*, rm.route_name, rm.route_code
     FROM route_schedules rs
     JOIN route_masters rm ON rs.route_id = rm.id
-    WHERE ${warehouseId ? 'rs.warehouse_id = ? AND' : ''} rs.is_active = 1
+    WHERE ${warehouseId ? '(rs.warehouse_id = ? OR rs.warehouse_id IS NULL) AND' : ''} rs.is_active = 1
     ORDER BY rs.dispatch_time ASC, rs.priority_order ASC
   `, whParams);
+  if (!schedules) schedules = [];
 
   // 3. Fetch All Pick Tickets for the target date or active tickets in warehouse
-  const ptWhere = warehouseId ? 'WHERE pt.warehouse_id = ?' : 'WHERE 1=1';
-  const pickTicketsRaw = await dbAsync.all(`
+  const ptWhere = warehouseId ? 'WHERE (pt.warehouse_id = ? OR pt.warehouse_id IS NULL)' : '';
+  let pickTicketsRaw = await dbAsync.all(`
     SELECT pt.*,
            b.id as billing_id, b.bill_no, b.billed_qty, b.invoice_amount, b.created_at as billed_at,
            b.start_time as billing_start_time, b.end_time as billing_end_time,
@@ -333,10 +360,30 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     LEFT JOIN picker_checker_helpers pkh ON pt.picker_id = pkh.id OR pt.picker_id = pkh.employee_code OR LOWER(pt.picker_id) = LOWER(pkh.name)
     LEFT JOIN dispatch_parties dp ON dp.billing_id = b.id
     LEFT JOIN dispatches d ON dp.dispatch_id = d.id
-    LEFT JOIN parties p ON pt.party_code = p.party_code AND p.warehouse_id = pt.warehouse_id
+    LEFT JOIN parties p ON pt.party_code = p.party_code
     ${ptWhere}
     ORDER BY pt.created_at ASC
   `, whParams);
+
+  if (!pickTicketsRaw || pickTicketsRaw.length === 0) {
+    pickTicketsRaw = await dbAsync.all(`
+      SELECT pt.*,
+             b.id as billing_id, b.bill_no, b.billed_qty, b.invoice_amount, b.created_at as billed_at,
+             b.start_time as billing_start_time, b.end_time as billing_end_time,
+             pkh.name as picker_name, pkh.employee_code as picker_emp_code,
+             dp.id as dispatch_party_id, dp.status as dispatch_party_status, dp.delivery_status, dp.delivered_at,
+             d.id as dispatch_id, d.dispatch_no, d.status as dispatch_master_status,
+             p.address as party_address, p.city as party_city, p.phone as party_phone
+      FROM pick_tickets pt
+      LEFT JOIN billings b ON b.pick_ticket_id = pt.id
+      LEFT JOIN picker_checker_helpers pkh ON pt.picker_id = pkh.id OR pt.picker_id = pkh.employee_code OR LOWER(pt.picker_id) = LOWER(pkh.name)
+      LEFT JOIN dispatch_parties dp ON dp.billing_id = b.id
+      LEFT JOIN dispatches d ON dp.dispatch_id = d.id
+      LEFT JOIN parties p ON pt.party_code = p.party_code
+      ORDER BY pt.created_at ASC
+    `);
+  }
+  if (!pickTicketsRaw) pickTicketsRaw = [];
 
   // If date filter is 'ALL' or empty, include ALL pending tickets across all dates!
   const pickTickets = pickTicketsRaw.filter(t => {
