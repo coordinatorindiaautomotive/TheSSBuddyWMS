@@ -21,6 +21,7 @@ import DispatchList from './pages/DispatchList';
 import DispatchDetail from './pages/DispatchDetail';
 import Tracking from './pages/Tracking';
 import DeliveryBoard from './pages/DeliveryBoard';
+import LEDDashboard from './pages/LEDDashboard';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -60,7 +61,8 @@ export default function App() {
                         <Route path="/dispatch/:id" element={<DispatchDetail />} />
                         <Route path="/tracking/:id" element={<Tracking />} />
                         <Route path="/delivery" element={<DeliveryBoard />} />
-                        <Route path="/control-tower" element={<ControlTower />} />
+                        <Route path="/control-tower" element={<LEDDashboard />} />
+                        <Route path="/led" element={<LEDDashboard />} />
                         <Route path="/ewaybill" element={<EWayBill />} />
                         <Route path="/masters" element={<MasterRegistries />} />
                         <Route path="/parties" element={<MasterRegistries />} />

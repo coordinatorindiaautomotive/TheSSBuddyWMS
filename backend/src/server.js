@@ -28,6 +28,7 @@ const trackingController = require('./controllers/trackingController');
 const mobileApiController = require('./controllers/mobileApiController');
 const auditLogController = require('./controllers/auditLogController');
 const systemSettingsController = require('./controllers/systemSettingsController');
+const ledController = require('./controllers/ledController');
 
 const app = express();
 const server = http.createServer(app);
@@ -107,6 +108,19 @@ apiRouter.get('/dispatch-planning/data', dispatchPlanningController.getPlanningD
 apiRouter.post('/dispatch-planning/create-trip', dispatchPlanningController.createTrip);
 apiRouter.get('/dispatch-planning/bill-status', dispatchPlanningController.getPartyBillStatus);
 apiRouter.post('/dispatch-planning/mark-dispatched', dispatchPlanningController.markTicketsDispatched);
+
+// LED (Live Dispatch Control) API
+apiRouter.get('/led/dashboard', ledController.getLedDashboard);
+apiRouter.get('/led/summary', ledController.getLedSummary);
+apiRouter.get('/led/routes', ledController.getLedRoutes);
+apiRouter.get('/led/routes/:routeId', ledController.getLedRouteById);
+apiRouter.get('/led/dispatch-cycles', ledController.getLedDispatchCycles);
+apiRouter.get('/led/pick-tickets', ledController.getLedPickTickets);
+apiRouter.get('/led/pick-tickets/:id', ledController.getLedPickTicketById);
+apiRouter.get('/led/stage-summary', ledController.getLedStageSummary);
+apiRouter.get('/led/party-summary', ledController.getLedPartySummary);
+apiRouter.get('/led/carton-summary', ledController.getCartonSummary);
+apiRouter.get('/led/alerts', ledController.getLedAlerts);
 
 // Dispatches API
 apiRouter.get('/dispatches', dispatchController.getDispatches);

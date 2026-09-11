@@ -7,20 +7,32 @@ const SocketContext = createContext();
 export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [isConnected, setIsConnected] = useState(false);
   const { activeWarehouse } = useAuth();
 
   useEffect(() => {
-    const newSocket = io('http://localhost:5000', {
-      transports: ['websocket', 'polling']
+    const socketUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5000'
+      : window.location.origin;
+
+    const newSocket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      autoConnect: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000
     });
 
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      console.log('Socket connected to backend server:', newSocket.id);
+      setIsConnected(true);
       if (activeWarehouse) {
         newSocket.emit('joinWarehouse', activeWarehouse.id);
       }
+    });
+
+    newSocket.on('disconnect', () => {
+      setIsConnected(false);
     });
 
     newSocket.on('slaAlert', (alert) => {
@@ -30,11 +42,13 @@ export function SocketProvider({ children }) {
       ]);
     });
 
-    return () => newSocket.close();
+    return () => {
+      newSocket.close();
+    };
   }, [activeWarehouse]);
 
   return (
-    <SocketContext.Provider value={{ socket, notifications, setNotifications }}>
+    <SocketContext.Provider value={{ socket, isConnected, notifications, setNotifications }}>
       {children}
     </SocketContext.Provider>
   );

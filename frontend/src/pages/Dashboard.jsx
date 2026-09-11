@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import {
   Truck,
   PackageCheck,
@@ -12,7 +13,9 @@ import {
   Receipt,
   Route,
   Building2,
-  RefreshCw
+  RefreshCw,
+  Radio,
+  ArrowRight
 } from 'lucide-react';
 import {
   AreaChart,
@@ -104,6 +107,36 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5">
+      {/* Live Dispatch Control LED Quick Access Banner */}
+      <div className="bg-linear-to-r from-[#003366] to-[#004c8f] rounded-2xl p-4 sm:p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-4 border-[#ed1c24]">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+            <Radio className="w-6 h-6 text-emerald-400 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black tracking-tight">
+                Live Dispatch Control Room (LED)
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/30 text-emerald-300 border border-emerald-400/40">
+                LIVE
+              </span>
+            </div>
+            <p className="text-xs text-blue-100 mt-0.5">
+              Real-time monitoring of today’s route dispatches, Pick Ticket stages, aging, delays, and route performance.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          to="/led"
+          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black flex items-center gap-2 shadow-sm transition-all self-start sm:self-auto shrink-0"
+        >
+          <span>Launch LED Monitor</span>
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+
       {/* 6 Executive KPI Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {statCards.map((card, idx) => {
