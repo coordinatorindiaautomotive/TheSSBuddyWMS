@@ -144,6 +144,38 @@ async function createTrip(req, res) {
   }
 }
 
+function normalizeRouteKey(r) {
+  if (!r) return '';
+  return String(r).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function routesMatch(rName1, rName2, rCode1, rCode2) {
+  const keys1 = [normalizeRouteKey(rName1), normalizeRouteKey(rCode1)].filter(k => k && k !== 'unassigned');
+  const keys2 = [normalizeRouteKey(rName2), normalizeRouteKey(rCode2)].filter(k => k && k !== 'unassigned');
+  if (keys1.length === 0 || keys2.length === 0) return false;
+  return keys1.some(k1 => keys2.some(k2 => k1 === k2 || k1.includes(k2) || k2.includes(k1)));
+}
+
+function normalizeDateStr(d) {
+  if (!d) return '';
+  const clean = String(d).trim().split('T')[0].split(' ')[0];
+  if (/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/.test(clean)) {
+    const match = clean.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+    const day = String(match[1]).padStart(2, '0');
+    const month = String(match[2]).padStart(2, '0');
+    const year = match[3];
+    return `${year}-${month}-${day}`;
+  }
+  if (/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/.test(clean)) {
+    const match = clean.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+    const year = match[1];
+    const month = String(match[2]).padStart(2, '0');
+    const day = String(match[3]).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return clean;
+}
+
 // Route Bill Status Tracker Controller APIs
 async function getPartyBillStatus(req, res) {
   try {
@@ -155,7 +187,7 @@ async function getPartyBillStatus(req, res) {
       targetRoute = await dbAsync.get(`
         SELECT * FROM route_masters 
         WHERE (id = ? OR route_name = ? OR route_code = ?) 
-          AND (warehouse_id = ? OR (warehouse_id IS NULL AND ? = 1))
+          AND (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1)
       `, [routeId, routeId, routeId, whId, whId]);
     }
 
@@ -163,7 +195,7 @@ async function getPartyBillStatus(req, res) {
       SELECT p.*, rm.route_name as master_route_name, rm.route_code as master_route_code
       FROM parties p
       LEFT JOIN route_masters rm ON p.route_id = rm.id
-      WHERE (p.warehouse_id = ? OR (p.warehouse_id IS NULL AND ? = 1))
+      WHERE (p.warehouse_id = ? OR p.warehouse_id IS NULL OR ? = 1)
     `;
     let partyParams = [whId, whId];
 
@@ -186,19 +218,24 @@ async function getPartyBillStatus(req, res) {
       SELECT pt.*, b.id as billing_id, b.bill_no, b.billed_qty, b.created_at as billing_date
       FROM pick_tickets pt
       LEFT JOIN billings b ON pt.id = b.pick_ticket_id
-      WHERE (pt.warehouse_id = ? OR (pt.warehouse_id IS NULL AND ? = 1))
+      WHERE (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
         AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))
     `;
     let ptParams = [whId, whId];
-    if (fromDate) {
-      ptSql += ' AND pt.date >= ?';
-      ptParams.push(fromDate);
-    }
-    if (toDate) {
-      ptSql += ' AND pt.date <= ?';
-      ptParams.push(toDate);
-    }
-    const allTickets = await dbAsync.all(ptSql, ptParams);
+    const allTicketsRaw = await dbAsync.all(ptSql, ptParams);
+
+    const normFrom = fromDate ? normalizeDateStr(fromDate) : null;
+    const normTo = toDate ? normalizeDateStr(toDate) : null;
+
+    const allTickets = (allTicketsRaw || []).filter(t => {
+      // Pending tickets are always included in status view unless outside explicit date range
+      if (!normFrom && !normTo) return true;
+      const tNorm = normalizeDateStr(t.date) || (t.created_at ? normalizeDateStr(t.created_at) : '');
+      if (!tNorm) return true;
+      if (normFrom && tNorm < normFrom) return false;
+      if (normTo && tNorm > normTo) return false;
+      return true;
+    });
 
     const partyDataMap = {};
     const validPartyCodes = new Set();
@@ -226,31 +263,30 @@ async function getPartyBillStatus(req, res) {
       const pCode = String(t.party_code || '').trim();
       const pCodeUpper = pCode.toUpperCase();
 
-      // If a route filter is active, only include tickets belonging to that route!
+      // If a route filter is active, check party match or ticket route match
       if (targetRoute || (routeId && routeId !== 'ALL')) {
-        if (!validPartyCodes.has(pCodeUpper)) {
-          // If the party is not in the filtered parties, check if ticket's route explicitly matches
-          const tRoute = String(t.route || '').trim().toLowerCase();
-          const targetLower = String(targetRoute?.route_name || routeId || '').trim().toLowerCase();
-          if (tRoute && targetLower && tRoute === targetLower) {
-            if (!partyDataMap[pCodeUpper]) {
-              partyDataMap[pCodeUpper] = {
-                partyCode: pCode,
-                partyName: t.party_name || pCode,
-                route: t.route || targetRoute?.route_name || 'Direct Route',
-                salesman: t.salesman || 'General Sales',
-                totalPickTickets: 0,
-                pendingCount: 0,
-                billedCount: 0,
-                dispatchedCount: 0,
-                pendingTickets: [],
-                billedTickets: []
-              };
-            }
-          } else {
-            // Does NOT belong to this route! Skip it completely!
-            continue;
-          }
+        const targetRouteName = targetRoute ? targetRoute.route_name : routeId;
+        const targetRouteCode = targetRoute ? targetRoute.route_code : routeId;
+        const isPartyMatch = validPartyCodes.has(pCodeUpper);
+        const isTicketRouteMatch = routesMatch(t.route, targetRouteName, t.route, targetRouteCode);
+
+        if (!isPartyMatch && !isTicketRouteMatch) {
+          continue;
+        }
+
+        if (!partyDataMap[pCodeUpper]) {
+          partyDataMap[pCodeUpper] = {
+            partyCode: pCode,
+            partyName: t.party_name || pCode,
+            route: t.route || targetRoute?.route_name || 'Direct Route',
+            salesman: t.salesman || 'General Sales',
+            totalPickTickets: 0,
+            pendingCount: 0,
+            billedCount: 0,
+            dispatchedCount: 0,
+            pendingTickets: [],
+            billedTickets: []
+          };
         }
       } else {
         if (!partyDataMap[pCodeUpper]) {

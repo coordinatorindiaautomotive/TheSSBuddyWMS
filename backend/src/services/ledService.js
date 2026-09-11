@@ -396,7 +396,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     LEFT JOIN picker_checker_helpers pkh ON pt.picker_id = pkh.id OR pt.picker_id = pkh.employee_code OR LOWER(pt.picker_id) = LOWER(pkh.name)
     LEFT JOIN dispatch_parties dp ON dp.billing_id = b.id
     LEFT JOIN dispatches d ON dp.dispatch_id = d.id
-    LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code))) AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL)
+    LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(pt.party_name)) = TRIM(LOWER(p.party_name))) AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL)
     WHERE (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
       AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))
     ORDER BY pt.created_at ASC
@@ -404,10 +404,14 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
   if (!pickTicketsRaw) pickTicketsRaw = [];
 
-  // If date filter is 'ALL' or empty, include ALL pending tickets across all dates!
+  // If date filter is 'ALL' or empty, include ALL tickets. For unbilled/pending tickets, ALWAYS include them in live monitor!
   const pickTickets = pickTicketsRaw.filter(t => {
+    const isPendingTicket = !t.billing_id && t.status !== 'Billed' && t.status !== 'Dispatched' && t.status !== 'Completed';
+    if (isPendingTicket) {
+      return true;
+    }
     if (!params.date || params.date === 'ALL' || params.all_dates === 'true') {
-      return true; // All pending tickets across all dates
+      return true;
     }
     const tDate = normalizeDateStr(t.date) || (t.created_at ? normalizeDateStr(t.created_at) : '');
     return !tDate || tDate === normTargetDate;
