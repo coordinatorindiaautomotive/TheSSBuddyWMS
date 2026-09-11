@@ -43,10 +43,7 @@ export default function LEDDashboard() {
   const [refreshCountdown, setRefreshCountdown] = useState(30);
 
   // Filters State
-  const [date, setDate] = useState(() => {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
-  });
+  const [date, setDate] = useState('ALL'); // 'ALL' loads all pending tickets across all dates
   const [selectedRouteId, setSelectedRouteId] = useState('ALL');
   const [selectedSlot, setSelectedSlot] = useState('ALL'); // 'ALL' | 'Morning' | 'Evening'
   const [showUnbilledOnly, setShowUnbilledOnly] = useState(true);
@@ -117,7 +114,7 @@ export default function LEDDashboard() {
     try {
       const res = await axios.get('/api/led/dashboard', {
         params: {
-          date,
+          date: date || 'ALL',
           route_id: selectedRouteId,
           dispatch_slot: selectedSlot,
           page: 1,
@@ -210,24 +207,26 @@ export default function LEDDashboard() {
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-extrabold tracking-tight">Dispatch Control - Live Monitor</h1>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500 text-white tracking-wider flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> LIVE
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> ALL PENDING LIVE
               </span>
             </div>
-            <p className="text-xs text-blue-200/80 font-medium">Real-time Route & Dispatch Slot Monitor for Pending Pick Tickets</p>
+            <p className="text-xs text-blue-200/80 font-medium">Automatic Live Monitoring of All Pending Pick Tickets across Routes</p>
           </div>
         </div>
 
         {/* Top Right: Real-time clock & Controls */}
         <div className="flex items-center flex-wrap gap-2 sm:gap-3 self-end sm:self-auto text-xs font-bold">
-          {/* Date Picker */}
-          <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/15 text-white">
+          {/* Optional Date Filter Dropdown */}
+          <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1.5 rounded-xl border border-white/15 text-white">
             <Calendar className="w-3.5 h-3.5 text-blue-300" />
-            <input
-              type="date"
+            <select
               value={date}
               onChange={(e) => { setDate(e.target.value); setCurrentPage(1); }}
               className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer"
-            />
+            >
+              <option value="ALL" className="text-slate-900 font-bold">All Pending Dates</option>
+              <option value={new Date().toISOString().split('T')[0]} className="text-slate-900 font-bold">Today ({new Date().toISOString().split('T')[0]})</option>
+            </select>
           </div>
 
           {/* Clock */}

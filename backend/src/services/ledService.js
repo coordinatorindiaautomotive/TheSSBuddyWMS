@@ -338,9 +338,11 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     ORDER BY pt.created_at ASC
   `, whParams);
 
-  // Filter pick tickets by date (matches pt.date or created_at date with normalization)
+  // If date filter is 'ALL' or empty, include ALL pending tickets across all dates!
   const pickTickets = pickTicketsRaw.filter(t => {
-    if (!normTargetDate) return true;
+    if (!params.date || params.date === 'ALL' || params.all_dates === 'true') {
+      return true; // All pending tickets across all dates
+    }
     const tDate = normalizeDateStr(t.date) || (t.created_at ? normalizeDateStr(t.created_at) : '');
     return !tDate || tDate === normTargetDate;
   });
