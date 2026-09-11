@@ -244,16 +244,17 @@ export default function Billing() {
     setSubmitting(true);
     try {
       if (editingId) {
-        await axios.put(`/api/billings/${editingId}`, formData);
-        toast.success('Invoice billing updated successfully!');
+        const res = await axios.put(`/api/billings/${editingId}`, formData);
+        toast.success(res.data?.message || 'Invoice billing updated successfully!');
       } else {
-        await axios.post('/api/billings', formData);
-        toast.success('Invoice billing created successfully!');
+        const res = await axios.post('/api/billings', formData);
+        toast.success(res.data?.message || 'Invoice billing created successfully!');
       }
       setShowModal(false);
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error saving invoice billing.');
+      const msg = err.response?.data?.message || err.response?.data?.details || err.message || 'Error saving invoice billing.';
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }

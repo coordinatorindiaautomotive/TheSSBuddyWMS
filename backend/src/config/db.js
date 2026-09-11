@@ -466,6 +466,32 @@ async function initMySQLSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
+  // Ensure all columns exist on billings for existing tables
+  const billingColumns = [
+    { name: 'pick_ticket_id', type: 'INT NOT NULL DEFAULT 0' },
+    { name: 'billing_date', type: 'VARCHAR(50) NOT NULL DEFAULT \'\'' },
+    { name: 'billing_time', type: 'VARCHAR(50) NOT NULL DEFAULT \'10:00\'' },
+    { name: 'bill_no', type: 'VARCHAR(100) NOT NULL DEFAULT \'\'' },
+    { name: 'billed_qty', type: 'INT DEFAULT 1' },
+    { name: 'checker_id', type: 'VARCHAR(100) NULL' },
+    { name: 'helper_id', type: 'VARCHAR(100) NULL' },
+    { name: 'start_time', type: 'DATETIME NULL' },
+    { name: 'end_time', type: 'DATETIME NULL' },
+    { name: 'invoice_amount', type: 'DECIMAL(15,2) DEFAULT 0' },
+    { name: 'short_qty', type: 'INT DEFAULT 0' },
+    { name: 'excess_qty', type: 'INT DEFAULT 0' },
+    { name: 'damage_qty', type: 'INT DEFAULT 0' },
+    { name: 'billing_remarks', type: 'TEXT NULL' },
+    { name: 'warehouse_id', type: 'INT NOT NULL DEFAULT 1' },
+    { name: 'created_by', type: 'VARCHAR(100) DEFAULT \'System\'' }
+  ];
+
+  for (const col of billingColumns) {
+    try {
+      await dbAsync.exec(`ALTER TABLE billings ADD COLUMN ${col.name} ${col.type};`);
+    } catch (e) {}
+  }
+
   // 12. Dispatches
   await dbAsync.exec(`
     CREATE TABLE IF NOT EXISTS dispatches (

@@ -299,7 +299,10 @@ async function updateBilling(req, res) {
     return res.json({ message: `Invoice Bill ${cleanBillNo} updated successfully!` });
   } catch (err) {
     console.error('Update billing error:', err);
-    return res.status(500).json({ message: err.message || 'Error updating billing record.' });
+    return res.status(500).json({
+      message: err.sqlMessage || err.message || 'Error updating billing record.',
+      details: err.message
+    });
   }
 }
 
