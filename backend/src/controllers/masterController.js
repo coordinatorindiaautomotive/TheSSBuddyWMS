@@ -73,6 +73,41 @@ async function getRoutes(req, res) {
   }
 }
 
+function cleanDaysArray(days) {
+  if (!days) return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  let list = [];
+  if (Array.isArray(days)) {
+    list = days;
+  } else if (typeof days === 'string') {
+    const trimmed = days.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try { list = JSON.parse(trimmed); } catch (e) { list = trimmed.split(','); }
+    } else {
+      list = trimmed.split(',');
+    }
+  }
+  const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const dayMap = {
+    mon: 'Monday', monday: 'Monday',
+    tue: 'Tuesday', tuesday: 'Tuesday',
+    wed: 'Wednesday', wednesday: 'Wednesday',
+    thu: 'Thursday', thursday: 'Thursday',
+    fri: 'Friday', friday: 'Friday',
+    sat: 'Saturday', saturday: 'Saturday',
+    sun: 'Sunday', sunday: 'Sunday'
+  };
+
+  const seen = new Set();
+  for (const item of list) {
+    const key = String(item).trim().toLowerCase().slice(0, 3);
+    const standard = dayMap[key];
+    if (standard) seen.add(standard);
+  }
+
+  const result = fullDays.filter(d => seen.has(d));
+  return result.length > 0 ? result : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+}
+
 async function createRoute(req, res) {
   try {
     const whId = req.activeWarehouseId;
@@ -110,12 +145,12 @@ async function createRoute(req, res) {
     `, [route_code, route_name, whId]);
 
     const routeId = result.id;
-    const defaultDays = selected_days ? (typeof selected_days === 'string' ? selected_days : JSON.stringify(selected_days)) : JSON.stringify(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+    const defaultDays = selected_days ? cleanDaysArray(selected_days) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     // Check if custom morning / evening provided or fallback
     if (morning_enabled !== undefined || evening_enabled !== undefined) {
       if (morning_enabled) {
-        const mDaysArr = Array.isArray(morning_days) ? morning_days : (typeof morning_days === 'string' ? JSON.parse(morning_days) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+        const mDaysArr = cleanDaysArray(morning_days || defaultDays);
         const mFreq = mDaysArr.length === 7 ? 'DAILY' : 'WEEKLY_SPECIFIC_DAYS';
         const mDays = JSON.stringify(mDaysArr);
         await dbAsync.run(`
@@ -124,7 +159,7 @@ async function createRoute(req, res) {
         `, [routeId, mFreq, mDays, morning_cutoff || '08:00', morning_dispatch || '09:30', whId]);
       }
       if (evening_enabled) {
-        const eDaysArr = Array.isArray(evening_days) ? evening_days : (typeof evening_days === 'string' ? JSON.parse(evening_days) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+        const eDaysArr = cleanDaysArray(evening_days || defaultDays);
         const eFreq = eDaysArr.length === 7 ? 'DAILY' : 'WEEKLY_SPECIFIC_DAYS';
         const eDays = JSON.stringify(eDaysArr);
         await dbAsync.run(`
@@ -137,7 +172,7 @@ async function createRoute(req, res) {
       await dbAsync.run(`
         INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
         VALUES (?, 'Morning Shift', 'FIXED_TIME', 'DAILY', ?, '08:00', '09:30', 1, 1, ?)
-      `, [routeId, defaultDays, whId]);
+      `, [routeId, JSON.stringify(defaultDays), whId]);
     }
 
     if (req.io) {
@@ -186,7 +221,7 @@ async function updateRoute(req, res) {
       `, [id]);
 
       if (morning_enabled) {
-        const mDaysArr = Array.isArray(morning_days) ? morning_days : (typeof morning_days === 'string' ? JSON.parse(morning_days) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+        const mDaysArr = cleanDaysArray(morning_days);
         const mFreq = mDaysArr.length === 7 ? 'DAILY' : 'WEEKLY_SPECIFIC_DAYS';
         const mDays = JSON.stringify(mDaysArr);
         await dbAsync.run(`
@@ -196,7 +231,7 @@ async function updateRoute(req, res) {
       }
 
       if (evening_enabled) {
-        const eDaysArr = Array.isArray(evening_days) ? evening_days : (typeof evening_days === 'string' ? JSON.parse(evening_days) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+        const eDaysArr = cleanDaysArray(evening_days);
         const eFreq = eDaysArr.length === 7 ? 'DAILY' : 'WEEKLY_SPECIFIC_DAYS';
         const eDays = JSON.stringify(eDaysArr);
         await dbAsync.run(`

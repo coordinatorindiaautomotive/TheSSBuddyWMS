@@ -1083,17 +1083,25 @@ export default function MasterRegistries() {
                     if (!trip) return null;
                     let d = trip.selected_days;
                     if (typeof d === 'string') {
-                      try { d = JSON.parse(d); } catch (e) {}
+                      try { d = JSON.parse(d); } catch (e) { d = d.split(','); }
                     }
                     if (Array.isArray(d)) {
-                      if (d.length === 7) {
+                      const dayMap = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+                      const cleanList = [];
+                      for (const item of d) {
+                        const k = String(item).trim().toLowerCase().slice(0, 3);
+                        if (dayMap[k] && !cleanList.includes(dayMap[k])) {
+                          cleanList.push(dayMap[k]);
+                        }
+                      }
+                      if (cleanList.length === 7) {
                         return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">Daily</span>;
                       }
-                      if (d.length === 6 && !d.includes('Sunday')) {
+                      if (cleanList.length === 6 && !cleanList.includes('Sun')) {
                         return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">Mon-Sat</span>;
                       }
-                      if (d.length > 0) {
-                        return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">{d.map(x => String(x).slice(0, 3)).join(', ')}</span>;
+                      if (cleanList.length > 0) {
+                        return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">{cleanList.join(', ')}</span>;
                       }
                     }
                     return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-700">{trip.frequency === 'DAILY' ? 'Daily' : 'Custom'}</span>;
@@ -2367,10 +2375,19 @@ export default function MasterRegistries() {
                           if (sched.frequency === 'ON_DEMAND') daysSummary = 'On-Demand';
                           else if (sched.frequency === 'WEEKLY_SPECIFIC_DAYS' && sched.selected_days) {
                             try {
-                              const parsed = typeof sched.selected_days === 'string' ? JSON.parse(sched.selected_days) : sched.selected_days;
-                              daysSummary = Array.isArray(parsed) && parsed.length < 7
-                                ? parsed.map(d => d.slice(0, 3)).join(', ')
-                                : 'Daily';
+                              let parsed = sched.selected_days;
+                              if (typeof parsed === 'string') {
+                                try { parsed = JSON.parse(parsed); } catch (e) { parsed = parsed.split(','); }
+                              }
+                              const dayMap = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+                              const cleanList = [];
+                              if (Array.isArray(parsed)) {
+                                for (const item of parsed) {
+                                  const k = String(item).trim().toLowerCase().slice(0, 3);
+                                  if (dayMap[k] && !cleanList.includes(dayMap[k])) cleanList.push(dayMap[k]);
+                                }
+                              }
+                              daysSummary = cleanList.length === 7 ? 'Daily' : (cleanList.length === 6 && !cleanList.includes('Sun')) ? 'Mon-Sat' : cleanList.join(', ') || 'Custom';
                             } catch (e) {
                               daysSummary = 'Custom';
                             }
