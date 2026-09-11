@@ -176,10 +176,13 @@ export default function LEDDashboard() {
   };
 
   const checkRoutesMatch = (r1, r2, code1, code2) => {
-    const keys1 = [normalizeRouteKey(r1), normalizeRouteKey(code1)].filter(k => k && k !== 'unassigned');
-    const keys2 = [normalizeRouteKey(r2), normalizeRouteKey(code2)].filter(k => k && k !== 'unassigned');
-    if (keys1.length === 0 || keys2.length === 0) return false;
-    return keys1.some(k1 => keys2.some(k2 => k1 === k2 || k1.includes(k2) || k2.includes(k1)));
+    const k1 = normalizeRouteKey(r1);
+    const k2 = normalizeRouteKey(r2);
+    const c1 = normalizeRouteKey(code1);
+    const c2 = normalizeRouteKey(code2);
+    if (!k1 && !c1) return false;
+    if (!k2 && !c2) return false;
+    return (k1 && (k1 === k2 || k1 === c2)) || (c1 && (c1 === k2 || c1 === c2)) || (k2 && (k2 === k1 || k2 === c1));
   };
 
   // Extract all tickets
@@ -261,9 +264,9 @@ export default function LEDDashboard() {
       // Route Filter
       if (selectedRoute !== 'ALL') {
         const isMatch = checkRoutesMatch(
-          t.route_name || t.ticket_route || t.party_route,
+          t.route_name,
           selectedRouteObj ? selectedRouteObj.route_name : selectedRoute,
-          t.ticket_route || t.party_route,
+          null,
           selectedRouteObj ? selectedRouteObj.route_code : selectedRoute
         );
         if (!isMatch) return false;
