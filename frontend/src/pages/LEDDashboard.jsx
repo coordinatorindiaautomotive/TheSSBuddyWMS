@@ -277,10 +277,10 @@ export default function LEDDashboard() {
 
       // Stage Filter
       if (selectedStage !== 'ALL') {
-        if (selectedStage === 'Pending' && (t.current_stage !== 'Pending' || t.is_billed)) return false;
+        if (selectedStage === 'Pending' && t.is_billed) return false;
         if (selectedStage === 'Picking' && t.current_stage !== 'Picking') return false;
         if (selectedStage === 'Billing' && (t.current_stage !== 'Billing' && !t.billing_id)) return false;
-        if (selectedStage === 'Ready' && (t.current_stage !== 'Ready' && !t.is_billed)) return false;
+        if (selectedStage === 'Ready' && (!t.is_billed || t.current_stage === 'Dispatched')) return false;
         if (selectedStage === 'Dispatched' && t.current_stage !== 'Dispatched') return false;
       }
 

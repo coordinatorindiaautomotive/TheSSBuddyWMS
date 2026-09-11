@@ -26,12 +26,12 @@ function formatAging(minutes) {
 }
 
 function formatCountdown(diffSec) {
-  if (diffSec === null || diffSec === undefined) return '—';
+  if (diffSec === null || diffSec === undefined || isNaN(diffSec)) return '—';
   const isNegative = diffSec < 0;
   const absSec = Math.abs(Math.floor(diffSec));
   const h = Math.floor(absSec / 3600);
   const m = Math.floor((absSec % 3600) / 60);
-  const formatted = String(h).padStart(2, '0') + 'h ' + String(m).padStart(2, '0') + 'm';
+  const formatted = (isNaN(h) ? '0' : String(h).padStart(2, '0')) + 'h ' + (isNaN(m) ? '0' : String(m).padStart(2, '0')) + 'm';
   return isNegative ? 'Overdue by ' + formatted : formatted + ' left';
 }
 
@@ -42,7 +42,9 @@ function parseTimeOnDate(timeStr, targetDate) {
   if (parts.length < 2) return null;
   const hours = parseInt(parts[0], 10);
   const minutes = parseInt(parts[1], 10);
+  if (isNaN(hours) || isNaN(minutes)) return null;
   const d = new Date(targetDate);
+  if (isNaN(d.getTime())) return null;
   d.setHours(hours, minutes, 0, 0);
   return d;
 }
@@ -505,10 +507,10 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
       const metrics = {
         total: mTickets.length,
-        pending: mTickets.filter(t => t.current_stage === 'Pending').length,
+        pending: mTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length,
         picking: mTickets.filter(t => t.current_stage === 'Picking').length,
         billing: mTickets.filter(t => t.current_stage === 'Billing' || t.billing_id).length,
-        ready: mTickets.filter(t => t.current_stage === 'Ready').length,
+        ready: mTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length,
         dispatched: mTickets.filter(t => t.current_stage === 'Dispatched').length,
         delayed: mTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed').length
       };
@@ -546,10 +548,10 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
       const metrics = {
         total: eTickets.length,
-        pending: eTickets.filter(t => t.current_stage === 'Pending').length,
+        pending: eTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length,
         picking: eTickets.filter(t => t.current_stage === 'Picking').length,
         billing: eTickets.filter(t => t.current_stage === 'Billing' || t.billing_id).length,
-        ready: eTickets.filter(t => t.current_stage === 'Ready').length,
+        ready: eTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length,
         dispatched: eTickets.filter(t => t.current_stage === 'Dispatched').length,
         delayed: eTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed').length
       };
