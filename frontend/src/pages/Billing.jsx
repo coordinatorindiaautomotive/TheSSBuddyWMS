@@ -261,11 +261,20 @@ export default function Billing() {
     }
   };
 
-  const filteredBillings = billings.filter(b =>
-    b.bill_no?.toLowerCase().includes(searchFilter.toLowerCase()) ||
-    b.party_name?.toLowerCase().includes(searchFilter.toLowerCase()) ||
-    b.ticket_no?.toLowerCase().includes(searchFilter.toLowerCase())
-  );
+  const filteredBillings = billings.filter(b => {
+    if (!searchFilter.trim()) return true;
+    const q = searchFilter.toLowerCase().trim();
+    return (
+      (b.bill_no && String(b.bill_no).toLowerCase().includes(q)) ||
+      (b.party_name && String(b.party_name).toLowerCase().includes(q)) ||
+      (b.party_code && String(b.party_code).toLowerCase().includes(q)) ||
+      (b.ticket_no && String(b.ticket_no).toLowerCase().includes(q)) ||
+      (b.customer_order_no && String(b.customer_order_no).toLowerCase().includes(q)) ||
+      (b.route && String(b.route).toLowerCase().includes(q)) ||
+      (b.salesman && String(b.salesman).toLowerCase().includes(q)) ||
+      (b.remarks && String(b.remarks).toLowerCase().includes(q))
+    );
+  });
 
   const totalPages = Math.ceil(filteredBillings.length / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;

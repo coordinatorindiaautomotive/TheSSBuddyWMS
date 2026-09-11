@@ -363,11 +363,22 @@ export default function PickTickets() {
     }
   };
 
-  const filteredTickets = tickets.filter(t =>
-    t.ticket_no?.toLowerCase().includes(searchFilter.toLowerCase()) ||
-    t.party_name?.toLowerCase().includes(searchFilter.toLowerCase()) ||
-    t.party_code?.toLowerCase().includes(searchFilter.toLowerCase())
-  );
+  const filteredTickets = tickets.filter(t => {
+    if (!searchFilter.trim()) return true;
+    const q = searchFilter.toLowerCase().trim();
+    return (
+      (t.ticket_no && String(t.ticket_no).toLowerCase().includes(q)) ||
+      (t.party_name && String(t.party_name).toLowerCase().includes(q)) ||
+      (t.party_code && String(t.party_code).toLowerCase().includes(q)) ||
+      (t.customer_order_no && String(t.customer_order_no).toLowerCase().includes(q)) ||
+      (t.route && String(t.route).toLowerCase().includes(q)) ||
+      (t.salesman && String(t.salesman).toLowerCase().includes(q)) ||
+      (t.picker_name && String(t.picker_name).toLowerCase().includes(q)) ||
+      (t.status && String(t.status).toLowerCase().includes(q)) ||
+      (t.remarks && String(t.remarks).toLowerCase().includes(q)) ||
+      (t.date && String(t.date).toLowerCase().includes(q))
+    );
+  });
 
   const totalPages = Math.ceil(filteredTickets.length / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;

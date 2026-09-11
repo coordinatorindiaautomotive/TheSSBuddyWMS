@@ -294,12 +294,16 @@ export default function LEDDashboard() {
     if (showUnbilledOnly && t.is_billed) return false;
 
     // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const matchNo = t.pick_ticket_no?.toLowerCase().includes(term);
-      const matchParty = t.party_name?.toLowerCase().includes(term) || t.party_code?.toLowerCase().includes(term);
-      const matchRoute = t.route_name?.toLowerCase().includes(term);
-      if (!matchNo && !matchParty && !matchRoute) return false;
+    if (searchTerm && searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      const matchNo = String(t.pick_ticket_no || '').toLowerCase().includes(term);
+      const matchParty = String(t.party_name || '').toLowerCase().includes(term) || String(t.party_code || '').toLowerCase().includes(term);
+      const matchRoute = String(t.route_name || t.party_route || t.route || '').toLowerCase().includes(term);
+      const matchOrder = String(t.customer_order_no || '').toLowerCase().includes(term);
+      const matchPicker = String(t.picker_name || t.assigned_to || '').toLowerCase().includes(term);
+      const matchBill = String(t.bill_no || '').toLowerCase().includes(term);
+      const matchSlot = String(t.dispatch_slot || '').toLowerCase().includes(term);
+      if (!matchNo && !matchParty && !matchRoute && !matchOrder && !matchPicker && !matchBill && !matchSlot) return false;
     }
 
     return true;

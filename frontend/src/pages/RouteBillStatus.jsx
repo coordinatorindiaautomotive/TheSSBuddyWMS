@@ -250,12 +250,25 @@ export default function RouteBillStatus() {
     }, 100);
   };
 
+  const filteredData = data.filter(p => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase().trim();
+    return (
+      (p.partyCode && String(p.partyCode).toLowerCase().includes(q)) ||
+      (p.partyName && String(p.partyName).toLowerCase().includes(q)) ||
+      (p.route && String(p.route).toLowerCase().includes(q)) ||
+      (p.salesman && String(p.salesman).toLowerCase().includes(q)) ||
+      (p.pendingTickets && p.pendingTickets.some(t => String(t.pickTicketNo || '').toLowerCase().includes(q))) ||
+      (p.billedTickets && p.billedTickets.some(t => String(t.pickTicketNo || '').toLowerCase().includes(q) || String(t.billNo || '').toLowerCase().includes(q)))
+    );
+  });
+
   // Summary KPI Calculations
-  const totalParties = data.length;
-  const totalBilled = data.reduce((s, d) => s + d.billedCount, 0);
-  const totalPending = data.reduce((s, d) => s + d.pendingCount, 0);
-  const totalDispatched = data.reduce((s, d) => s + (d.dispatchedCount || 0), 0);
-  const partiesPending = data.filter(d => d.pendingCount > 0).length;
+  const totalParties = filteredData.length;
+  const totalBilled = filteredData.reduce((s, d) => s + d.billedCount, 0);
+  const totalPending = filteredData.reduce((s, d) => s + d.pendingCount, 0);
+  const totalDispatched = filteredData.reduce((s, d) => s + (d.dispatchedCount || 0), 0);
+  const partiesPending = filteredData.filter(d => d.pendingCount > 0).length;
 
   const selectedRouteObj = routes.find(r => r.id.toString() === selectedRoute);
   const selectedRouteName = selectedRouteObj ? selectedRouteObj.route_name : 'All Routes';
@@ -503,7 +516,7 @@ export default function RouteBillStatus() {
               </thead>
               <tbody className="divide-y divide-indigo-100 text-slate-900">
                 {(() => {
-                  const sortedData = [...data].sort((a, b) => b.pendingCount - a.pendingCount);
+                  const sortedData = [...filteredData].sort((a, b) => b.pendingCount - a.pendingCount);
                   const totalPages = Math.ceil(sortedData.length / pageSize) || 1;
                   const startIndex = (currentPage - 1) * pageSize;
                   const endIndex = Math.min(startIndex + pageSize, sortedData.length);

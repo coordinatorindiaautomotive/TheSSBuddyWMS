@@ -165,11 +165,15 @@ export default function DispatchPlanning() {
   // Builder Invoices Filtering
   const filteredInvoices = useMemo(() => {
     return (data.pendingBillings || []).filter((b) => {
+      const q = (searchQuery || '').trim().toLowerCase();
       const matchesSearch =
-        !searchQuery ||
-        (b.bill_no && b.bill_no.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (b.party_name && b.party_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (b.party_code && b.party_code.toLowerCase().includes(searchQuery.toLowerCase()));
+        !q ||
+        (b.bill_no && String(b.bill_no).toLowerCase().includes(q)) ||
+        (b.party_name && String(b.party_name).toLowerCase().includes(q)) ||
+        (b.party_code && String(b.party_code).toLowerCase().includes(q)) ||
+        (b.route_name && String(b.route_name).toLowerCase().includes(q)) ||
+        (b.ticket_no && String(b.ticket_no).toLowerCase().includes(q)) ||
+        (b.customer_order_no && String(b.customer_order_no).toLowerCase().includes(q));
 
       const matchesRoute =
         !routeFilter ||

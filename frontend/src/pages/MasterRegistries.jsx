@@ -632,8 +632,16 @@ export default function MasterRegistries() {
   const sf = (key, val) => setForm(p => ({ ...p, [key]: val }));
 
   // ── Filter ──────────────────────────────────────────────────────────────────
-  const filtered = (arr, keys) =>
-    (Array.isArray(arr) ? arr : []).filter(r => keys.some(k => String(r[k] ?? '').toLowerCase().includes((search || '').toLowerCase())));
+  const filtered = (arr, keys) => {
+    if (!Array.isArray(arr)) return [];
+    const q = (search || '').trim().toLowerCase();
+    if (!q) return arr;
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return arr.filter(r => {
+      const combined = keys.map(k => String(r[k] ?? '')).join(' ').toLowerCase();
+      return tokens.every(tok => combined.includes(tok));
+    });
+  };
 
   // ── Counts ──────────────────────────────────────────────────────────────────
   const tabCounts = {
@@ -856,9 +864,9 @@ export default function MasterRegistries() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr><td colSpan={9} className="text-center py-12 text-slate-400 text-sm font-semibold">Loading parties...</td></tr>
-                ) : filtered(parties, ['party_code', 'party_name', 'route_name', 'salesman']).length === 0 ? (
+                ) : filtered(parties, ['party_code', 'party_name', 'route_name', 'salesman', 'phone', 'city', 'address', 'gstin']).length === 0 ? (
                   <EmptyTable colSpan={9} message="No parties found" />
-                ) : paginate(filtered(parties, ['party_code', 'party_name', 'route_name', 'salesman'])).map(p => (
+                ) : paginate(filtered(parties, ['party_code', 'party_name', 'route_name', 'salesman', 'phone', 'city', 'address', 'gstin'])).map(p => (
                   <tr key={p.id} className="hover:bg-blue-50/40 transition-colors">
                     <TD><span className="font-mono font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200">{p.party_code}</span></TD>
                     <TD><span className="font-bold text-slate-900 text-sm">{p.party_name}</span></TD>
@@ -874,7 +882,7 @@ export default function MasterRegistries() {
               </tbody>
             </table>
           </div>
-          <PaginationFooter totalItems={filtered(parties, ['party_code', 'party_name', 'route_name', 'salesman']).length} label="parties" />
+          <PaginationFooter totalItems={filtered(parties, ['party_code', 'party_name', 'route_name', 'salesman', 'phone', 'city', 'address', 'gstin']).length} label="parties" />
         </div>
       )}
 
