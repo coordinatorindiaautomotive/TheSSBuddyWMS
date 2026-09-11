@@ -60,11 +60,21 @@ async function suggestNextNo(req, res) {
   try {
     const whId = req.activeWarehouseId;
     const wh = await dbAsync.get('SELECT prefix_logic FROM warehouses WHERE id = ?', [whId]);
-    const prefix = req.query.prefix || (wh ? wh.prefix_logic : 'PIK26-');
+    let prefix = req.query.prefix || (wh && wh.prefix_logic ? wh.prefix_logic : 'PIK/');
+
+    if (!prefix.endsWith('/')) {
+      if (prefix.includes('-')) {
+        prefix = 'PIK/';
+      } else {
+        prefix = `${prefix}/`;
+      }
+    }
+
+    const yearSuffix = new Date().getFullYear().toString().substring(2);
 
     const lastTicket = await dbAsync.get(`
       SELECT ticket_no FROM pick_tickets
-      WHERE warehouse_id = ? AND ticket_no LIKE ?
+      WHERE warehouse_id = ? AND (ticket_no LIKE ? OR ticket_no LIKE 'PIK%')
       ORDER BY id DESC LIMIT 1
     `, [whId, `${prefix}%`]);
 
@@ -72,14 +82,22 @@ async function suggestNextNo(req, res) {
     if (lastTicket && lastTicket.ticket_no) {
       const match = lastTicket.ticket_no.match(/\d+$/);
       if (match) {
-        nextNumber = parseInt(match[0], 10) + 1;
+        const raw = match[0];
+        if (raw.length === 8 && raw.startsWith(yearSuffix)) {
+          nextNumber = parseInt(raw.substring(2), 10) + 1;
+        } else if (raw.length >= 6) {
+          nextNumber = parseInt(raw.slice(-6), 10) + 1;
+        } else {
+          nextNumber = parseInt(raw, 10) + 1;
+        }
       }
     }
 
-    const suggestedNo = `${prefix}${String(nextNumber).padStart(6, '0')}`;
+    const suggestedNo = `${prefix}${yearSuffix}${String(nextNumber).padStart(6, '0')}`;
     return res.json({ suggestedNo });
   } catch (err) {
-    return res.status(500).json({ suggestedNo: 'PIK26-000001' });
+    const yearSuffix = new Date().getFullYear().toString().substring(2);
+    return res.status(500).json({ suggestedNo: `PIK/${yearSuffix}000001` });
   }
 }
 

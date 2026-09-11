@@ -2131,7 +2131,7 @@ export default function MasterRegistries() {
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Prefix Logic <span className="text-red-500 font-bold ml-0.5">*</span>
                         <span className="ml-1 text-[10px] text-slate-400 normal-case font-normal">(auto-prepended to pick ticket numbers)</span>
                       </label>
-                      <input value={f('prefix_logic')} onChange={e => sf('prefix_logic', e.target.value.toUpperCase())} required placeholder="e.g. PIK26-"
+                      <input value={f('prefix_logic')} onChange={e => sf('prefix_logic', e.target.value.toUpperCase())} required placeholder="e.g. PIK/"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold uppercase text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                     </div>
                     <div>

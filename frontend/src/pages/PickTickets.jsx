@@ -209,7 +209,8 @@ export default function PickTickets() {
     setPartyFetchStatus(null);
     setTicketNoValid(null);
 
-    let suggestedNo = 'PIK26-000001';
+    const yearSuffix = new Date().getFullYear().toString().substring(2);
+    let suggestedNo = `PIK/${yearSuffix}000001`;
     try {
       const res = await axios.get('/api/pick-tickets/suggest-next-no');
       suggestedNo = res.data.suggestedNo;
@@ -738,7 +739,7 @@ export default function PickTickets() {
                       handleValidateTicketNo(val);
                     }}
                     required
-                    placeholder="PIK26-000001"
+                    placeholder="PIK/26000001"
                     className="w-full h-11 bg-white border border-slate-300 rounded-xl px-3.5 text-xs text-[#004c8f] font-mono font-bold uppercase focus:border-[#004c8f] focus:outline-none"
                   />
                 </div>

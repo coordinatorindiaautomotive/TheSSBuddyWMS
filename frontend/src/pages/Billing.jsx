@@ -102,7 +102,8 @@ export default function Billing() {
     const startTimeStr = new Date(now.getTime() - 30 * 60000).toISOString().substring(0, 16);
     const endTimeStr = now.toISOString().substring(0, 16);
 
-    let defaultBillNo = 'RS/26-000001';
+    const yearSuffix = new Date().getFullYear().toString().substring(2);
+    let defaultBillNo = `RS/${yearSuffix}000001`;
     try {
       const res = await axios.get('/api/billings/suggest-next-no?prefix=RS/');
       defaultBillNo = res.data.suggestedNo;
@@ -638,7 +639,7 @@ export default function Billing() {
                         value={formData.bill_no}
                         onChange={(e) => setFormData({ ...formData, bill_no: e.target.value.toUpperCase() })}
                         required
-                        placeholder="RS/26-000001"
+                        placeholder="RS/26000156"
                         className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs text-[#004c8f] font-mono font-bold uppercase focus:border-[#004c8f] focus:outline-none"
                       />
                     </div>

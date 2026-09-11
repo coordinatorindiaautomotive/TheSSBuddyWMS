@@ -48,6 +48,8 @@ async function suggestNextBillNo(req, res) {
       return res.json({ suggestedNo: '' });
     }
 
+    const yearSuffix = new Date().getFullYear().toString().substring(2);
+
     const lastBill = await dbAsync.get(`
       SELECT bill_no FROM billings
       WHERE warehouse_id = ? AND bill_no LIKE ?
@@ -58,15 +60,22 @@ async function suggestNextBillNo(req, res) {
     if (lastBill && lastBill.bill_no) {
       const match = lastBill.bill_no.match(/\d+$/);
       if (match) {
-        nextNum = parseInt(match[0], 10) + 1;
+        const raw = match[0];
+        if (raw.length === 8 && raw.startsWith(yearSuffix)) {
+          nextNum = parseInt(raw.substring(2), 10) + 1;
+        } else if (raw.length >= 6) {
+          nextNum = parseInt(raw.slice(-6), 10) + 1;
+        } else {
+          nextNum = parseInt(raw, 10) + 1;
+        }
       }
     }
 
-    const yearSuffix = new Date().getFullYear().toString().substring(2);
-    const suggestedNo = `${prefix}${yearSuffix}-${String(nextNum).padStart(6, '0')}`;
+    const suggestedNo = `${prefix}${yearSuffix}${String(nextNum).padStart(6, '0')}`;
     return res.json({ suggestedNo });
   } catch (err) {
-    return res.status(500).json({ suggestedNo: 'RS/26-000001' });
+    const yearSuffix = new Date().getFullYear().toString().substring(2);
+    return res.status(500).json({ suggestedNo: `RS/${yearSuffix}000001` });
   }
 }
 
