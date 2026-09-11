@@ -287,7 +287,7 @@ async function markTicketsDispatched(req, res) {
     }
 
     for (const id of selectedIds) {
-      await dbAsync.run("UPDATE pick_tickets SET status = 'Dispatched', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [id]);
+      await dbAsync.run("UPDATE pick_tickets SET status = 'Dispatched' WHERE id = ?", [id]);
     }
 
     return res.json({ success: true, message: `Successfully marked ${selectedIds.length} ticket(s) as Dispatched!` });

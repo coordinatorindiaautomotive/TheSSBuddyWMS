@@ -170,7 +170,7 @@ async function createBilling(req, res) {
     ]);
 
     // Update Pick Ticket status to Billed
-    await dbAsync.run("UPDATE pick_tickets SET status = 'Billed', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticket.id]);
+    await dbAsync.run("UPDATE pick_tickets SET status = 'Billed' WHERE id = ?", [ticket.id]);
 
     // Audit log (non-blocking)
     try {
@@ -239,16 +239,20 @@ async function updateBilling(req, res) {
       }
     }
 
-    const sTime = formatDateTimeForDb(start_time) || formatDateTimeForDb(billing.start_time) || formatDateTimeForDb(new Date());
-    const eTime = formatDateTimeForDb(end_time) || formatDateTimeForDb(billing.end_time) || formatDateTimeForDb(new Date());
+    const sTime = formatDateTimeForDb(start_time) || formatDateTimeForDb(billing.start_time);
+    const eTime = formatDateTimeForDb(end_time) || formatDateTimeForDb(billing.end_time);
 
-    const cleanBilledQty = billed_qty !== undefined && billed_qty !== '' ? (parseInt(billed_qty, 10) || 0) : billing.billed_qty;
-    const cleanShortQty = short_qty !== undefined && short_qty !== '' ? (parseInt(short_qty, 10) || 0) : billing.short_qty;
-    const cleanExcessQty = excess_qty !== undefined && excess_qty !== '' ? (parseInt(excess_qty, 10) || 0) : billing.excess_qty;
-    const cleanDamageQty = damage_qty !== undefined && damage_qty !== '' ? (parseInt(damage_qty, 10) || 0) : billing.damage_qty;
-    const cleanAmount = invoice_amount !== undefined && invoice_amount !== '' ? (parseFloat(invoice_amount) || 0) : billing.invoice_amount;
+    const cleanBilledQty = (billed_qty !== undefined && billed_qty !== null && billed_qty !== '') ? (parseInt(billed_qty, 10) || 0) : (billing.billed_qty || 0);
+    const cleanShortQty = (short_qty !== undefined && short_qty !== null && short_qty !== '') ? (parseInt(short_qty, 10) || 0) : (billing.short_qty || 0);
+    const cleanExcessQty = (excess_qty !== undefined && excess_qty !== null && excess_qty !== '') ? (parseInt(excess_qty, 10) || 0) : (billing.excess_qty || 0);
+    const cleanDamageQty = (damage_qty !== undefined && damage_qty !== null && damage_qty !== '') ? (parseInt(damage_qty, 10) || 0) : (billing.damage_qty || 0);
+    const cleanAmount = (invoice_amount !== undefined && invoice_amount !== null && invoice_amount !== '') ? (parseFloat(invoice_amount) || 0) : (billing.invoice_amount || 0);
     const cleanChecker = checker_id !== undefined ? (checker_id ? String(checker_id) : null) : billing.checker_id;
     const cleanHelper = helper_id !== undefined ? (helper_id ? String(helper_id) : null) : billing.helper_id;
+    const cleanPtId = pick_ticket_id ? parseInt(pick_ticket_id, 10) : billing.pick_ticket_id;
+    const cleanBDate = billing_date || billing.billing_date || new Date().toISOString().split('T')[0];
+    const cleanBTime = billing_time || billing.billing_time || '10:00';
+    const cleanRemarks = billing_remarks !== undefined ? String(billing_remarks || '') : (billing.billing_remarks || '');
 
     await dbAsync.run(`
       UPDATE billings
@@ -258,9 +262,9 @@ async function updateBilling(req, res) {
           billing_remarks = ?
       WHERE id = ?
     `, [
-      pick_ticket_id || billing.pick_ticket_id,
-      billing_date || billing.billing_date,
-      billing_time || billing.billing_time,
+      cleanPtId,
+      cleanBDate,
+      cleanBTime,
       cleanBillNo,
       cleanBilledQty,
       cleanChecker,
@@ -271,14 +275,13 @@ async function updateBilling(req, res) {
       cleanShortQty,
       cleanExcessQty,
       cleanDamageQty,
-      billing_remarks !== undefined ? billing_remarks : billing.billing_remarks,
-      id
+      cleanRemarks,
+      parseInt(id, 10)
     ]);
 
     // Keep pick ticket status updated
-    const targetPtId = pick_ticket_id || billing.pick_ticket_id;
-    if (targetPtId) {
-      await dbAsync.run("UPDATE pick_tickets SET status = 'Billed', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [targetPtId]);
+    if (cleanPtId) {
+      await dbAsync.run("UPDATE pick_tickets SET status = 'Billed' WHERE id = ?", [cleanPtId]);
     }
 
     try {

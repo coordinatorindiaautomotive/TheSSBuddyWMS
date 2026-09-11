@@ -155,11 +155,19 @@ export default function Billing() {
       picker_name: b.picker_name || 'Floor Picker',
       qty_in_pick_ticket: b.qty_in_pick_ticket || b.billed_qty
     });
+
+    let detectedPrefix = 'FREE';
+    if (b.bill_no) {
+      if (b.bill_no.startsWith('RS/')) detectedPrefix = 'RS/';
+      else if (b.bill_no.startsWith('STI/')) detectedPrefix = 'STI/';
+      else if (b.bill_no.startsWith('CSI/')) detectedPrefix = 'CSI/';
+    }
+
     setFormData({
       pick_ticket_id: b.pick_ticket_id,
-      billing_date: b.billing_date || new Date().toISOString().split('T')[0],
+      billing_date: b.billing_date || (b.created_at ? b.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
       billing_time: b.billing_time || '10:00',
-      prefix: 'RS/',
+      prefix: detectedPrefix,
       bill_no: b.bill_no,
       billed_qty: b.billed_qty || 0,
       checker_id: b.checker_id || (checkers.length > 0 ? checkers[0].id : ''),
@@ -545,6 +553,11 @@ export default function Billing() {
                       className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#004c8f] focus:outline-none disabled:bg-slate-100"
                     >
                       <option value="">-- Choose Pending Ticket --</option>
+                      {editingId && selectedTicket && (
+                        <option value={formData.pick_ticket_id}>
+                          {selectedTicket.ticket_no} - {selectedTicket.party_name} ({selectedTicket.qty_in_pick_ticket} Qty)
+                        </option>
+                      )}
                       {pendingTickets.map(t => (
                         <option key={t.id} value={t.id}>
                           {t.ticket_no} - {t.party_name} ({t.qty_in_pick_ticket} Qty)

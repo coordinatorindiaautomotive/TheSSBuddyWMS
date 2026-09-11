@@ -435,6 +435,10 @@ async function initMySQLSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
+  try {
+    await dbAsync.exec('ALTER TABLE pick_tickets ADD COLUMN updated_at DATETIME NULL;');
+  } catch (e) {}
+
   // 11. Billings
   await dbAsync.exec(`
     CREATE TABLE IF NOT EXISTS billings (
