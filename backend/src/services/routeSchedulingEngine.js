@@ -188,7 +188,7 @@ async function getOperationsConsoleData(warehouseId) {
     SELECT pt.*, b.id as billing_id, b.bill_no, b.billed_qty, b.invoice_amount, b.created_at as billed_at
     FROM pick_tickets pt
     LEFT JOIN billings b ON b.pick_ticket_id = pt.id
-    ${whWhere}
+    ${whWhere ? whWhere + " AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))" : "WHERE (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))"}
     ORDER BY pt.created_at ASC
   `, whParams);
 

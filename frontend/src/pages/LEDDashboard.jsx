@@ -705,7 +705,11 @@ export default function LEDDashboard() {
 
                       {/* Status */}
                       <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                        {t.is_billed ? (
+                        {t.current_stage === 'Cancelled' || String(t.status || '').toLowerCase() === 'cancelled' ? (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-red-50 text-red-700 border border-red-200 line-through">
+                            Cancelled
+                          </span>
+                        ) : t.is_billed ? (
                           <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Billed ({t.bill_no || 'Ready'})
                           </span>

@@ -161,22 +161,26 @@ function routesMatch(rName1, rName2, rCode1, rCode2) {
  * Determine dynamic stage of a pick ticket
  */
 function determineTicketStage(ticket, billing, dispatchParty) {
-  if (ticket.status === 'Cancelled' || ticket.status === 'Hold') {
+  const st = String(ticket.status || '').toLowerCase();
+  if (st === 'cancelled' || st === 'canceled') {
+    return 'Cancelled';
+  }
+  if (st === 'hold') {
     return 'Hold';
   }
-  if (ticket.status === 'Dispatched' || (dispatchParty && ['In Transit', 'Delivered', 'Completed', 'Assigned'].includes(dispatchParty.status))) {
+  if (st === 'dispatched' || (dispatchParty && ['In Transit', 'Delivered', 'Completed', 'Assigned'].includes(dispatchParty.status))) {
     return 'Dispatched';
   }
   if (billing && billing.id) {
     return 'Ready'; // Billed and waiting for vehicle/dispatch
   }
-  if (ticket.status === 'Billed') {
+  if (st === 'billed') {
     return 'Ready';
   }
-  if (ticket.status === 'Billing') {
+  if (st === 'billing') {
     return 'Billing';
   }
-  if (ticket.status === 'Picking' || ticket.status === 'Picked' || ticket.picker_id) {
+  if (st === 'picking' || st === 'picked' || ticket.picker_id) {
     return 'Picking';
   }
   return 'Pending';
@@ -395,6 +399,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     LEFT JOIN dispatches d ON dp.dispatch_id = d.id
     LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code))) AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL)
     WHERE (pt.warehouse_id = ? OR (pt.warehouse_id IS NULL AND ? = 1))
+      AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))
     ORDER BY pt.created_at ASC
   `, whParams);
 

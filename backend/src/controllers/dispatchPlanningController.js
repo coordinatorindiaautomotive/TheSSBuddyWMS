@@ -187,6 +187,7 @@ async function getPartyBillStatus(req, res) {
       FROM pick_tickets pt
       LEFT JOIN billings b ON pt.id = b.pick_ticket_id
       WHERE (pt.warehouse_id = ? OR (pt.warehouse_id IS NULL AND ? = 1))
+        AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))
     `;
     let ptParams = [whId, whId];
     if (fromDate) {
