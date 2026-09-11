@@ -53,11 +53,40 @@ async function deleteWarehouse(req, res) {
 async function getRoutes(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    const routes = await dbAsync.all('SELECT * FROM route_masters WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY route_name ASC', [whId, whId]);
+    let routes = await dbAsync.all('SELECT * FROM route_masters WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY route_name ASC', [whId, whId]);
     const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY priority_order ASC, dispatch_time ASC', [whId, whId]);
+
+    if (!routes) routes = [];
+
+    // Discover any additional routes from pick_tickets / parties
+    try {
+      const distinctTicketRoutes = await dbAsync.all(`
+        SELECT DISTINCT route FROM pick_tickets 
+        WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) 
+          AND route IS NOT NULL 
+          AND TRIM(route) != ''
+        ORDER BY route ASC
+      `, [whId, whId]);
+
+      const existingNames = new Set(routes.map(r => String(r.route_name || '').toLowerCase().trim()));
+      let tempId = 9000;
+      for (const tr of (distinctTicketRoutes || [])) {
+        const name = String(tr.route || '').trim();
+        const key = name.toLowerCase();
+        if (name && key !== 'unassigned' && key !== 'direct route' && !existingNames.has(key)) {
+          routes.push({
+            id: tempId++,
+            route_code: name.substring(0, 10).toUpperCase(),
+            route_name: name,
+            warehouse_id: whId
+          });
+          existingNames.add(key);
+        }
+      }
+    } catch (e) {}
     
     const routesWithSchedules = routes.map(r => {
-      const rScheds = schedules.filter(s => s.route_id === r.id);
+      const rScheds = (schedules || []).filter(s => s.route_id === r.id);
       return {
         ...r,
         schedules: rScheds,

@@ -167,20 +167,50 @@ async function getOperationsConsoleData(warehouseId) {
   const todayStr = now.toISOString().split('T')[0];
   const dayName = WEEKDAY_NAMES[now.getDay()];
 
-  const whWhere = warehouseId ? 'WHERE warehouse_id = ?' : 'WHERE 1=1';
-  const whParams = warehouseId ? [warehouseId] : [];
+  const whId = warehouseId || 1;
+  const whWhere = '(warehouse_id = ? OR warehouse_id IS NULL OR ? = 1)';
+  const whParams = [whId, whId];
 
-  const routes = await dbAsync.all(`
+  let routes = await dbAsync.all(`
     SELECT * FROM route_masters 
-    ${whWhere}
+    WHERE ${whWhere}
     ORDER BY route_name ASC
   `, whParams);
+
+  if (!routes) routes = [];
+
+  // Discover routes from pick_tickets if route_masters is empty or missing routes
+  try {
+    const distinctTicketRoutes = await dbAsync.all(`
+      SELECT DISTINCT route FROM pick_tickets 
+      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) 
+        AND route IS NOT NULL 
+        AND TRIM(route) != ''
+      ORDER BY route ASC
+    `, whParams);
+
+    const existingNames = new Set(routes.map(r => String(r.route_name || '').toLowerCase().trim()));
+    let tempId = 9000;
+    for (const tr of (distinctTicketRoutes || [])) {
+      const name = String(tr.route || '').trim();
+      const key = name.toLowerCase();
+      if (name && key !== 'unassigned' && key !== 'direct route' && !existingNames.has(key)) {
+        routes.push({
+          id: tempId++,
+          route_code: name.substring(0, 10).toUpperCase(),
+          route_name: name,
+          warehouse_id: whId
+        });
+        existingNames.add(key);
+      }
+    }
+  } catch (e) {}
 
   const schedules = await dbAsync.all(`
     SELECT rs.*, rm.route_name, rm.route_code 
     FROM route_schedules rs
     JOIN route_masters rm ON rs.route_id = rm.id
-    WHERE ${warehouseId ? 'rs.warehouse_id = ? AND' : ''} rs.is_active = 1
+    WHERE (rs.warehouse_id = ? OR rs.warehouse_id IS NULL OR ? = 1) AND rs.is_active = 1
     ORDER BY rs.dispatch_time ASC, rs.priority_order ASC
   `, whParams);
 
@@ -188,7 +218,8 @@ async function getOperationsConsoleData(warehouseId) {
     SELECT pt.*, b.id as billing_id, b.bill_no, b.billed_qty, b.invoice_amount, b.created_at as billed_at
     FROM pick_tickets pt
     LEFT JOIN billings b ON b.pick_ticket_id = pt.id
-    ${whWhere ? whWhere + " AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))" : "WHERE (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))"}
+    WHERE (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
+      AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))
     ORDER BY pt.created_at ASC
   `, whParams);
 
@@ -196,13 +227,14 @@ async function getOperationsConsoleData(warehouseId) {
     SELECT d.*, dp.billing_id, dp.party_code
     FROM dispatches d
     LEFT JOIN dispatch_parties dp ON dp.dispatch_id = d.id
-    WHERE ${warehouseId ? 'd.warehouse_id = ? AND' : ''} (d.dispatch_date = ? OR DATE(d.created_at) = ?)
-  `, warehouseId ? [warehouseId, todayStr, todayStr] : [todayStr, todayStr]);
+    WHERE (d.warehouse_id = ? OR d.warehouse_id IS NULL OR ? = 1)
+      AND (d.dispatch_date = ? OR DATE(d.created_at) = ?)
+  `, [whId, whId, todayStr, todayStr]);
 
-  const dispatchedBillingIds = new Set(todayDispatches.map(d => d.billing_id).filter(Boolean));
+  const dispatchedBillingIds = new Set((todayDispatches || []).map(d => d.billing_id).filter(Boolean));
 
   const ticketsByRoute = new Map();
-  for (const t of pickTickets) {
+  for (const t of (pickTickets || [])) {
     const rKey = (t.route || '').trim().toLowerCase();
     if (!ticketsByRoute.has(rKey)) ticketsByRoute.set(rKey, []);
     ticketsByRoute.get(rKey).push(t);
@@ -227,7 +259,10 @@ async function getOperationsConsoleData(warehouseId) {
 
   for (const r of routes) {
     const rKey = (r.route_name || '').trim().toLowerCase();
-    const routeTickets = ticketsByRoute.get(rKey) || [];
+    const routeTickets = (pickTickets || []).filter(t => {
+      const trName = (t.route || '').trim().toLowerCase();
+      return trName === rKey || (rKey && trName && (trName.includes(rKey) || rKey.includes(trName)));
+    });
 
     let totalTickets = 0;
     let pendingTicketsCount = 0;

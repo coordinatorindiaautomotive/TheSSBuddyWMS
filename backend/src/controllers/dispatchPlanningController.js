@@ -3,7 +3,7 @@ const { getOperationsConsoleData } = require('../services/routeSchedulingEngine'
 
 async function getOperationsConsole(req, res) {
   try {
-    const whId = req.activeWarehouseId;
+    const whId = req.activeWarehouseId || 1;
     const consoleData = await getOperationsConsoleData(whId);
     return res.json(consoleData);
   } catch (err) {
@@ -14,7 +14,7 @@ async function getOperationsConsole(req, res) {
 
 async function createOnDemandDispatch(req, res) {
   try {
-    const whId = req.activeWarehouseId;
+    const whId = req.activeWarehouseId || 1;
     const { route_id, route_name } = req.body;
 
     const rName = route_name || (await dbAsync.get('SELECT route_name FROM route_masters WHERE id = ?', [route_id]))?.route_name;
@@ -27,10 +27,10 @@ async function createOnDemandDispatch(req, res) {
       SELECT b.id, b.bill_no, b.invoice_amount, pt.qty_in_pick_ticket as total_cartons, pt.party_code
       FROM billings b
       JOIN pick_tickets pt ON b.pick_ticket_id = pt.id
-      WHERE b.warehouse_id = ? 
-        AND LOWER(pt.route) = LOWER(?)
+      WHERE (b.warehouse_id = ? OR b.warehouse_id IS NULL OR ? = 1) 
+        AND LOWER(TRIM(pt.route)) = LOWER(TRIM(?))
         AND b.id NOT IN (SELECT billing_id FROM dispatch_parties WHERE status != 'Failed')
-    `, [whId, rName]);
+    `, [whId, whId, rName]);
 
     return res.json({
       message: 'On-Demand dispatch review generated.',
@@ -48,28 +48,61 @@ async function createOnDemandDispatch(req, res) {
 
 async function getPlanningData(req, res) {
   try {
-    const whId = req.activeWarehouseId;
+    const whId = req.activeWarehouseId || 1;
 
-    const routes = await dbAsync.all('SELECT * FROM route_masters WHERE warehouse_id = ?', [whId]);
-    const drivers = await dbAsync.all("SELECT * FROM drivers WHERE warehouse_id = ? AND status = 'Available'", [whId]);
-    const vehicles = await dbAsync.all("SELECT * FROM vehicles WHERE warehouse_id = ? AND status = 'Available'", [whId]);
+    let routes = await dbAsync.all('SELECT * FROM route_masters WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY route_name ASC', [whId, whId]);
+    const drivers = await dbAsync.all("SELECT * FROM drivers WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) AND status = 'Available'", [whId, whId]);
+    const vehicles = await dbAsync.all("SELECT * FROM vehicles WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) AND status = 'Available'", [whId, whId]);
+
+    // Discover any additional routes from pick_tickets / parties if not yet in route_masters
+    try {
+      const distinctTicketRoutes = await dbAsync.all(`
+        SELECT DISTINCT route FROM pick_tickets 
+        WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) 
+          AND route IS NOT NULL 
+          AND TRIM(route) != ''
+        ORDER BY route ASC
+      `, [whId, whId]);
+
+      const existingNames = new Set((routes || []).map(r => String(r.route_name || '').toLowerCase().trim()));
+      let tempId = 9000;
+      for (const tr of (distinctTicketRoutes || [])) {
+        const name = String(tr.route || '').trim();
+        const key = name.toLowerCase();
+        if (name && key !== 'unassigned' && key !== 'direct route' && !existingNames.has(key)) {
+          routes.push({
+            id: tempId++,
+            route_code: name.substring(0, 10).toUpperCase(),
+            route_name: name,
+            warehouse_id: whId
+          });
+          existingNames.add(key);
+        }
+      }
+    } catch (e) {}
 
     const pendingBillings = await dbAsync.all(`
-      SELECT b.*, p.party_name, p.party_code, p.address, p.city, p.route_id, rm.route_name, pt.qty_in_pick_ticket as total_cartons
+      SELECT b.*, 
+             COALESCE(p.party_name, pt.party_name, b.party_name) as party_name, 
+             COALESCE(p.party_code, pt.party_code, b.party_code) as party_code, 
+             p.address, p.city, p.route_id, 
+             COALESCE(rm.route_name, p.route_name, pt.route, 'Direct Route') as route_name, 
+             COALESCE(pt.qty_in_pick_ticket, b.billed_qty, 1) as total_cartons,
+             pt.route as ticket_route
       FROM billings b
-      JOIN pick_tickets pt ON b.pick_ticket_id = pt.id
-      JOIN parties p ON pt.party_code = p.party_code AND p.warehouse_id = b.warehouse_id
-      LEFT JOIN route_masters rm ON p.route_id = rm.id
-      WHERE b.warehouse_id = ?
+      LEFT JOIN pick_tickets pt ON b.pick_ticket_id = pt.id
+      LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(b.party_code)) = TRIM(LOWER(p.party_code))) AND (p.warehouse_id = b.warehouse_id OR p.warehouse_id IS NULL OR ? = 1)
+      LEFT JOIN route_masters rm ON (p.route_id = rm.id OR LOWER(TRIM(rm.route_name)) = LOWER(TRIM(pt.route)))
+      WHERE (b.warehouse_id = ? OR b.warehouse_id IS NULL OR ? = 1)
         AND b.id NOT IN (SELECT billing_id FROM dispatch_parties WHERE status != 'Failed')
       ORDER BY b.created_at DESC
-    `, [whId]);
+    `, [whId, whId, whId]);
 
     return res.json({
-      routes,
-      drivers,
-      vehicles,
-      pendingBillings
+      routes: routes || [],
+      drivers: drivers || [],
+      vehicles: vehicles || [],
+      pendingBillings: pendingBillings || []
     });
   } catch (err) {
     console.error('Dispatch planning data error:', err);
@@ -79,7 +112,7 @@ async function getPlanningData(req, res) {
 
 async function createTrip(req, res) {
   try {
-    const whId = req.activeWarehouseId;
+    const whId = req.activeWarehouseId || 1;
     const { driver_id, vehicle_id, billing_ids, notes } = req.body;
 
     if (!driver_id || !vehicle_id || !billing_ids || !billing_ids.length) {
