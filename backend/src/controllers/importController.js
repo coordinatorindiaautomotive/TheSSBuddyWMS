@@ -161,19 +161,42 @@ async function importExcel(req, res) {
       }
     } else if (entity_type === 'Parties') {
       for (const r of rows) {
+        const pCode = (r['Party Code'] || r['PartyCode'] || `PTY-${Math.floor(1000 + Math.random() * 9000)}`).trim().toUpperCase();
+        const pName = r['Party Name'] || r['PartyName'] || r['Name'] || 'Party';
+        const route = r['Route'] || r['Route Name'] || 'Direct Route';
+        const salesman = r['Salesman'] || 'General Sales';
+        const phone = r['Phone'] || r['Mobile'] || '';
+        const gstin = r['GSTIN'] || r['Gstin'] || '';
+
+        const existing = await dbAsync.get('SELECT id FROM parties WHERE party_code = ? AND warehouse_id = ?', [pCode, whId]);
+        if (!existing) {
+          await dbAsync.run(`
+            INSERT INTO parties (party_code, party_name, route_name, salesman, phone, gstin, warehouse_id, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+          `, [pCode, pName, route, salesman, phone, gstin, whId]);
+          imported++;
+        }
+      }
+    } else if (entity_type === 'Drivers') {
+      for (const r of rows) {
+        const dName = r['Driver Name'] || r['Name'] || 'Driver';
         await dbAsync.run(`
-          INSERT INTO drivers (name, phone, license_no, status, warehouse_id)
-          VALUES (?, ?, ?, 'Available', ?)
-        `, [r['Driver Name'] || r['Name'], r['Phone'], r['License No'] || '', whId]);
+          INSERT INTO drivers (name, driver_name, phone, mobile, license_no, status, warehouse_id)
+          VALUES (?, ?, ?, ?, ?, 'Available', ?)
+        `, [dName, dName, r['Phone'] || '', r['Phone'] || '', r['License No'] || r['License'] || '', whId]);
         imported++;
       }
     } else if (entity_type === 'Vehicles') {
       for (const r of rows) {
-        await dbAsync.run(`
-          INSERT INTO vehicles (vehicle_number, capacity_tons, status, warehouse_id)
-          VALUES (?, ?, 'Available', ?)
-        `, [r['Vehicle Number'] || r['VehicleNo'], parseFloat(r['Capacity Tons'] || 5.0), whId]);
-        imported++;
+        const vNum = (r['Vehicle Number'] || r['VehicleNo'] || `VEH-${Math.floor(1000 + Math.random() * 9000)}`).trim().toUpperCase();
+        const existing = await dbAsync.get('SELECT id FROM vehicles WHERE vehicle_number = ? AND warehouse_id = ?', [vNum, whId]);
+        if (!existing) {
+          await dbAsync.run(`
+            INSERT INTO vehicles (vehicle_number, capacity_tons, status, warehouse_id)
+            VALUES (?, ?, 'Available', ?)
+          `, [vNum, parseFloat(r['Capacity Tons'] || r['Capacity'] || 5.0), whId]);
+          imported++;
+        }
       }
     } else {
       return res.status(400).json({ message: 'Invalid entity type for import.' });

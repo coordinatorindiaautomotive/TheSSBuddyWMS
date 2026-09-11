@@ -219,34 +219,47 @@ async function updatePickTicket(req, res) {
       return res.status(404).json({ message: 'Pick Ticket not found.' });
     }
 
+    const finalStatus = status || ticket.status;
+
     await dbAsync.run(`
       UPDATE pick_tickets
       SET date = ?, time = ?, ticket_no = ?, customer_order_no = ?, qty_in_pick_ticket = ?,
           picker_id = ?, party_code = ?, party_name = ?, route = ?, salesman = ?,
-          priority = ?, remarks = ?, status = COALESCE(?, status), updated_by = ?, updated_at = CURRENT_TIMESTAMP
+          priority = ?, remarks = ?, status = ?
       WHERE id = ?
     `, [
       date || ticket.date,
       time || ticket.time,
       ticket_no || ticket.ticket_no,
       customer_order_no !== undefined ? customer_order_no : ticket.customer_order_no,
-      qty_in_pick_ticket || ticket.qty_in_pick_ticket,
-      picker_id || ticket.picker_id,
+      qty_in_pick_ticket !== undefined ? parseInt(qty_in_pick_ticket, 10) : ticket.qty_in_pick_ticket,
+      picker_id !== undefined ? (picker_id ? String(picker_id) : null) : ticket.picker_id,
       party_code || ticket.party_code,
       party_name || ticket.party_name,
       route || ticket.route,
       salesman || ticket.salesman,
       priority || ticket.priority,
       remarks !== undefined ? remarks : ticket.remarks,
-      status || null,
-      req.user ? req.user.username : 'System',
+      finalStatus,
       id
     ]);
+
+    try {
+      await logAudit(req, {
+        action_type: 'UPDATE',
+        module: 'Pick Tickets',
+        target_id: ticket.ticket_no,
+        details: `Updated Pick Ticket ${ticket.ticket_no}`,
+        changed_fields: { status: finalStatus, priority: priority || ticket.priority }
+      });
+    } catch (auditErr) {
+      console.warn('Pick ticket audit warning:', auditErr.message);
+    }
 
     return res.json({ message: `Pick Ticket ${ticket.ticket_no} updated successfully!` });
   } catch (err) {
     console.error('Update pick ticket error:', err);
-    return res.status(500).json({ message: 'Error updating pick ticket.' });
+    return res.status(500).json({ message: err.message || 'Error updating pick ticket.' });
   }
 }
 

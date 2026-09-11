@@ -4,7 +4,7 @@ async function getDispatches(req, res) {
   try {
     const whId = req.activeWarehouseId;
     const dispatches = await dbAsync.all(`
-      SELECT d.*, drv.name as driver_name, drv.phone as driver_phone, v.vehicle_number,
+      SELECT d.*, COALESCE(drv.driver_name, drv.name) as driver_name, COALESCE(drv.phone, drv.mobile) as driver_phone, v.vehicle_number,
              (SELECT COUNT(*) FROM dispatch_parties WHERE dispatch_id = d.id) as party_count
       FROM dispatches d
       LEFT JOIN drivers drv ON d.driver_id = drv.id
@@ -15,7 +15,7 @@ async function getDispatches(req, res) {
 
     return res.json(dispatches);
   } catch (err) {
-    return res.status(500).json({ message: 'Error fetching dispatches.' });
+    return res.status(500).json({ message: err.message || 'Error fetching dispatches.' });
   }
 }
 
@@ -23,7 +23,7 @@ async function getDispatchById(req, res) {
   try {
     const { id } = req.params;
     const dispatch = await dbAsync.get(`
-      SELECT d.*, drv.name as driver_name, drv.phone as driver_phone, v.vehicle_number
+      SELECT d.*, COALESCE(drv.driver_name, drv.name) as driver_name, COALESCE(drv.phone, drv.mobile) as driver_phone, v.vehicle_number
       FROM dispatches d
       LEFT JOIN drivers drv ON d.driver_id = drv.id
       LEFT JOIN vehicles v ON d.vehicle_id = v.id
