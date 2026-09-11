@@ -93,13 +93,14 @@ export default function RouteBillStatus() {
           search
         }
       });
-      setData(res.data);
+      const partyList = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+      setData(partyList);
 
       // Auto-check billed tickets that are not yet dispatched
       const autoChecked = [];
-      res.data.forEach(party => {
-        (party.billedTickets || []).forEach(t => {
-          if (!t.isDispatched) {
+      partyList.forEach(party => {
+        (party?.billedTickets || []).forEach(t => {
+          if (!t.isDispatched && t.pickTicketId) {
             autoChecked.push(t.pickTicketId);
           }
         });
@@ -250,25 +251,27 @@ export default function RouteBillStatus() {
     }, 100);
   };
 
-  const filteredData = data.filter(p => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase().trim();
+  const safeData = Array.isArray(data) ? data : [];
+  const filteredData = safeData.filter(p => {
+    if (!p) return false;
+    if (!search || !search.trim()) return true;
+    const q = String(search).toLowerCase().trim();
     return (
       (p.partyCode && String(p.partyCode).toLowerCase().includes(q)) ||
       (p.partyName && String(p.partyName).toLowerCase().includes(q)) ||
       (p.route && String(p.route).toLowerCase().includes(q)) ||
       (p.salesman && String(p.salesman).toLowerCase().includes(q)) ||
-      (p.pendingTickets && p.pendingTickets.some(t => String(t.pickTicketNo || '').toLowerCase().includes(q))) ||
-      (p.billedTickets && p.billedTickets.some(t => String(t.pickTicketNo || '').toLowerCase().includes(q) || String(t.billNo || '').toLowerCase().includes(q)))
+      (Array.isArray(p.pendingTickets) && p.pendingTickets.some(t => t && String(t.pickTicketNo || '').toLowerCase().includes(q))) ||
+      (Array.isArray(p.billedTickets) && p.billedTickets.some(t => t && (String(t.pickTicketNo || '').toLowerCase().includes(q) || String(t.billNo || '').toLowerCase().includes(q))))
     );
   });
 
   // Summary KPI Calculations
   const totalParties = filteredData.length;
-  const totalBilled = filteredData.reduce((s, d) => s + d.billedCount, 0);
-  const totalPending = filteredData.reduce((s, d) => s + d.pendingCount, 0);
-  const totalDispatched = filteredData.reduce((s, d) => s + (d.dispatchedCount || 0), 0);
-  const partiesPending = filteredData.filter(d => d.pendingCount > 0).length;
+  const totalBilled = filteredData.reduce((s, d) => s + (Number(d?.billedCount) || 0), 0);
+  const totalPending = filteredData.reduce((s, d) => s + (Number(d?.pendingCount) || 0), 0);
+  const totalDispatched = filteredData.reduce((s, d) => s + (Number(d?.dispatchedCount) || 0), 0);
+  const partiesPending = filteredData.filter(d => (Number(d?.pendingCount) || 0) > 0).length;
 
   const selectedRouteObj = routes.find(r => r.id.toString() === selectedRoute);
   const selectedRouteName = selectedRouteObj ? selectedRouteObj.route_name : 'All Routes';
@@ -356,8 +359,13 @@ export default function RouteBillStatus() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && fetchBillStatus()}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  fetchBillStatus();
+                }
+              }}
               placeholder="Code, Name, Ticket No..."
               className="w-full bg-slate-50 border border-indigo-200 rounded-xl p-2.5 text-xs text-slate-900 font-semibold focus:border-indigo-600 focus:bg-white focus:outline-none transition-colors"
             />
@@ -643,7 +651,7 @@ export default function RouteBillStatus() {
           </div>
 
           {/* Pagination Footer Bar */}
-          {data.length > 0 && (
+          {filteredData.length > 0 && (
             <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 text-xs">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -653,11 +661,11 @@ export default function RouteBillStatus() {
                 Previous
               </button>
               <span className="font-bold text-slate-700 px-2">
-                Page {currentPage} of {Math.ceil(data.length / pageSize) || 1}
+                Page {currentPage} of {Math.ceil(filteredData.length / pageSize) || 1}
               </span>
               <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(data.length / pageSize) || 1))}
-                disabled={currentPage >= (Math.ceil(data.length / pageSize) || 1)}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredData.length / pageSize) || 1))}
+                disabled={currentPage >= (Math.ceil(filteredData.length / pageSize) || 1)}
                 className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer transition-all"
               >
                 Next

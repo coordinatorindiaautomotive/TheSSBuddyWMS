@@ -164,7 +164,8 @@ export default function DispatchPlanning() {
 
   // Builder Invoices Filtering
   const filteredInvoices = useMemo(() => {
-    return (data.pendingBillings || []).filter((b) => {
+    return (Array.isArray(data?.pendingBillings) ? data.pendingBillings : []).filter((b) => {
+      if (!b) return false;
       const q = (searchQuery || '').trim().toLowerCase();
       const matchesSearch =
         !q ||
@@ -177,7 +178,7 @@ export default function DispatchPlanning() {
 
       const matchesRoute =
         !routeFilter ||
-        (b.route_name && b.route_name.toLowerCase() === routeFilter.toLowerCase());
+        (b.route_name && String(b.route_name).toLowerCase() === String(routeFilter).toLowerCase());
 
       return matchesSearch && matchesRoute;
     });
@@ -201,7 +202,7 @@ export default function DispatchPlanning() {
 
   // Builder Live Summary
   const selectedSummary = useMemo(() => {
-    const selectedObjects = (data.pendingBillings || []).filter((b) => selectedBills.includes(b.id));
+    const selectedObjects = (Array.isArray(data?.pendingBillings) ? data.pendingBillings : []).filter((b) => selectedBills.includes(b.id));
     const count = selectedObjects.length;
     const cartons = selectedObjects.reduce((acc, b) => acc + (Number(b.total_cartons) || 1), 0);
     const units = selectedObjects.reduce((acc, b) => acc + (Number(b.billed_qty) || Number(b.qty_in_pick_ticket) || 0), 0);
@@ -237,7 +238,7 @@ export default function DispatchPlanning() {
 
   const uniqueRoutes = useMemo(() => {
     const routes = new Set();
-    (data.pendingBillings || []).forEach((b) => {
+    (Array.isArray(data?.pendingBillings) ? data.pendingBillings : []).forEach((b) => {
       if (b.route_name) routes.add(b.route_name);
     });
     return Array.from(routes);
@@ -245,16 +246,18 @@ export default function DispatchPlanning() {
 
   // Matrix Filtered List
   const filteredMatrix = useMemo(() => {
-    return (consoleData.routeMatrix || []).filter((item) => {
+    const q = (matrixSearch || '').trim().toLowerCase();
+    return (Array.isArray(consoleData?.routeMatrix) ? consoleData.routeMatrix : []).filter((item) => {
+      if (!item) return false;
       const matchesSearch =
-        !matrixSearch ||
-        (item.routeName && item.routeName.toLowerCase().includes(matrixSearch.toLowerCase())) ||
-        (item.routeCode && item.routeCode.toLowerCase().includes(matrixSearch.toLowerCase())) ||
-        (item.tripName && item.tripName.toLowerCase().includes(matrixSearch.toLowerCase()));
+        !q ||
+        (item.routeName && String(item.routeName).toLowerCase().includes(q)) ||
+        (item.routeCode && String(item.routeCode).toLowerCase().includes(q)) ||
+        (item.tripName && String(item.tripName).toLowerCase().includes(q));
 
       if (!matchesSearch) return false;
 
-      if (matrixFilter === 'CRITICAL') return item.priority?.score >= 3;
+      if (matrixFilter === 'CRITICAL') return (item.priority?.score || 0) >= 3;
       if (matrixFilter === 'SCHEDULED') return item.dispatchType !== 'ON_DEMAND';
       if (matrixFilter === 'ON_DEMAND') return item.dispatchType === 'ON_DEMAND';
 

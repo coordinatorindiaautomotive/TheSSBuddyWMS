@@ -363,7 +363,9 @@ export default function PickTickets() {
     }
   };
 
-  const filteredTickets = tickets.filter(t => {
+  const safeTickets = Array.isArray(tickets) ? tickets : [];
+  const filteredTickets = safeTickets.filter(t => {
+    if (!t) return false;
     if (!searchFilter.trim()) return true;
     const q = searchFilter.toLowerCase().trim();
     return (
@@ -447,11 +449,11 @@ export default function PickTickets() {
                     <div className="font-semibold text-slate-800 text-xs">
                       {(() => {
                         if (!t.date) return '—';
-                        if (t.date.startsWith('/Date(')) {
+                        if (typeof t.date === 'string' && t.date.startsWith('/Date(')) {
                           const ms = parseInt(t.date.replace(/\/Date\((\d+)\)\//, '$1'), 10);
                           return new Date(ms).toISOString().split('T')[0];
                         }
-                        return t.date;
+                        return String(t.date);
                       })()}
                     </div>
                     <div className="text-[10px] text-slate-500 font-medium">{t.time}</div>

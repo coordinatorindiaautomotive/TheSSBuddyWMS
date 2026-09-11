@@ -24,11 +24,13 @@ export default function DispatchList() {
     }
   };
 
-  const filteredDispatches = dispatches.filter(d =>
-    !search ||
-    (d.dispatch_no && d.dispatch_no.toLowerCase().includes(search.toLowerCase())) ||
-    (d.driver_name && d.driver_name.toLowerCase().includes(search.toLowerCase())) ||
-    (d.vehicle_number && d.vehicle_number.toLowerCase().includes(search.toLowerCase()))
+  const safeDispatches = Array.isArray(dispatches) ? dispatches : [];
+  const q = (search || '').trim().toLowerCase();
+  const filteredDispatches = safeDispatches.filter(d =>
+    !q ||
+    (d.dispatch_no && String(d.dispatch_no).toLowerCase().includes(q)) ||
+    (d.driver_name && String(d.driver_name).toLowerCase().includes(q)) ||
+    (d.vehicle_number && String(d.vehicle_number).toLowerCase().includes(q))
   );
 
   return (

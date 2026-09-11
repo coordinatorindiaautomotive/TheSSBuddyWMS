@@ -261,7 +261,9 @@ export default function Billing() {
     }
   };
 
-  const filteredBillings = billings.filter(b => {
+  const safeBillings = Array.isArray(billings) ? billings : [];
+  const filteredBillings = safeBillings.filter(b => {
+    if (!b) return false;
     if (!searchFilter.trim()) return true;
     const q = searchFilter.toLowerCase().trim();
     return (

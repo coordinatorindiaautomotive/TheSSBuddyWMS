@@ -306,12 +306,12 @@ async function getPartyBillStatus(req, res) {
     let resultList = Object.values(partyDataMap);
 
     if (search) {
-      const q = search.toLowerCase();
+      const q = String(search).toLowerCase().trim();
       resultList = resultList.filter(p =>
-        p.partyCode.toLowerCase().includes(q) ||
-        p.partyName.toLowerCase().includes(q) ||
-        p.pendingTickets.some(t => t.pickTicketNo.toLowerCase().includes(q)) ||
-        p.billedTickets.some(t => t.pickTicketNo.toLowerCase().includes(q) || (t.billNo && t.billNo.toLowerCase().includes(q)))
+        (p.partyCode && String(p.partyCode).toLowerCase().includes(q)) ||
+        (p.partyName && String(p.partyName).toLowerCase().includes(q)) ||
+        (Array.isArray(p.pendingTickets) && p.pendingTickets.some(t => t.pickTicketNo && String(t.pickTicketNo).toLowerCase().includes(q))) ||
+        (Array.isArray(p.billedTickets) && p.billedTickets.some(t => (t.pickTicketNo && String(t.pickTicketNo).toLowerCase().includes(q)) || (t.billNo && String(t.billNo).toLowerCase().includes(q))))
       );
     }
 

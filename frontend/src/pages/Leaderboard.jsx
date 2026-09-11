@@ -82,12 +82,13 @@ export default function Leaderboard() {
   };
 
   const filterStaff = (list = []) => {
-    if (!search.trim()) return list;
-    const q = search.toLowerCase();
-    return list.filter(
+    const safeList = Array.isArray(list) ? list : [];
+    if (!search || !search.trim()) return safeList;
+    const q = search.toLowerCase().trim();
+    return safeList.filter(
       s =>
-        (s.name && s.name.toLowerCase().includes(q)) ||
-        (s.employee_code && s.employee_code.toLowerCase().includes(q))
+        (s.name && String(s.name).toLowerCase().includes(q)) ||
+        (s.employee_code && String(s.employee_code).toLowerCase().includes(q))
     );
   };
 

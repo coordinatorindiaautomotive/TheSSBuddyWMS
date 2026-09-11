@@ -653,7 +653,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
   if (slotFilter && slotFilter !== 'ALL') {
     filteredTickets = filteredTickets.filter(t =>
-      t.dispatch_slot.toLowerCase() === slotFilter.toLowerCase()
+      String(t.dispatch_slot || '').toLowerCase() === slotFilter.toLowerCase()
     );
   }
 
@@ -664,7 +664,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     } else if (sf === 'ready') {
       filteredTickets = filteredTickets.filter(t => t.current_stage === 'Ready' || t.billing_id != null);
     } else {
-      filteredTickets = filteredTickets.filter(t => t.current_stage.toLowerCase() === sf);
+      filteredTickets = filteredTickets.filter(t => String(t.current_stage || '').toLowerCase() === sf);
     }
   }
 
@@ -673,23 +673,23 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     if (stf === 'delayed') {
       filteredTickets = filteredTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed');
     } else {
-      filteredTickets = filteredTickets.filter(t => t.status.toLowerCase() === stf);
+      filteredTickets = filteredTickets.filter(t => String(t.status || '').toLowerCase() === stf);
     }
   }
 
   if (priorityFilter && priorityFilter !== 'ALL') {
     filteredTickets = filteredTickets.filter(t =>
-      t.priority.toLowerCase() === priorityFilter.toLowerCase()
+      String(t.priority || '').toLowerCase() === priorityFilter.toLowerCase()
     );
   }
 
   if (searchTerm) {
     filteredTickets = filteredTickets.filter(t =>
-      (t.pick_ticket_no && t.pick_ticket_no.toLowerCase().includes(searchTerm)) ||
-      (t.party_name && t.party_name.toLowerCase().includes(searchTerm)) ||
-      (t.party_code && t.party_code.toLowerCase().includes(searchTerm)) ||
-      (t.bill_no && t.bill_no.toLowerCase().includes(searchTerm)) ||
-      (t.customer_order_no && t.customer_order_no.toLowerCase().includes(searchTerm))
+      (t.pick_ticket_no && String(t.pick_ticket_no).toLowerCase().includes(searchTerm)) ||
+      (t.party_name && String(t.party_name).toLowerCase().includes(searchTerm)) ||
+      (t.party_code && String(t.party_code).toLowerCase().includes(searchTerm)) ||
+      (t.bill_no && String(t.bill_no).toLowerCase().includes(searchTerm)) ||
+      (t.customer_order_no && String(t.customer_order_no).toLowerCase().includes(searchTerm))
     );
   }
 
@@ -776,7 +776,7 @@ async function getStageSummary(params = {}, warehouseId = 1) {
 
   const stages = ['Pending', 'Picking', 'Billing', 'Ready', 'Dispatched', 'Hold'];
   const summary = stages.map(stage => {
-    const matching = tickets.filter(t => t.current_stage.toLowerCase() === stage.toLowerCase());
+    const matching = tickets.filter(t => String(t.current_stage || '').toLowerCase() === stage.toLowerCase());
     const totalCartons = matching.reduce((sum, t) => sum + (t.cartons || 1), 0);
     const totalAmount = matching.reduce((sum, t) => sum + (t.invoice_amount || 0), 0);
     const avgAging = matching.length > 0
