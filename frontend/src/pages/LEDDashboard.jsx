@@ -168,27 +168,28 @@ export default function LEDDashboard() {
       .catch(() => {});
   }, [activeWarehouse]);
 
-  // Aggregate all available routes to ensure dropdown is NEVER empty
+  const normalizeRouteKey = (r) => {
+    if (!r) return '';
+    return String(r).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  };
+
+  const checkRoutesMatch = (r1, r2) => {
+    if (!r1 || !r2) return false;
+    const k1 = normalizeRouteKey(r1);
+    const k2 = normalizeRouteKey(r2);
+    if (!k1 || !k2 || k1 === 'unassigned' || k2 === 'unassigned') return false;
+    return k1 === k2;
+  };
+
+  // Aggregate all available routes to ensure dropdown has valid routes
   const routesMap = new Map();
 
-  // 1. From API data.routes
-  (data?.routes || []).forEach(r => {
-    const name = String(r.route_name || r.name || '').trim();
-    if (name) {
-      routesMap.set(name.toLowerCase(), {
-        id: r.id || name,
-        route_name: name,
-        route_code: r.route_code || name.substring(0, 10).toUpperCase(),
-        unbilled_count: r.unbilled_count || 0
-      });
-    }
-  });
-
-  // 2. From Master Routes API
+  // 1. From Master Routes API (Authoritative)
   masterRoutes.forEach(mr => {
     const name = String(mr.route_name || mr.name || '').trim();
-    if (name && !routesMap.has(name.toLowerCase())) {
-      routesMap.set(name.toLowerCase(), {
+    const k = normalizeRouteKey(name);
+    if (k && k !== 'unassigned' && !routesMap.has(k)) {
+      routesMap.set(k, {
         id: mr.id || name,
         route_name: name,
         route_code: mr.route_code || name.substring(0, 10).toUpperCase(),
@@ -197,11 +198,31 @@ export default function LEDDashboard() {
     }
   });
 
+  // 2. From API data.routes
+  (data?.routes || []).forEach(r => {
+    const name = String(r.route_name || r.name || '').trim();
+    const k = normalizeRouteKey(name);
+    if (k && k !== 'unassigned') {
+      if (!routesMap.has(k)) {
+        routesMap.set(k, {
+          id: r.id || name,
+          route_name: name,
+          route_code: r.route_code || name.substring(0, 10).toUpperCase(),
+          unbilled_count: r.unbilled_count || 0
+        });
+      } else {
+        const existing = routesMap.get(k);
+        existing.unbilled_count = r.unbilled_count || existing.unbilled_count;
+      }
+    }
+  });
+
   // 3. From any loaded Pick Tickets
   (data?.tickets?.items || []).forEach(t => {
-    const name = String(t.route_name || t.route || '').trim();
-    if (name && !routesMap.has(name.toLowerCase())) {
-      routesMap.set(name.toLowerCase(), {
+    const name = String(t.route_name || t.party_route || t.route || '').trim();
+    const k = normalizeRouteKey(name);
+    if (k && k !== 'unassigned' && !routesMap.has(k)) {
+      routesMap.set(k, {
         id: name,
         route_name: name,
         route_code: name.substring(0, 10).toUpperCase(),
@@ -213,7 +234,7 @@ export default function LEDDashboard() {
   const routesList = Array.from(routesMap.values()).sort((a, b) => a.route_name.localeCompare(b.route_name));
 
   const selectedRouteObj = selectedRouteId !== 'ALL' 
-    ? routesList.find(r => String(r.id) === String(selectedRouteId) || String(r.route_name || '').toLowerCase() === String(selectedRouteId).toLowerCase())
+    ? routesList.find(r => String(r.id) === String(selectedRouteId) || checkRoutesMatch(r.route_name, selectedRouteId))
     : null;
 
   // Extract selected route object and slot cycles
@@ -221,20 +242,20 @@ export default function LEDDashboard() {
   const eveningCycle = data?.eveningDispatch?.cycles?.[0] || null;
 
   // Determine available slots for the selected route
-  const selectedMasterRoute = masterRoutes.find(mr => String(mr.id) === String(selectedRouteId) || String(mr.route_name || '').toLowerCase() === String(selectedRouteId).toLowerCase());
+  const selectedMasterRoute = masterRoutes.find(mr => String(mr.id) === String(selectedRouteId) || checkRoutesMatch(mr.route_name, selectedRouteId));
   
   const hasMorningConfigured = selectedRouteId === 'ALL'
     ? true
     : (selectedMasterRoute && Array.isArray(selectedMasterRoute.schedules) && selectedMasterRoute.schedules.length > 0
         ? selectedMasterRoute.schedules.some(s => ((s.trip_name || '').toLowerCase().includes('morning') || s.priority_order === 1) && !!s.is_active && !(s.trip_name || '').toLowerCase().includes('evening'))
-        : (data?.morningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) && String(c.slot).toLowerCase() === 'morning')
+        : (data?.morningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || checkRoutesMatch(c.route_name, selectedRouteObj?.route_name)) && String(c.slot).toLowerCase() === 'morning')
       );
 
   const hasEveningConfigured = selectedRouteId === 'ALL'
     ? true
     : (selectedMasterRoute && Array.isArray(selectedMasterRoute.schedules) && selectedMasterRoute.schedules.length > 0
         ? selectedMasterRoute.schedules.some(s => ((s.trip_name || '').toLowerCase().includes('evening') || s.priority_order === 2) && !!s.is_active && !(s.trip_name || '').toLowerCase().includes('morning'))
-        : (data?.eveningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) && String(c.slot).toLowerCase() === 'evening')
+        : (data?.eveningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || checkRoutesMatch(c.route_name, selectedRouteObj?.route_name)) && String(c.slot).toLowerCase() === 'evening')
       );
 
   // Fallback if route has no explicit schedule configuration in DB
@@ -257,9 +278,9 @@ export default function LEDDashboard() {
   const filteredTickets = allTickets.filter((t) => {
     // Route Filter
     if (selectedRouteId !== 'ALL') {
-      const targetRoute = (selectedRouteObj?.route_name || selectedRouteId).trim().toLowerCase();
-      const ticketRoute = String(t.route_name || t.route || '').trim().toLowerCase();
-      if (ticketRoute !== targetRoute && !ticketRoute.includes(targetRoute) && !targetRoute.includes(ticketRoute)) {
+      const targetRoute = selectedRouteObj?.route_name || selectedRouteId;
+      const ticketRoute = t.route_name || t.party_route || t.route;
+      if (!checkRoutesMatch(ticketRoute, targetRoute)) {
         return false;
       }
     }

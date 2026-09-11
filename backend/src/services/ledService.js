@@ -137,14 +137,23 @@ function normalizeDateStr(d) {
   return clean;
 }
 
+function normalizeRouteKey(r) {
+  if (!r) return '';
+  return String(r).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 function routesMatch(rName1, rName2, rCode1, rCode2) {
-  if (!rName1 && !rName2) return true;
   if (!rName1 || !rName2) return false;
-  const n1 = String(rName1).trim().toLowerCase();
-  const n2 = String(rName2).trim().toLowerCase();
-  if (n1 === n2) return true;
-  if (n1.includes(n2) || n2.includes(n1)) return true;
-  if (rCode1 && rCode2 && String(rCode1).trim().toLowerCase() === String(rCode2).trim().toLowerCase()) return true;
+  const k1 = normalizeRouteKey(rName1);
+  const k2 = normalizeRouteKey(rName2);
+  if (!k1 || !k2 || k1 === 'unassigned' || k2 === 'unassigned') return false;
+  if (k1 === k2) return true;
+
+  if (rCode1 && rCode2) {
+    const c1 = normalizeRouteKey(rCode1);
+    const c2 = normalizeRouteKey(rCode2);
+    if (c1 && c2 && c1 === c2) return true;
+  }
   return false;
 }
 
@@ -311,20 +320,20 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
   if (!routes) routes = [];
 
-  // Also discover any routes from pick_tickets for this warehouse
+  // Also discover any routes from parties and pick_tickets for this warehouse
   try {
-    const distinctTicketRoutes = await dbAsync.all(`
-      SELECT DISTINCT route FROM pick_tickets 
+    const distinctPartyRoutes = await dbAsync.all(`
+      SELECT DISTINCT route_name FROM parties 
       WHERE (warehouse_id = ? OR (warehouse_id IS NULL AND ? = 1)) 
-        AND route IS NOT NULL 
-        AND TRIM(route) != ''
-      ORDER BY route ASC
+        AND route_name IS NOT NULL 
+        AND TRIM(route_name) != ''
+      ORDER BY route_name ASC
     `, warehouseId ? [warehouseId, warehouseId] : [1, 1]);
 
     const existingRouteNames = new Set(routes.map(r => (r.route_name || '').trim().toLowerCase()));
     let tempId = 9000;
-    for (const tr of (distinctTicketRoutes || [])) {
-      const cleanRouteName = String(tr.route || '').trim();
+    for (const pr of (distinctPartyRoutes || [])) {
+      const cleanRouteName = String(pr.route_name || '').trim();
       if (cleanRouteName && !existingRouteNames.has(cleanRouteName.toLowerCase())) {
         routes.push({
           id: tempId++,
@@ -336,21 +345,24 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       }
     }
 
-    if (routes.length === 0) {
-      const allDistinctRoutes = await dbAsync.all(`
-        SELECT DISTINCT route FROM pick_tickets WHERE route IS NOT NULL AND TRIM(route) != '' ORDER BY route ASC
-      `);
-      for (const tr of (allDistinctRoutes || [])) {
-        const cleanRouteName = String(tr.route || '').trim();
-        if (cleanRouteName && !existingRouteNames.has(cleanRouteName.toLowerCase())) {
-          routes.push({
-            id: tempId++,
-            route_code: cleanRouteName.substring(0, 10).toUpperCase(),
-            route_name: cleanRouteName,
-            warehouse_id: warehouseId
-          });
-          existingRouteNames.add(cleanRouteName.toLowerCase());
-        }
+    const distinctTicketRoutes = await dbAsync.all(`
+      SELECT DISTINCT route FROM pick_tickets 
+      WHERE (warehouse_id = ? OR (warehouse_id IS NULL AND ? = 1)) 
+        AND route IS NOT NULL 
+        AND TRIM(route) != ''
+      ORDER BY route ASC
+    `, warehouseId ? [warehouseId, warehouseId] : [1, 1]);
+
+    for (const tr of (distinctTicketRoutes || [])) {
+      const cleanRouteName = String(tr.route || '').trim();
+      if (cleanRouteName && !existingRouteNames.has(cleanRouteName.toLowerCase())) {
+        routes.push({
+          id: tempId++,
+          route_code: cleanRouteName.substring(0, 10).toUpperCase(),
+          route_name: cleanRouteName,
+          warehouse_id: warehouseId
+        });
+        existingRouteNames.add(cleanRouteName.toLowerCase());
       }
     }
   } catch (e) {}
@@ -373,13 +385,15 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
            pkh.name as picker_name, pkh.employee_code as picker_emp_code,
            dp.id as dispatch_party_id, dp.status as dispatch_party_status, dp.delivery_status, dp.delivered_at,
            d.id as dispatch_id, d.dispatch_no, d.status as dispatch_master_status,
-           p.address as party_address, p.city as party_city, p.phone as party_phone
+           p.address as party_address, p.city as party_city, p.phone as party_phone,
+           p.route_name as party_route_name, p.route_id as party_route_id,
+           p.party_name as master_party_name
     FROM pick_tickets pt
     LEFT JOIN billings b ON b.pick_ticket_id = pt.id
     LEFT JOIN picker_checker_helpers pkh ON pt.picker_id = pkh.id OR pt.picker_id = pkh.employee_code OR LOWER(pt.picker_id) = LOWER(pkh.name)
     LEFT JOIN dispatch_parties dp ON dp.billing_id = b.id
     LEFT JOIN dispatches d ON dp.dispatch_id = d.id
-    LEFT JOIN parties p ON pt.party_code = p.party_code AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL)
+    LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code))) AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL)
     WHERE (pt.warehouse_id = ? OR (pt.warehouse_id IS NULL AND ? = 1))
     ORDER BY pt.created_at ASC
   `, whParams);
@@ -424,17 +438,19 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
     // Assigned To
     const assignedTo = t.assigned_to || t.picker_name || (billing ? 'Billing Desk' : (t.salesman || 'Unassigned'));
+    const resolvedRoute = (t.party_route_name && t.party_route_name.trim()) || (t.route && t.route.trim()) || 'Unassigned';
 
     return {
       id: t.id,
       pick_ticket_no: t.ticket_no,
       customer_order_no: t.customer_order_no,
       party_code: t.party_code,
-      party_name: t.party_name,
+      party_name: t.master_party_name || t.party_name,
       party_address: t.party_address,
       party_city: t.party_city,
       party_phone: t.party_phone,
-      route_name: t.route,
+      party_route: t.party_route_name || '',
+      route_name: resolvedRoute,
       dispatch_slot: slot,
       date: t.date || dateStr,
       time: t.time || '09:00',
