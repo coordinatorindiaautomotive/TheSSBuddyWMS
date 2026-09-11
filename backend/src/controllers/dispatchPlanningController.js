@@ -147,35 +147,48 @@ async function createTrip(req, res) {
 // Route Bill Status Tracker Controller APIs
 async function getPartyBillStatus(req, res) {
   try {
-    const whId = req.activeWarehouseId;
+    const whId = req.activeWarehouseId || 1;
     const { routeId, fromDate, toDate, statusFilter, search } = req.query;
 
+    let targetRoute = null;
+    if (routeId && routeId !== 'ALL') {
+      targetRoute = await dbAsync.get(`
+        SELECT * FROM route_masters 
+        WHERE (id = ? OR route_name = ? OR route_code = ?) 
+          AND (warehouse_id = ? OR (warehouse_id IS NULL AND ? = 1))
+      `, [routeId, routeId, routeId, whId, whId]);
+    }
+
     let partySql = `
-      SELECT p.*, rm.route_name as master_route_name
+      SELECT p.*, rm.route_name as master_route_name, rm.route_code as master_route_code
       FROM parties p
       LEFT JOIN route_masters rm ON p.route_id = rm.id
-      WHERE p.warehouse_id = ?
+      WHERE (p.warehouse_id = ? OR (p.warehouse_id IS NULL AND ? = 1))
     `;
-    let partyParams = [whId];
-    if (routeId) {
-      const targetRoute = await dbAsync.get('SELECT * FROM route_masters WHERE id = ? OR route_name = ?', [routeId, routeId]);
-      if (targetRoute) {
-        partySql += ' AND (p.route_id = ? OR rm.id = ? OR p.route_name = ?)';
-        partyParams.push(targetRoute.id, targetRoute.id, targetRoute.route_name);
-      } else {
-        partySql += ' AND (p.route_id = ? OR rm.id = ? OR p.route_name = ?)';
-        partyParams.push(routeId, routeId, routeId);
-      }
+    let partyParams = [whId, whId];
+
+    if (targetRoute) {
+      partySql += ` AND (
+        p.route_id = ? 
+        OR rm.id = ? 
+        OR LOWER(TRIM(p.route_name)) = LOWER(TRIM(?))
+        OR (rm.route_name IS NOT NULL AND LOWER(TRIM(rm.route_name)) = LOWER(TRIM(?)))
+      )`;
+      partyParams.push(targetRoute.id, targetRoute.id, targetRoute.route_name, targetRoute.route_name);
+    } else if (routeId && routeId !== 'ALL') {
+      partySql += ` AND LOWER(TRIM(p.route_name)) = LOWER(TRIM(?))`;
+      partyParams.push(String(routeId).trim());
     }
+
     const parties = await dbAsync.all(partySql, partyParams);
 
     let ptSql = `
       SELECT pt.*, b.id as billing_id, b.bill_no, b.billed_qty, b.created_at as billing_date
       FROM pick_tickets pt
       LEFT JOIN billings b ON pt.id = b.pick_ticket_id
-      WHERE pt.warehouse_id = ?
+      WHERE (pt.warehouse_id = ? OR (pt.warehouse_id IS NULL AND ? = 1))
     `;
-    let ptParams = [whId];
+    let ptParams = [whId, whId];
     if (fromDate) {
       ptSql += ' AND pt.date >= ?';
       ptParams.push(fromDate);
@@ -187,11 +200,17 @@ async function getPartyBillStatus(req, res) {
     const allTickets = await dbAsync.all(ptSql, ptParams);
 
     const partyDataMap = {};
-    for (const party of parties) {
-      partyDataMap[party.party_code] = {
+    const validPartyCodes = new Set();
+
+    for (const party of (parties || [])) {
+      const code = String(party.party_code).trim();
+      const codeUpper = code.toUpperCase();
+      validPartyCodes.add(codeUpper);
+
+      partyDataMap[codeUpper] = {
         partyCode: party.party_code,
         partyName: party.party_name,
-        route: party.master_route_name || party.route_name || 'Direct Route',
+        route: party.master_route_name || party.route_name || targetRoute?.route_name || 'Direct Route',
         salesman: party.salesman || 'General Sales',
         totalPickTickets: 0,
         pendingCount: 0,
@@ -202,24 +221,56 @@ async function getPartyBillStatus(req, res) {
       };
     }
 
-    for (const t of allTickets) {
-      let pCode = t.party_code;
-      if (!partyDataMap[pCode]) {
-        partyDataMap[pCode] = {
-          partyCode: pCode,
-          partyName: t.party_name || pCode,
-          route: t.route || 'Direct Route',
-          salesman: t.salesman || 'General Sales',
-          totalPickTickets: 0,
-          pendingCount: 0,
-          billedCount: 0,
-          dispatchedCount: 0,
-          pendingTickets: [],
-          billedTickets: []
-        };
+    for (const t of (allTickets || [])) {
+      const pCode = String(t.party_code || '').trim();
+      const pCodeUpper = pCode.toUpperCase();
+
+      // If a route filter is active, only include tickets belonging to that route!
+      if (targetRoute || (routeId && routeId !== 'ALL')) {
+        if (!validPartyCodes.has(pCodeUpper)) {
+          // If the party is not in the filtered parties, check if ticket's route explicitly matches
+          const tRoute = String(t.route || '').trim().toLowerCase();
+          const targetLower = String(targetRoute?.route_name || routeId || '').trim().toLowerCase();
+          if (tRoute && targetLower && tRoute === targetLower) {
+            if (!partyDataMap[pCodeUpper]) {
+              partyDataMap[pCodeUpper] = {
+                partyCode: pCode,
+                partyName: t.party_name || pCode,
+                route: t.route || targetRoute?.route_name || 'Direct Route',
+                salesman: t.salesman || 'General Sales',
+                totalPickTickets: 0,
+                pendingCount: 0,
+                billedCount: 0,
+                dispatchedCount: 0,
+                pendingTickets: [],
+                billedTickets: []
+              };
+            }
+          } else {
+            // Does NOT belong to this route! Skip it completely!
+            continue;
+          }
+        }
+      } else {
+        if (!partyDataMap[pCodeUpper]) {
+          partyDataMap[pCodeUpper] = {
+            partyCode: pCode,
+            partyName: t.party_name || pCode,
+            route: t.route || 'Direct Route',
+            salesman: t.salesman || 'General Sales',
+            totalPickTickets: 0,
+            pendingCount: 0,
+            billedCount: 0,
+            dispatchedCount: 0,
+            pendingTickets: [],
+            billedTickets: []
+          };
+        }
       }
 
-      const pEntry = partyDataMap[pCode];
+      const pEntry = partyDataMap[pCodeUpper];
+      if (!pEntry) continue;
+
       pEntry.totalPickTickets += 1;
 
       if (t.status === 'Dispatched' || t.status === 'Delivered') {
