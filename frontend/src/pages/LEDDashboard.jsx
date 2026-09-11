@@ -225,13 +225,13 @@ export default function LEDDashboard() {
   
   const hasMorningConfigured = selectedRouteId === 'ALL'
     ? true
-    : (data?.morningDispatch?.cycles || []).some(c => String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) ||
-      (selectedMasterRoute ? (selectedMasterRoute.schedules || []).some(s => (s.trip_name || '').toLowerCase().includes('morning') || parseInt((s.cutoff_time || '0').split(':')[0], 10) < 13) : false);
+    : (data?.morningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) && String(c.slot).toLowerCase() === 'morning') ||
+      (selectedMasterRoute ? (selectedMasterRoute.schedules || []).some(s => (s.trip_name || '').toLowerCase().includes('morning') && s.is_active) : false);
 
   const hasEveningConfigured = selectedRouteId === 'ALL'
     ? true
-    : (data?.eveningDispatch?.cycles || []).some(c => String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) ||
-      (selectedMasterRoute ? (selectedMasterRoute.schedules || []).some(s => (s.trip_name || '').toLowerCase().includes('evening') || parseInt((s.cutoff_time || '0').split(':')[0], 10) >= 13) : false);
+    : (data?.eveningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) && String(c.slot).toLowerCase() === 'evening') ||
+      (selectedMasterRoute ? (selectedMasterRoute.schedules || []).some(s => (s.trip_name || '').toLowerCase().includes('evening') && s.is_active) : false);
 
   // Fallback if route has no explicit schedule configuration in DB
   const showMorningSlot = hasMorningConfigured || (!hasMorningConfigured && !hasEveningConfigured);

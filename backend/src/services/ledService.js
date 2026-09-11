@@ -471,27 +471,33 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   for (const r of routes) {
     const routeSchedules = schedules.filter(s => s.route_id === r.id);
 
-    // Morning configuration
+    // Morning configuration: strictly match trip_name 'morning' or priority 1 (without evening in name)
     const morningSched = routeSchedules.find(s =>
       (s.trip_name && s.trip_name.toLowerCase().includes('morning')) ||
-      (s.cutoff_time && parseInt(s.cutoff_time.split(':')[0], 10) < 13)
+      (s.priority_order === 1 && s.trip_name && !s.trip_name.toLowerCase().includes('evening'))
     );
 
-    // Evening configuration
+    // Evening configuration: strictly match trip_name 'evening' or priority 2
     const eveningSched = routeSchedules.find(s =>
       (s.trip_name && s.trip_name.toLowerCase().includes('evening')) ||
-      (s.cutoff_time && parseInt(s.cutoff_time.split(':')[0], 10) >= 13)
+      (s.priority_order === 2 && s.trip_name && !s.trip_name.toLowerCase().includes('morning'))
     );
 
     // Filter tickets belonging to route r
     const mTickets = enrichedTickets.filter(t =>
-      t.dispatch_slot.toLowerCase() === 'morning' &&
-      routesMatch(t.route_name, r.route_name, null, r.route_code)
+      routesMatch(t.route_name, r.route_name, null, r.route_code) &&
+      (
+        (!eveningSched && morningSched) ||
+        (t.dispatch_slot && t.dispatch_slot.toLowerCase() === 'morning')
+      )
     );
 
     const eTickets = enrichedTickets.filter(t =>
-      t.dispatch_slot.toLowerCase() === 'evening' &&
-      routesMatch(t.route_name, r.route_name, null, r.route_code)
+      routesMatch(t.route_name, r.route_name, null, r.route_code) &&
+      (
+        (!morningSched && eveningSched) ||
+        (t.dispatch_slot && t.dispatch_slot.toLowerCase() === 'evening')
+      )
     );
 
     // Check which schedules are configured for this route
