@@ -10,9 +10,13 @@ export function AuthProvider({ children }) {
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Set default axios header
+  // Set default axios headers
   if (token) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  }
+  const savedWhId = localStorage.getItem('wms_active_warehouse_id');
+  if (savedWhId) {
+    axios.defaults.headers.common['x-warehouse-id'] = savedWhId;
   }
 
   useEffect(() => {
@@ -25,11 +29,17 @@ export function AuthProvider({ children }) {
 
   const fetchProfile = async () => {
     try {
+      const storedWhId = localStorage.getItem('wms_active_warehouse_id');
       const res = await axios.get('/api/auth/me', {
-        headers: activeWarehouse ? { 'x-warehouse-id': activeWarehouse.id } : {}
+        headers: storedWhId ? { 'x-warehouse-id': storedWhId } : {}
       });
       setUser(res.data.user);
-      setActiveWarehouse(res.data.activeWarehouse);
+      const wh = res.data.activeWarehouse || res.data.user?.warehouse;
+      setActiveWarehouse(wh);
+      if (wh?.id) {
+        axios.defaults.headers.common['x-warehouse-id'] = wh.id;
+        localStorage.setItem('wms_active_warehouse_id', wh.id);
+      }
       setWarehouses(res.data.warehouses || []);
     } catch (err) {
       console.error('Failed to load user profile:', err);
@@ -46,7 +56,12 @@ export function AuthProvider({ children }) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     setToken(newToken);
     setUser(userData);
-    setActiveWarehouse(userData.warehouse);
+    const wh = userData.warehouse;
+    setActiveWarehouse(wh);
+    if (wh?.id) {
+      axios.defaults.headers.common['x-warehouse-id'] = wh.id;
+      localStorage.setItem('wms_active_warehouse_id', wh.id);
+    }
     return userData;
   };
 
@@ -62,6 +77,7 @@ export function AuthProvider({ children }) {
     const wh = warehouses.find(w => w.id === parseInt(warehouseId, 10));
     if (wh) {
       setActiveWarehouse(wh);
+      localStorage.setItem('wms_active_warehouse_id', wh.id);
       axios.defaults.headers.common['x-warehouse-id'] = wh.id;
       try {
         await axios.post('/api/auth/switch-warehouse', { warehouse_id: wh.id });
@@ -71,6 +87,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('wms_token');
+    localStorage.removeItem('wms_active_warehouse_id');
     delete axios.defaults.headers.common['Authorization'];
     delete axios.defaults.headers.common['x-warehouse-id'];
     setToken(null);

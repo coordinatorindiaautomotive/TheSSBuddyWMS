@@ -161,7 +161,9 @@ export default function LEDDashboard() {
 
   // Extract selected route object and slot cycles
   const routesList = data?.routes || [];
-  const selectedRouteObj = selectedRouteId !== 'ALL' ? routesList.find(r => String(r.id) === String(selectedRouteId)) : null;
+  const selectedRouteObj = selectedRouteId !== 'ALL' 
+    ? routesList.find(r => String(r.id) === String(selectedRouteId) || String(r.route_name || '').toLowerCase() === String(selectedRouteId).toLowerCase())
+    : null;
 
   const morningCycle = data?.morningDispatch?.cycles?.[0] || null;
   const eveningCycle = data?.eveningDispatch?.cycles?.[0] || null;
@@ -209,6 +211,11 @@ export default function LEDDashboard() {
             <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> ALL PENDING
             </span>
+            {activeWarehouse && (
+              <span className="px-2 py-0.5 rounded-lg text-[10px] font-extrabold uppercase bg-blue-50 text-[#003366] border border-blue-200">
+                WH: {activeWarehouse.warehouse_code || activeWarehouse.warehouse_name}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 text-xs font-bold">
@@ -256,7 +263,7 @@ export default function LEDDashboard() {
               >
                 <option value="ALL">🌟 All Routes ({routesList.length} Routes)</option>
                 {routesList.map((r) => (
-                  <option key={r.id} value={r.id}>
+                  <option key={r.id || r.route_name} value={String(r.id || r.route_name)}>
                     {r.route_name} {r.unbilled_count > 0 ? `(⏳ ${r.unbilled_count} Pending)` : '(✓ 0 Pending)'}
                   </option>
                 ))}
