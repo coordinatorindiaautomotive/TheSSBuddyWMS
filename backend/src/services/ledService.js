@@ -273,8 +273,8 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   const searchTerm = (params.search || '').trim().toLowerCase();
 
   const whId = warehouseId || 1;
-  const whWhere = '(rm.warehouse_id = ? OR rm.warehouse_id IS NULL OR ? = 1)';
-  const whParams = [whId, whId];
+  const whWhere = '(rm.warehouse_id = ? OR rm.warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM route_masters WHERE warehouse_id = ?))';
+  const whParams = [whId, whId, whId];
 
   // 1. Fetch Routes for active warehouse
   let routes = await dbAsync.all(`
@@ -289,11 +289,11 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   try {
     const distinctPartyRoutes = await dbAsync.all(`
       SELECT DISTINCT route_name FROM parties 
-      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) 
+      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM parties WHERE warehouse_id = ?)) 
         AND route_name IS NOT NULL 
         AND TRIM(route_name) != ''
       ORDER BY route_name ASC
-    `, whParams);
+    `, [whId, whId, whId]);
 
     const existingRouteNames = new Set();
     routes.forEach(r => {
@@ -318,11 +318,11 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
     const distinctTicketRoutes = await dbAsync.all(`
       SELECT DISTINCT route FROM pick_tickets 
-      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) 
+      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM pick_tickets WHERE warehouse_id = ?)) 
         AND route IS NOT NULL 
         AND TRIM(route) != ''
       ORDER BY route ASC
-    `, whParams);
+    `, [whId, whId, whId]);
 
     for (const tr of (distinctTicketRoutes || [])) {
       const cleanRouteName = String(tr.route || '').trim();
@@ -344,12 +344,12 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     SELECT rs.*, rm.route_name, rm.route_code
     FROM route_schedules rs
     JOIN route_masters rm ON rs.route_id = rm.id
-    WHERE (rs.warehouse_id = ? OR rs.warehouse_id IS NULL OR ? = 1) AND rs.is_active = 1
+    WHERE (rs.warehouse_id = ? OR rs.warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM route_schedules WHERE warehouse_id = ?)) AND rs.is_active = 1
     ORDER BY rs.dispatch_time ASC, rs.priority_order ASC
-  `, whParams);
+  `, [whId, whId, whId]);
   if (!schedules) schedules = [];
 
-  // 3. Fetch All Pick Tickets for active warehouse
+  // 3. Fetch All Pick Tickets for active warehouse (with resilient fallback so tickets never disappear)
   let pickTicketsRaw = await dbAsync.all(`
     SELECT pt.*,
            b.id as billing_id, b.bill_no, b.billed_qty, b.invoice_amount, b.created_at as billed_at,
@@ -365,8 +365,8 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     LEFT JOIN picker_checker_helpers pkh ON pt.picker_id = pkh.id OR pt.picker_id = pkh.employee_code OR LOWER(pt.picker_id) = LOWER(pkh.name)
     LEFT JOIN dispatch_parties dp ON dp.billing_id = b.id
     LEFT JOIN dispatches d ON dp.dispatch_id = d.id
-    LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(pt.party_name)) = TRIM(LOWER(p.party_name))) AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL OR ? = 1)
-    WHERE (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
+    LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(pt.party_name)) = TRIM(LOWER(p.party_name)))
+    WHERE (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM pick_tickets WHERE warehouse_id = ?))
       AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))
     ORDER BY pt.created_at ASC
   `, [whId, whId, whId]);
@@ -850,9 +850,9 @@ async function getPickTicketDetailById(ticketId, warehouseId = 1) {
     LEFT JOIN dispatches d ON dp.dispatch_id = d.id
     LEFT JOIN drivers dr ON d.driver_id = dr.id
     LEFT JOIN vehicles v ON d.vehicle_id = v.id
-    LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(pt.party_name)) = TRIM(LOWER(p.party_name))) AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL OR ? = 1)
-    WHERE (pt.id = ? OR pt.ticket_no = ?) AND (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
-  `, [whId, ticketId, ticketId, whId, whId]);
+    LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(pt.party_name)) = TRIM(LOWER(p.party_name)))
+    WHERE (pt.id = ? OR pt.ticket_no = ?) AND (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM pick_tickets WHERE warehouse_id = ?))
+  `, [ticketId, ticketId, whId, whId, whId]);
 
   if (!ticket) return null;
 

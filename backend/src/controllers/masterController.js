@@ -53,8 +53,8 @@ async function deleteWarehouse(req, res) {
 async function getRoutes(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    let routes = await dbAsync.all('SELECT * FROM route_masters WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY route_name ASC', [whId, whId]);
-    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY priority_order ASC, dispatch_time ASC', [whId, whId]);
+    let routes = await dbAsync.all('SELECT * FROM route_masters WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM route_masters WHERE warehouse_id = ?)) ORDER BY route_name ASC', [whId, whId, whId]);
+    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM route_schedules WHERE warehouse_id = ?)) ORDER BY priority_order ASC, dispatch_time ASC', [whId, whId, whId]);
 
     if (!routes) routes = [];
 
@@ -62,11 +62,11 @@ async function getRoutes(req, res) {
     try {
       const distinctTicketRoutes = await dbAsync.all(`
         SELECT DISTINCT route FROM pick_tickets 
-        WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) 
+        WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM pick_tickets WHERE warehouse_id = ?)) 
           AND route IS NOT NULL 
           AND TRIM(route) != ''
         ORDER BY route ASC
-      `, [whId, whId]);
+      `, [whId, whId, whId]);
 
       const existingNames = new Set(routes.map(r => String(r.route_name || '').toLowerCase().trim()));
       let tempId = 9000;
