@@ -80,6 +80,9 @@ function formatDateTimeForDb(dt) {
     if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(clean)) {
       return clean;
     }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+      return `${clean} 00:00:00`;
+    }
   }
   const d = new Date(dt);
   if (isNaN(d.getTime())) return null;
@@ -126,7 +129,7 @@ async function createBilling(req, res) {
 
     const ticket = await dbAsync.get('SELECT * FROM pick_tickets WHERE id = ?', [pick_ticket_id]);
     if (!ticket) {
-      return res.status(404).json({ message: 'Selected Pick Ticket not found.' });
+      return res.status(404).json({ message: 'Selected pick ticket was not found.' });
     }
 
     const bDate = billing_date || new Date().toISOString().split('T')[0];
@@ -224,8 +227,28 @@ async function updateBilling(req, res) {
     }
 
     const cleanBillNo = bill_no ? String(bill_no).trim().toUpperCase() : billing.bill_no;
-    const sTime = formatDateTimeForDb(start_time) || billing.start_time;
-    const eTime = formatDateTimeForDb(end_time) || billing.end_time;
+
+    // Check duplicate bill number excluding current
+    if (cleanBillNo !== billing.bill_no) {
+      const duplicate = await dbAsync.get(
+        'SELECT id FROM billings WHERE bill_no = ? AND warehouse_id = ? AND id != ?',
+        [cleanBillNo, billing.warehouse_id, id]
+      );
+      if (duplicate) {
+        return res.status(400).json({ message: `Bill Number '${cleanBillNo}' is already in use by another record.` });
+      }
+    }
+
+    const sTime = formatDateTimeForDb(start_time) || formatDateTimeForDb(billing.start_time) || formatDateTimeForDb(new Date());
+    const eTime = formatDateTimeForDb(end_time) || formatDateTimeForDb(billing.end_time) || formatDateTimeForDb(new Date());
+
+    const cleanBilledQty = billed_qty !== undefined && billed_qty !== '' ? (parseInt(billed_qty, 10) || 0) : billing.billed_qty;
+    const cleanShortQty = short_qty !== undefined && short_qty !== '' ? (parseInt(short_qty, 10) || 0) : billing.short_qty;
+    const cleanExcessQty = excess_qty !== undefined && excess_qty !== '' ? (parseInt(excess_qty, 10) || 0) : billing.excess_qty;
+    const cleanDamageQty = damage_qty !== undefined && damage_qty !== '' ? (parseInt(damage_qty, 10) || 0) : billing.damage_qty;
+    const cleanAmount = invoice_amount !== undefined && invoice_amount !== '' ? (parseFloat(invoice_amount) || 0) : billing.invoice_amount;
+    const cleanChecker = checker_id !== undefined ? (checker_id ? String(checker_id) : null) : billing.checker_id;
+    const cleanHelper = helper_id !== undefined ? (helper_id ? String(helper_id) : null) : billing.helper_id;
 
     await dbAsync.run(`
       UPDATE billings
@@ -239,18 +262,24 @@ async function updateBilling(req, res) {
       billing_date || billing.billing_date,
       billing_time || billing.billing_time,
       cleanBillNo,
-      billed_qty !== undefined ? parseInt(billed_qty, 10) : billing.billed_qty,
-      checker_id !== undefined ? (checker_id ? String(checker_id) : null) : billing.checker_id,
-      helper_id !== undefined ? (helper_id ? String(helper_id) : null) : billing.helper_id,
+      cleanBilledQty,
+      cleanChecker,
+      cleanHelper,
       sTime,
       eTime,
-      invoice_amount !== undefined ? parseFloat(invoice_amount) : billing.invoice_amount,
-      short_qty !== undefined ? parseInt(short_qty, 10) : billing.short_qty,
-      excess_qty !== undefined ? parseInt(excess_qty, 10) : billing.excess_qty,
-      damage_qty !== undefined ? parseInt(damage_qty, 10) : billing.damage_qty,
+      cleanAmount,
+      cleanShortQty,
+      cleanExcessQty,
+      cleanDamageQty,
       billing_remarks !== undefined ? billing_remarks : billing.billing_remarks,
       id
     ]);
+
+    // Keep pick ticket status updated
+    const targetPtId = pick_ticket_id || billing.pick_ticket_id;
+    if (targetPtId) {
+      await dbAsync.run("UPDATE pick_tickets SET status = 'Billed', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [targetPtId]);
+    }
 
     try {
       await logAudit(req, {
@@ -258,7 +287,7 @@ async function updateBilling(req, res) {
         module: 'Billing',
         target_id: cleanBillNo,
         details: `Updated Billing Invoice ${cleanBillNo}`,
-        changed_fields: { invoice_amount, billed_qty }
+        changed_fields: { invoice_amount: cleanAmount, billed_qty: cleanBilledQty }
       });
     } catch (auditErr) {
       console.warn('Billing audit log warning:', auditErr.message);

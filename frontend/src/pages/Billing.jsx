@@ -128,6 +128,22 @@ export default function Billing() {
     setShowModal(true);
   };
 
+  const formatForDateTimeLocal = (dt) => {
+    if (!dt) return new Date().toISOString().substring(0, 16);
+    if (typeof dt === 'string') {
+      const clean = dt.replace(' ', 'T').substring(0, 16);
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(clean)) return clean;
+    }
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return new Date().toISOString().substring(0, 16);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const handleOpenEditModal = (b) => {
     setEditingId(b.id);
     setSelectedTicket({
@@ -148,8 +164,8 @@ export default function Billing() {
       billed_qty: b.billed_qty || 0,
       checker_id: b.checker_id || (checkers.length > 0 ? checkers[0].id : ''),
       helper_id: b.helper_id || (helpers.length > 0 ? helpers[0].id : ''),
-      start_time: b.start_time || new Date().toISOString().substring(0, 16),
-      end_time: b.end_time || new Date().toISOString().substring(0, 16),
+      start_time: formatForDateTimeLocal(b.start_time),
+      end_time: formatForDateTimeLocal(b.end_time),
       invoice_amount: b.invoice_amount || 0,
       short_qty: b.short_qty || 0,
       excess_qty: b.excess_qty || 0,
