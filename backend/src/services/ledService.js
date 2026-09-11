@@ -370,6 +370,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     // Invoices count
     const invoicesCount = t.invoices_count || (billing ? 1 : 0);
     const cartonsCount = t.qty_in_pick_ticket || 1;
+    const isBilled = !!(billing && billing.id) || t.status === 'Billed' || t.status === 'Dispatched';
 
     // Assigned To
     const assignedTo = t.assigned_to || t.picker_name || (billing ? 'Billing Desk' : (t.salesman || 'Unassigned'));
@@ -389,6 +390,8 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       time: t.time || '09:00',
       invoices_count: invoicesCount,
       cartons: cartonsCount,
+      is_billed: isBilled,
+      billing_status: isBilled ? 'Billed' : 'Unbilled',
       current_stage: currentStage,
       stage_started_at: t.stage_started_at || (t.time ? `${dateStr} ${t.time}` : t.created_at),
       stage_started_time_formatted: formatTime12h(t.time || '09:00'),
@@ -654,7 +657,17 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       count: filteredEveningCycles.length,
       cycles: filteredEveningCycles
     },
-    routes: routes.map(r => ({ id: r.id, route_code: r.route_code, route_name: r.route_name })),
+    routes: routes.map(r => {
+      const rTickets = enrichedTickets.filter(t => routesMatch(t.route_name, r.route_name, null, r.route_code));
+      const unbilled = rTickets.filter(t => !t.is_billed).length;
+      return {
+        id: r.id,
+        route_code: r.route_code,
+        route_name: r.route_name,
+        unbilled_count: unbilled,
+        total_count: rTickets.length
+      };
+    }),
     tickets: {
       items: paginatedTickets,
       pagination: {
