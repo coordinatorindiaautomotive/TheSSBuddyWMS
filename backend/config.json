@@ -22,9 +22,9 @@
   "mysql": {
     "host": "127.0.0.1",
     "port": 3306,
-    "database": "wms_enterprise_db",
-    "user": "root",
-    "password": "root"
+    "database": "thesssys_wms_enterprise_db",
+    "user": "thesssys_shailendra",
+    "password": ""
   },
   "server": {
     "port": 5000,

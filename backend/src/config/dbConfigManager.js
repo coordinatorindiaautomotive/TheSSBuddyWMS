@@ -1,7 +1,25 @@
-require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
+
+// Search and load .env from multiple possible locations on cPanel / local
+const possibleEnvPaths = [
+  path.join(__dirname, '../../.env'),
+  path.join(__dirname, '../../../.env'),
+  path.join(process.cwd(), '.env'),
+  path.join(process.cwd(), 'backend/.env'),
+  '/home/thesssys/TheSSBuddyWMS/backend/.env',
+  '/home/thesssys/public_html/backend/.env',
+  '/home/thesssys/public_html/.env'
+];
+
+for (const envP of possibleEnvPaths) {
+  try {
+    if (fs.existsSync(envP)) {
+      require('dotenv').config({ path: envP, override: true });
+    }
+  } catch (e) {}
+}
 
 let mssql = null;
 try { mssql = require('mssql'); } catch (e) {}
@@ -12,16 +30,26 @@ try { sqlite3 = require('sqlite3').verbose(); } catch (e) {}
 let PgClient = null;
 try { PgClient = require('pg').Client; } catch (e) {}
 
-const configPath = path.join(__dirname, '../../config.json');
-
 function getConfig() {
   let fileConfig = {};
-  try {
-    if (fs.existsSync(configPath)) {
-      const data = fs.readFileSync(configPath, 'utf8');
-      fileConfig = JSON.parse(data);
-    }
-  } catch (e) {}
+  const possibleConfigPaths = [
+    path.join(__dirname, '../../config.json'),
+    path.join(__dirname, '../../../config.json'),
+    path.join(process.cwd(), 'config.json'),
+    path.join(process.cwd(), 'backend/config.json'),
+    '/home/thesssys/TheSSBuddyWMS/backend/config.json',
+    '/home/thesssys/public_html/backend/config.json'
+  ];
+
+  for (const cp of possibleConfigPaths) {
+    try {
+      if (fs.existsSync(cp)) {
+        const data = fs.readFileSync(cp, 'utf8');
+        const parsed = JSON.parse(data);
+        fileConfig = { ...fileConfig, ...parsed };
+      }
+    } catch (e) {}
+  }
 
   return {
     dbType: process.env.DB_TYPE || fileConfig.dbType || 'MYSQL',
@@ -47,8 +75,8 @@ function getConfig() {
     mysql: {
       host: process.env.DB_HOST || fileConfig.mysql?.host || '127.0.0.1',
       port: parseInt(process.env.DB_PORT || fileConfig.mysql?.port, 10) || 3306,
-      database: process.env.DB_NAME || fileConfig.mysql?.database || 'wms_enterprise_db',
-      user: process.env.DB_USER || fileConfig.mysql?.user || 'root',
+      database: process.env.DB_NAME || fileConfig.mysql?.database || 'thesssys_wms_enterprise_db',
+      user: process.env.DB_USER || fileConfig.mysql?.user || 'thesssys_shailendra',
       password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : (fileConfig.mysql?.password || '')
     },
     server: { 
