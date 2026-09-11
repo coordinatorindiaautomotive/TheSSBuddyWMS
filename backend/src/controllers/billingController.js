@@ -70,6 +70,28 @@ async function suggestNextBillNo(req, res) {
   }
 }
 
+function formatDateTimeForDb(dt) {
+  if (!dt) return null;
+  if (typeof dt === 'string') {
+    let clean = dt.trim().replace('T', ' ').replace('Z', '').split('.')[0];
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(clean)) {
+      return `${clean}:00`;
+    }
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(clean)) {
+      return clean;
+    }
+  }
+  const d = new Date(dt);
+  if (isNaN(d.getTime())) return null;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 async function createBilling(req, res) {
   try {
     const whId = req.activeWarehouseId;
@@ -94,10 +116,12 @@ async function createBilling(req, res) {
       return res.status(400).json({ message: 'Pick Ticket and Invoice Bill No are required.' });
     }
 
-    // Duplicate bill check
-    const existing = await dbAsync.get('SELECT id FROM billings WHERE bill_no = ? AND warehouse_id = ?', [bill_no, whId]);
+    const cleanBillNo = String(bill_no).trim().toUpperCase();
+
+    // Duplicate bill check in warehouse
+    const existing = await dbAsync.get('SELECT id FROM billings WHERE bill_no = ? AND warehouse_id = ?', [cleanBillNo, whId]);
     if (existing) {
-      return res.status(400).json({ message: `Bill Number '${bill_no}' already exists.` });
+      return res.status(400).json({ message: `Bill Number '${cleanBillNo}' already exists in this warehouse.` });
     }
 
     const ticket = await dbAsync.get('SELECT * FROM pick_tickets WHERE id = ?', [pick_ticket_id]);
@@ -108,11 +132,14 @@ async function createBilling(req, res) {
     const bDate = billing_date || new Date().toISOString().split('T')[0];
     const bTime = billing_time || new Date().toTimeString().split(' ')[0].substring(0, 5);
 
-    const bQty = parseInt(billed_qty || ticket.qty_in_pick_ticket, 10);
-    const dQty = parseInt(damage_qty || 0, 10);
-    const qtyDiff = ticket.qty_in_pick_ticket - bQty;
+    const bQty = parseInt(billed_qty !== undefined ? billed_qty : ticket.qty_in_pick_ticket, 10) || 0;
+    const dQty = parseInt(damage_qty || 0, 10) || 0;
+    const qtyDiff = (ticket.qty_in_pick_ticket || 0) - bQty;
     const computedShort = qtyDiff > 0 ? qtyDiff : 0;
     const computedExcess = qtyDiff < 0 ? Math.abs(qtyDiff) : 0;
+
+    const sTime = formatDateTimeForDb(start_time) || formatDateTimeForDb(new Date());
+    const eTime = formatDateTimeForDb(end_time) || formatDateTimeForDb(new Date());
 
     const result = await dbAsync.run(`
       INSERT INTO billings (
@@ -121,44 +148,48 @@ async function createBilling(req, res) {
         short_qty, excess_qty, damage_qty, billing_remarks, warehouse_id, created_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      pick_ticket_id,
+      ticket.id,
       bDate,
       bTime,
-      bill_no,
+      cleanBillNo,
       bQty,
-      checker_id || null,
-      helper_id || null,
-      start_time || new Date().toISOString(),
-      end_time || new Date().toISOString(),
-      parseFloat(invoice_amount || 0),
+      checker_id ? String(checker_id) : null,
+      helper_id ? String(helper_id) : null,
+      sTime,
+      eTime,
+      parseFloat(invoice_amount || 0) || 0,
       short_qty !== undefined ? parseInt(short_qty, 10) : computedShort,
       excess_qty !== undefined ? parseInt(excess_qty, 10) : computedExcess,
       dQty,
       billing_remarks || '',
-      whId,
-      req.user ? req.user.username : 'System'
+      whId || ticket.warehouse_id || 1,
+      req.user ? (req.user.full_name || req.user.username || 'System') : 'System'
     ]);
 
     // Update Pick Ticket status to Billed
-    await dbAsync.run("UPDATE pick_tickets SET status = 'Billed', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [pick_ticket_id]);
+    await dbAsync.run("UPDATE pick_tickets SET status = 'Billed', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticket.id]);
 
-    // Audit log
-    await logAudit(req, {
-      action_type: 'CREATE',
-      module: 'Billing',
-      target_id: bill_no,
-      details: `Created Billing Invoice ${bill_no} for Pick Ticket ${ticket.ticket_no} (Invoice Amount: ₹${invoice_amount || 0})`,
-      changed_fields: { invoice_amount: invoice_amount || 0, status: 'Billed' }
-    });
+    // Audit log (non-blocking)
+    try {
+      await logAudit(req, {
+        action_type: 'CREATE',
+        module: 'Billing',
+        target_id: cleanBillNo,
+        details: `Created Billing Invoice ${cleanBillNo} for Pick Ticket ${ticket.ticket_no} (Invoice Amount: ₹${invoice_amount || 0})`,
+        changed_fields: { invoice_amount: invoice_amount || 0, status: 'Billed' }
+      });
+    } catch (auditErr) {
+      console.warn('Billing audit log warning:', auditErr.message);
+    }
 
     return res.json({
-      message: `Invoice Bill ${bill_no} created successfully!`,
+      message: `Invoice Bill ${cleanBillNo} created successfully!`,
       id: result.id,
-      bill_no
+      bill_no: cleanBillNo
     });
   } catch (err) {
     console.error('Create billing error:', err);
-    return res.status(500).json({ message: 'Error creating billing invoice.' });
+    return res.status(500).json({ message: err.message || 'Error creating billing invoice.' });
   }
 }
 
@@ -192,36 +223,51 @@ async function updateBilling(req, res) {
       return res.status(400).json({ message: 'Cannot edit billing invoice for a Dispatched or Delivered pick ticket.' });
     }
 
+    const cleanBillNo = bill_no ? String(bill_no).trim().toUpperCase() : billing.bill_no;
+    const sTime = formatDateTimeForDb(start_time) || billing.start_time;
+    const eTime = formatDateTimeForDb(end_time) || billing.end_time;
+
     await dbAsync.run(`
       UPDATE billings
       SET pick_ticket_id = ?, billing_date = ?, billing_time = ?, bill_no = ?,
           billed_qty = ?, checker_id = ?, helper_id = ?, start_time = ?, end_time = ?,
           invoice_amount = ?, short_qty = ?, excess_qty = ?, damage_qty = ?,
-          billing_remarks = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+          billing_remarks = ?
       WHERE id = ?
     `, [
       pick_ticket_id || billing.pick_ticket_id,
       billing_date || billing.billing_date,
       billing_time || billing.billing_time,
-      bill_no || billing.bill_no,
+      cleanBillNo,
       billed_qty !== undefined ? parseInt(billed_qty, 10) : billing.billed_qty,
-      checker_id || billing.checker_id,
-      helper_id || billing.helper_id,
-      start_time || billing.start_time,
-      end_time || billing.end_time,
+      checker_id !== undefined ? (checker_id ? String(checker_id) : null) : billing.checker_id,
+      helper_id !== undefined ? (helper_id ? String(helper_id) : null) : billing.helper_id,
+      sTime,
+      eTime,
       invoice_amount !== undefined ? parseFloat(invoice_amount) : billing.invoice_amount,
       short_qty !== undefined ? parseInt(short_qty, 10) : billing.short_qty,
       excess_qty !== undefined ? parseInt(excess_qty, 10) : billing.excess_qty,
       damage_qty !== undefined ? parseInt(damage_qty, 10) : billing.damage_qty,
       billing_remarks !== undefined ? billing_remarks : billing.billing_remarks,
-      req.user ? req.user.username : 'System',
       id
     ]);
 
-    return res.json({ message: `Invoice Bill ${billing.bill_no} updated successfully!` });
+    try {
+      await logAudit(req, {
+        action_type: 'UPDATE',
+        module: 'Billing',
+        target_id: cleanBillNo,
+        details: `Updated Billing Invoice ${cleanBillNo}`,
+        changed_fields: { invoice_amount, billed_qty }
+      });
+    } catch (auditErr) {
+      console.warn('Billing audit log warning:', auditErr.message);
+    }
+
+    return res.json({ message: `Invoice Bill ${cleanBillNo} updated successfully!` });
   } catch (err) {
     console.error('Update billing error:', err);
-    return res.status(500).json({ message: 'Error updating billing record.' });
+    return res.status(500).json({ message: err.message || 'Error updating billing record.' });
   }
 }
 
