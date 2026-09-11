@@ -3,53 +3,38 @@ const { dbAsync } = require('../config/db');
 const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const FULL_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-/**
- * Get current time in Indian Standard Time (UTC+05:30)
- */
 function getNowIST() {
   const now = new Date();
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   return new Date(utc + (330 * 60000));
 }
 
-/**
- * Format Date to YYYY-MM-DD
- */
 function formatDateToYMD(d) {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return year + '-' + month + '-' + day;
 }
 
-/**
- * Format Minutes to Human Readable String (e.g. 1h 03m, 46m)
- */
 function formatAging(minutes) {
   if (minutes === null || minutes === undefined || isNaN(minutes)) return '-';
   const totalMin = Math.max(0, Math.floor(minutes));
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
-  if (h === 0) return `${m}m`;
-  return `${h}h ${String(m).padStart(2, '0')}m`;
+  if (h === 0) return m + 'm';
+  return h + 'h ' + String(m).padStart(2, '0') + 'm';
 }
 
-/**
- * Format Seconds into HHh MMm / Countdown
- */
 function formatCountdown(diffSec) {
   if (diffSec === null || diffSec === undefined) return '—';
   const isNegative = diffSec < 0;
   const absSec = Math.abs(Math.floor(diffSec));
   const h = Math.floor(absSec / 3600);
   const m = Math.floor((absSec % 3600) / 60);
-  const formatted = `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`;
-  return isNegative ? `Overdue by ${formatted}` : `${formatted} left`;
+  const formatted = String(h).padStart(2, '0') + 'h ' + String(m).padStart(2, '0') + 'm';
+  return isNegative ? 'Overdue by ' + formatted : formatted + ' left';
 }
 
-/**
- * Parse a 'HH:MM' time string into a Date object on the target date
- */
 function parseTimeOnDate(timeStr, targetDate) {
   if (!timeStr) return null;
   const clean = String(timeStr).trim();
@@ -62,9 +47,6 @@ function parseTimeOnDate(timeStr, targetDate) {
   return d;
 }
 
-/**
- * Convert 24-hour time to 12-hour AM/PM string
- */
 function formatTime12h(timeStr) {
   if (!timeStr) return '—';
   const parts = String(timeStr).trim().split(':');
@@ -74,12 +56,9 @@ function formatTime12h(timeStr) {
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12;
   hours = hours ? hours : 12;
-  return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+  return String(hours).padStart(2, '0') + ':' + minutes + ' ' + ampm;
 }
 
-/**
- * Determine if a schedule is active on a given target date
- */
 function isScheduleActive(schedule, targetDate) {
   if (!schedule.is_active) return false;
   if (schedule.dispatch_type === 'ON_DEMAND') return true;
@@ -118,21 +97,19 @@ function isScheduleActive(schedule, targetDate) {
 function normalizeDateStr(d) {
   if (!d) return '';
   const clean = String(d).trim().split('T')[0].split(' ')[0];
-  // If DD-MM-YYYY or DD/MM/YYYY
   if (/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/.test(clean)) {
     const match = clean.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
     const day = String(match[1]).padStart(2, '0');
     const month = String(match[2]).padStart(2, '0');
     const year = match[3];
-    return `${year}-${month}-${day}`;
+    return year + '-' + month + '-' + day;
   }
-  // If YYYY-MM-DD or YYYY/MM/DD
   if (/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/.test(clean)) {
     const match = clean.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
     const year = match[1];
     const month = String(match[2]).padStart(2, '0');
     const day = String(match[3]).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return year + '-' + month + '-' + day;
   }
   return clean;
 }
@@ -149,9 +126,6 @@ function routesMatch(rName1, rName2, rCode1, rCode2) {
   return keys1.some(k1 => keys2.some(k2 => k1 === k2 || k1.includes(k2) || k2.includes(k1)));
 }
 
-/**
- * Determine dynamic stage of a pick ticket
- */
 function determineTicketStage(ticket, billing, dispatchParty) {
   const st = String(ticket.status || '').toLowerCase();
   if (st === 'cancelled' || st === 'canceled') {
@@ -164,7 +138,7 @@ function determineTicketStage(ticket, billing, dispatchParty) {
     return 'Dispatched';
   }
   if (billing && billing.id) {
-    return 'Ready'; // Billed and waiting for vehicle/dispatch
+    return 'Ready';
   }
   if (st === 'billed') {
     return 'Ready';
@@ -178,19 +152,16 @@ function determineTicketStage(ticket, billing, dispatchParty) {
   return 'Pending';
 }
 
-/**
- * Determine aging level and priority
- */
 function getAgingMetrics(stageStartedAt, pendingSince, createdAt, now) {
   const baseTime = stageStartedAt || pendingSince || createdAt || now;
   const baseDate = new Date(baseTime);
   const diffMs = isNaN(baseDate.getTime()) ? 0 : now.getTime() - baseDate.getTime();
   const agingMinutes = Math.max(0, Math.floor(diffMs / 60000));
 
-  let agingLevel = 'Normal'; // 0-15 min
-  let agingColor = 'text-slate-600 bg-slate-100 border-slate-200';
+  let agingLevel = 'Normal';
+  let agingColor = 'text-emerald-700 bg-emerald-50 border-emerald-200';
 
-  if (agingMinutes > 60) {
+  if (agingMinutes >= 60) {
     agingLevel = 'Critical';
     agingColor = 'text-red-700 bg-red-50 border-red-200 font-bold';
   } else if (agingMinutes >= 30) {
@@ -209,9 +180,6 @@ function getAgingMetrics(stageStartedAt, pendingSince, createdAt, now) {
   };
 }
 
-/**
- * Calculate Cycle Status
- */
 function calculateCycleStatus(metrics, cutoffTimeStr, dispatchTimeStr, targetDate, now) {
   const { total, pending, picking, billing, ready, dispatched } = metrics;
 
@@ -221,7 +189,9 @@ function calculateCycleStatus(metrics, cutoffTimeStr, dispatchTimeStr, targetDat
       statusBadge: 'Upcoming',
       statusClass: 'bg-slate-100 text-slate-700 border-slate-200',
       timeRemaining: 'No Tickets',
-      isDelayed: false
+      isDelayed: false,
+      secondsToDispatch: 0,
+      secondsToCutoff: 0
     };
   }
 
@@ -231,19 +201,21 @@ function calculateCycleStatus(metrics, cutoffTimeStr, dispatchTimeStr, targetDat
       statusBadge: 'Completed',
       statusClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       timeRemaining: 'Completed',
-      isDelayed: false
+      isDelayed: false,
+      secondsToDispatch: 0,
+      secondsToCutoff: 0
     };
   }
 
   const dispatchDate = parseTimeOnDate(dispatchTimeStr, targetDate);
   const cutoffDate = parseTimeOnDate(cutoffTimeStr, targetDate);
 
-  let diffDispatchSec = dispatchDate ? (dispatchDate.getTime() - now.getTime()) / 1000 : 0;
-  let diffCutoffSec = cutoffDate ? (cutoffDate.getTime() - now.getTime()) / 1000 : 0;
+  let diffDispatchSec = dispatchDate ? Math.floor((dispatchDate.getTime() - now.getTime()) / 1000) : 0;
+  let diffCutoffSec = cutoffDate ? Math.floor((cutoffDate.getTime() - now.getTime()) / 1000) : 0;
 
   const isDispatchOverdue = diffDispatchSec < 0;
   const isCutoffMissed = diffCutoffSec < 0;
-  const isImminent = diffDispatchSec > 0 && diffDispatchSec <= 1800; // <= 30 min
+  const isImminent = diffDispatchSec > 0 && diffDispatchSec <= 1800;
 
   let status = 'In Progress';
   let statusBadge = 'In Progress';
@@ -287,14 +259,11 @@ function calculateCycleStatus(metrics, cutoffTimeStr, dispatchTimeStr, targetDat
   };
 }
 
-/**
- * Fetch and process complete LED dashboard data
- */
 async function getLedDashboardData(params = {}, warehouseId = 1) {
   const now = getNowIST();
   const dateStr = params.date || formatDateToYMD(now);
   const normTargetDate = normalizeDateStr(dateStr);
-  const targetDate = new Date(`${normTargetDate || formatDateToYMD(now)}T12:00:00`);
+  const targetDate = new Date((normTargetDate || formatDateToYMD(now)) + 'T12:00:00');
 
   const routeFilter = params.route_id && params.route_id !== 'ALL' ? String(params.route_id).trim() : null;
   const slotFilter = params.dispatch_slot && params.dispatch_slot !== 'ALL' ? params.dispatch_slot : null;
@@ -303,20 +272,20 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   const priorityFilter = params.priority && params.priority !== 'ALL' ? params.priority : null;
   const searchTerm = (params.search || '').trim().toLowerCase();
 
-  const whWhere = warehouseId ? 'WHERE (rm.warehouse_id = ? OR rm.warehouse_id IS NULL OR ? = 1)' : 'WHERE 1=1';
-  const whParams = warehouseId ? [warehouseId, warehouseId] : [];
+  const whId = warehouseId || 1;
+  const whWhere = '(rm.warehouse_id = ? OR rm.warehouse_id IS NULL OR ? = 1)';
+  const whParams = [whId, whId];
 
   // 1. Fetch Routes for active warehouse
   let routes = await dbAsync.all(`
     SELECT rm.* 
     FROM route_masters rm
-    ${whWhere}
+    WHERE ${whWhere}
     ORDER BY rm.route_name ASC
   `, whParams);
 
   if (!routes) routes = [];
 
-  // Also discover any routes from parties and pick_tickets for this warehouse
   try {
     const distinctPartyRoutes = await dbAsync.all(`
       SELECT DISTINCT route_name FROM parties 
@@ -336,12 +305,12 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     for (const pr of (distinctPartyRoutes || [])) {
       const cleanRouteName = String(pr.route_name || '').trim();
       const k = normalizeRouteKey(cleanRouteName);
-      if (k && !existingRouteNames.has(k)) {
+      if (k && k !== 'unassigned' && k !== 'directroute' && !existingRouteNames.has(k)) {
         routes.push({
           id: tempId++,
           route_code: cleanRouteName.substring(0, 10).toUpperCase(),
           route_name: cleanRouteName,
-          warehouse_id: warehouseId
+          warehouse_id: whId
         });
         existingRouteNames.add(k);
       }
@@ -358,12 +327,12 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     for (const tr of (distinctTicketRoutes || [])) {
       const cleanRouteName = String(tr.route || '').trim();
       const k = normalizeRouteKey(cleanRouteName);
-      if (k && !existingRouteNames.has(k)) {
+      if (k && k !== 'unassigned' && k !== 'directroute' && !existingRouteNames.has(k)) {
         routes.push({
           id: tempId++,
           route_code: cleanRouteName.substring(0, 10).toUpperCase(),
           route_name: cleanRouteName,
-          warehouse_id: warehouseId
+          warehouse_id: whId
         });
         existingRouteNames.add(k);
       }
@@ -390,21 +359,20 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
            d.id as dispatch_id, d.dispatch_no, d.status as dispatch_master_status,
            p.address as party_address, p.city as party_city, p.phone as party_phone,
            p.route_name as party_route_name, p.route_id as party_route_id,
-           p.party_name as master_party_name
+           COALESCE(p.party_name, pt.party_name) as master_party_name
     FROM pick_tickets pt
     LEFT JOIN billings b ON b.pick_ticket_id = pt.id
     LEFT JOIN picker_checker_helpers pkh ON pt.picker_id = pkh.id OR pt.picker_id = pkh.employee_code OR LOWER(pt.picker_id) = LOWER(pkh.name)
     LEFT JOIN dispatch_parties dp ON dp.billing_id = b.id
     LEFT JOIN dispatches d ON dp.dispatch_id = d.id
-    LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(pt.party_name)) = TRIM(LOWER(p.party_name))) AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL)
+    LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(pt.party_name)) = TRIM(LOWER(p.party_name))) AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL OR ? = 1)
     WHERE (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
       AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))
     ORDER BY pt.created_at ASC
-  `, whParams);
+  `, [whId, whId, whId]);
 
   if (!pickTicketsRaw) pickTicketsRaw = [];
 
-  // If date filter is 'ALL' or empty, include ALL tickets. For unbilled/pending tickets, ALWAYS include them in live monitor!
   const pickTickets = pickTicketsRaw.filter(t => {
     const isPendingTicket = !t.billing_id && t.status !== 'Billed' && t.status !== 'Dispatched' && t.status !== 'Completed';
     if (isPendingTicket) {
@@ -417,34 +385,30 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     return !tDate || tDate === normTargetDate;
   });
 
-  // Map tickets into normalized structures
   const enrichedTickets = pickTickets.map(t => {
     const billing = t.billing_id ? { id: t.billing_id, bill_no: t.bill_no, billed_qty: t.billed_qty, invoice_amount: t.invoice_amount, billed_at: t.billed_at } : null;
     const dispatchParty = t.dispatch_party_id ? { id: t.dispatch_party_id, status: t.dispatch_party_status || t.dispatch_master_status } : null;
 
     const currentStage = determineTicketStage(t, billing, dispatchParty);
-    const createdAt = t.created_at ? new Date(t.created_at) : (t.date ? new Date(`${t.date} ${t.time || '09:00'}`) : now);
+    const createdAt = t.created_at ? new Date(t.created_at) : (t.date ? new Date(t.date + ' ' + (t.time || '09:00')) : now);
     const stageStartedAt = t.stage_started_at ? new Date(t.stage_started_at) : createdAt;
     const pendingSince = t.pending_since ? new Date(t.pending_since) : createdAt;
 
     const aging = getAgingMetrics(stageStartedAt, pendingSince, createdAt, now);
 
-    // Determine slot (Morning or Evening)
     let slot = 'Morning';
     if (t.dispatch_slot) {
       slot = String(t.dispatch_slot).toLowerCase().includes('evening') ? 'Evening' : 'Morning';
     } else if (t.time) {
       const parts = String(t.time).split(':');
       const hour = parseInt(parts[0], 10);
-      if (hour >= 13) slot = 'Evening';
+      if (hour >= 14) slot = 'Evening';
     }
 
-    // Invoices count
     const invoicesCount = t.invoices_count || (billing ? 1 : 0);
     const cartonsCount = t.qty_in_pick_ticket || 1;
     const isBilled = !!(billing && billing.id) || t.status === 'Billed' || t.status === 'Dispatched';
 
-    // Assigned To
     const assignedTo = t.assigned_to || t.picker_name || (billing ? 'Billing Desk' : (t.salesman || 'Unassigned'));
     const cleanTicketRoute = (t.route && t.route.trim() && t.route.trim() !== 'Direct Route' && t.route.trim() !== 'Unassigned') ? t.route.trim() : '';
     const cleanPartyRoute = (t.party_route_name && t.party_route_name.trim()) ? t.party_route_name.trim() : '';
@@ -470,7 +434,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       is_billed: isBilled,
       billing_status: isBilled ? 'Billed' : 'Unbilled',
       current_stage: currentStage,
-      stage_started_at: t.stage_started_at || (t.time ? `${dateStr} ${t.time}` : t.created_at),
+      stage_started_at: t.stage_started_at || (t.time ? (dateStr + ' ' + t.time) : t.created_at),
       stage_started_time_formatted: formatTime12h(t.time || '09:00'),
       pending_since: t.pending_since || t.created_at,
       pending_since_time_formatted: formatTime12h(t.time || '09:00'),
@@ -490,7 +454,6 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     };
   });
 
-  // Calculate unbilled_count for each route
   routes.forEach(r => {
     r.unbilled_count = enrichedTickets.filter(t =>
       !t.is_billed && t.current_stage !== 'Cancelled' &&
@@ -498,7 +461,6 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     ).length;
   });
 
-  // Generate Dispatch Cycles for each Route Master entry
   const morningCycles = [];
   const eveningCycles = [];
   const allCycles = [];
@@ -506,19 +468,16 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   for (const r of routes) {
     const routeSchedules = schedules.filter(s => s.route_id === r.id);
 
-    // Morning configuration: strictly match trip_name 'morning' or priority 1 (without evening in name)
     const morningSched = routeSchedules.find(s =>
       (s.trip_name && s.trip_name.toLowerCase().includes('morning')) ||
       (s.priority_order === 1 && s.trip_name && !s.trip_name.toLowerCase().includes('evening'))
     );
 
-    // Evening configuration: strictly match trip_name 'evening' or priority 2
     const eveningSched = routeSchedules.find(s =>
       (s.trip_name && s.trip_name.toLowerCase().includes('evening')) ||
       (s.priority_order === 2 && s.trip_name && !s.trip_name.toLowerCase().includes('morning'))
     );
 
-    // Filter tickets belonging to route r
     const mTickets = enrichedTickets.filter(t =>
       routesMatch(t.route_name, r.route_name, t.ticket_route || t.party_route, r.route_code) &&
       (
@@ -536,11 +495,9 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       )
     );
 
-    // Check which schedules are configured for this route
     const hasConfiguredSchedules = routeSchedules.length > 0;
     const isAllDates = !params.date || params.date === 'ALL' || params.all_dates === 'true';
 
-    // Morning Cycle
     const mActive = morningSched ? (isAllDates || isScheduleActive(morningSched, targetDate)) : (!hasConfiguredSchedules);
     if (mActive) {
       const mCutoff = morningSched ? morningSched.cutoff_time : '08:00';
@@ -563,7 +520,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       const cycleStatusInfo = calculateCycleStatus(metrics, mCutoff, mDispatch, targetDate, now);
 
       const cycleItem = {
-        cycle_key: `${r.id}_morning`,
+        cycle_key: r.id + '_morning',
         route_id: r.id,
         route_code: r.route_code,
         route_name: r.route_name,
@@ -582,7 +539,6 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       allCycles.push(cycleItem);
     }
 
-    // Evening Cycle
     const eActive = eveningSched ? (isAllDates || isScheduleActive(eveningSched, targetDate)) : (!hasConfiguredSchedules);
     if (eActive) {
       const eCutoff = eveningSched ? eveningSched.cutoff_time : '16:00';
@@ -605,7 +561,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       const cycleStatusInfo = calculateCycleStatus(metrics, eCutoff, eDispatch, targetDate, now);
 
       const cycleItem = {
-        cycle_key: `${r.id}_evening`,
+        cycle_key: r.id + '_evening',
         route_id: r.id,
         route_code: r.route_code,
         route_name: r.route_name,
@@ -625,7 +581,6 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     }
   }
 
-  // Filter Morning & Evening cycles based on Route Filter
   let filteredMorningCycles = morningCycles;
   let filteredEveningCycles = eveningCycles;
 
@@ -640,12 +595,10 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
       filteredEveningCycles = eveningCycles.filter(c => c.route_id === selectedRouteObj.id || routesMatch(c.route_name, selectedRouteObj.route_name, c.route_code, selectedRouteObj.route_code));
     }
   } else {
-    // Sort so routes with tickets are displayed first!
     filteredMorningCycles.sort((a, b) => (b.metrics.total || 0) - (a.metrics.total || 0));
     filteredEveningCycles.sort((a, b) => (b.metrics.total || 0) - (a.metrics.total || 0));
   }
 
-  // Calculate Next Dispatch Banner
   let nextDispatch = allCycles
     .filter(c => c.metrics.total > 0 && c.metrics.dispatched < c.metrics.total && c.secondsToDispatch >= -3600)
     .sort((a, b) => (a.secondsToDispatch || 0) - (b.secondsToDispatch || 0))[0];
@@ -654,7 +607,6 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     nextDispatch = allCycles.find(c => c.metrics.total > 0 && c.metrics.dispatched < c.metrics.total) || allCycles[0] || null;
   }
 
-  // Apply filters on pick tickets table
   let filteredTickets = [...enrichedTickets];
 
   if (routeFilter && routeFilter !== 'ALL') {
@@ -717,7 +669,6 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     );
   }
 
-  // Calculate Overall Dashboard KPIs
   const totalTicketsCount = enrichedTickets.length;
   const pendingCount = enrichedTickets.filter(t => t.current_stage === 'Pending').length;
   const pickingCount = enrichedTickets.filter(t => t.current_stage === 'Picking').length;
@@ -726,9 +677,8 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   const delayedCount = enrichedTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed').length;
   const activeRoutesCount = new Set(allCycles.filter(c => c.metrics.total > 0).map(c => c.route_id)).size || routes.length;
 
-  // Pagination for tickets table
   const page = Math.max(1, parseInt(params.page || 1, 10));
-  const limit = Math.max(1, parseInt(params.limit || 8, 10));
+  const limit = Math.max(1, parseInt(params.limit || 5000, 10));
   const totalCount = filteredTickets.length;
   const totalPages = Math.ceil(totalCount / limit) || 1;
   const startIndex = (page - 1) * limit;
@@ -779,6 +729,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     }),
     tickets: {
       items: paginatedTickets,
+      allItems: enrichedTickets,
       pagination: {
         page,
         limit,
@@ -791,9 +742,6 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   };
 }
 
-/**
- * Generate Stage Summary for selected cycle or overall
- */
 async function getStageSummary(params = {}, warehouseId = 1) {
   const dashboard = await getLedDashboardData(params, warehouseId);
   const tickets = dashboard.tickets.items || [];
@@ -821,9 +769,6 @@ async function getStageSummary(params = {}, warehouseId = 1) {
   return summary;
 }
 
-/**
- * Generate Party Summary for selected cycle or overall
- */
 async function getPartySummary(params = {}, warehouseId = 1) {
   const dashboard = await getLedDashboardData(params, warehouseId);
   const tickets = dashboard.tickets.items || [];
@@ -863,9 +808,6 @@ async function getPartySummary(params = {}, warehouseId = 1) {
   return Array.from(partiesMap.values()).sort((a, b) => b.total_tickets - a.total_tickets);
 }
 
-/**
- * Generate Carton Summary
- */
 async function getCartonSummary(params = {}, warehouseId = 1) {
   const dashboard = await getLedDashboardData(params, warehouseId);
   const tickets = dashboard.tickets.items || [];
@@ -888,11 +830,9 @@ async function getCartonSummary(params = {}, warehouseId = 1) {
   };
 }
 
-/**
- * Single Pick Ticket Details with Timeline Stages
- */
 async function getPickTicketDetailById(ticketId, warehouseId = 1) {
   const now = getNowIST();
+  const whId = warehouseId || 1;
   const ticket = await dbAsync.get(`
     SELECT pt.*,
            b.id as billing_id, b.bill_no, b.billed_qty, b.invoice_amount, b.created_at as billed_at,
@@ -901,7 +841,8 @@ async function getPickTicketDetailById(ticketId, warehouseId = 1) {
            dp.id as dispatch_party_id, dp.status as dispatch_party_status, dp.delivery_status, dp.delivered_at,
            d.id as dispatch_id, d.dispatch_no, d.status as dispatch_master_status, d.driver_id, d.vehicle_id,
            dr.driver_name, dr.mobile as driver_mobile, v.vehicle_number,
-           p.address as party_address, p.city as party_city, p.phone as party_phone, p.gstin as party_gstin
+           p.address as party_address, p.city as party_city, p.phone as party_phone, p.gstin as party_gstin,
+           COALESCE(p.party_name, pt.party_name) as master_party_name
     FROM pick_tickets pt
     LEFT JOIN billings b ON b.pick_ticket_id = pt.id
     LEFT JOIN picker_checker_helpers pkh ON pt.picker_id = pkh.id OR pt.picker_id = pkh.employee_code OR LOWER(pt.picker_id) = LOWER(pkh.name)
@@ -909,9 +850,9 @@ async function getPickTicketDetailById(ticketId, warehouseId = 1) {
     LEFT JOIN dispatches d ON dp.dispatch_id = d.id
     LEFT JOIN drivers dr ON d.driver_id = dr.id
     LEFT JOIN vehicles v ON d.vehicle_id = v.id
-    LEFT JOIN parties p ON pt.party_code = p.party_code AND p.warehouse_id = pt.warehouse_id
+    LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(pt.party_name)) = TRIM(LOWER(p.party_name))) AND (p.warehouse_id = pt.warehouse_id OR p.warehouse_id IS NULL OR ? = 1)
     WHERE (pt.id = ? OR pt.ticket_no = ?) AND (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
-  `, [ticketId, ticketId, warehouseId, warehouseId]);
+  `, [whId, ticketId, ticketId, whId, whId]);
 
   if (!ticket) return null;
 
@@ -936,13 +877,12 @@ async function getPickTicketDetailById(ticketId, warehouseId = 1) {
   } : null;
 
   const currentStage = determineTicketStage(ticket, billing, dispatchParty);
-  const createdAt = ticket.created_at ? new Date(ticket.created_at) : (ticket.date ? new Date(`${ticket.date} ${ticket.time || '09:00'}`) : now);
+  const createdAt = ticket.created_at ? new Date(ticket.created_at) : (ticket.date ? new Date(ticket.date + ' ' + (ticket.time || '09:00')) : now);
   const stageStartedAt = ticket.stage_started_at ? new Date(ticket.stage_started_at) : createdAt;
   const pendingSince = ticket.pending_since ? new Date(ticket.pending_since) : createdAt;
 
   const aging = getAgingMetrics(stageStartedAt, pendingSince, createdAt, now);
 
-  // Timeline: Created → Picking → Picked → Billing → Billed → Ready → Dispatched
   const stagesOrder = ['Created', 'Picking', 'Picked', 'Billing', 'Billed', 'Ready', 'Dispatched'];
   let currentStageIndex = 0;
   if (currentStage === 'Dispatched') currentStageIndex = 6;
@@ -951,12 +891,12 @@ async function getPickTicketDetailById(ticketId, warehouseId = 1) {
   else if (currentStage === 'Picking') currentStageIndex = 1;
 
   const timeline = stagesOrder.map((st, idx) => {
-    let state = 'upcoming'; // 'completed' | 'current' | 'upcoming'
+    let state = 'upcoming';
     if (idx < currentStageIndex) state = 'completed';
     else if (idx === currentStageIndex) state = 'current';
 
     let timestamp = null;
-    if (st === 'Created') timestamp = ticket.created_at || `${ticket.date} ${ticket.time}`;
+    if (st === 'Created') timestamp = ticket.created_at || (ticket.date + ' ' + ticket.time);
     else if (st === 'Picking' && ticket.picker_id) timestamp = ticket.created_at;
     else if (st === 'Billed' && billing) timestamp = billing.billed_at;
     else if (st === 'Ready' && billing) timestamp = billing.billed_at;
@@ -975,7 +915,7 @@ async function getPickTicketDetailById(ticketId, warehouseId = 1) {
     pick_ticket_no: ticket.ticket_no,
     customer_order_no: ticket.customer_order_no,
     party_code: ticket.party_code,
-    party_name: ticket.party_name,
+    party_name: ticket.master_party_name || ticket.party_name,
     party_address: ticket.party_address,
     party_city: ticket.party_city,
     party_phone: ticket.party_phone,
