@@ -225,13 +225,17 @@ export default function LEDDashboard() {
   
   const hasMorningConfigured = selectedRouteId === 'ALL'
     ? true
-    : (data?.morningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) && String(c.slot).toLowerCase() === 'morning') ||
-      (selectedMasterRoute ? (selectedMasterRoute.schedules || []).some(s => (s.trip_name || '').toLowerCase().includes('morning') && s.is_active) : false);
+    : (selectedMasterRoute && Array.isArray(selectedMasterRoute.schedules) && selectedMasterRoute.schedules.length > 0
+        ? selectedMasterRoute.schedules.some(s => ((s.trip_name || '').toLowerCase().includes('morning') || s.priority_order === 1) && !!s.is_active && !(s.trip_name || '').toLowerCase().includes('evening'))
+        : (data?.morningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) && String(c.slot).toLowerCase() === 'morning')
+      );
 
   const hasEveningConfigured = selectedRouteId === 'ALL'
     ? true
-    : (data?.eveningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) && String(c.slot).toLowerCase() === 'evening') ||
-      (selectedMasterRoute ? (selectedMasterRoute.schedules || []).some(s => (s.trip_name || '').toLowerCase().includes('evening') && s.is_active) : false);
+    : (selectedMasterRoute && Array.isArray(selectedMasterRoute.schedules) && selectedMasterRoute.schedules.length > 0
+        ? selectedMasterRoute.schedules.some(s => ((s.trip_name || '').toLowerCase().includes('evening') || s.priority_order === 2) && !!s.is_active && !(s.trip_name || '').toLowerCase().includes('morning'))
+        : (data?.eveningDispatch?.cycles || []).some(c => (String(c.route_id) === String(selectedRouteObj?.id) || (c.route_name && selectedRouteObj?.route_name && c.route_name.toLowerCase() === selectedRouteObj.route_name.toLowerCase())) && String(c.slot).toLowerCase() === 'evening')
+      );
 
   // Fallback if route has no explicit schedule configuration in DB
   const showMorningSlot = hasMorningConfigured || (!hasMorningConfigured && !hasEveningConfigured);

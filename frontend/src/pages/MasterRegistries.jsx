@@ -257,24 +257,39 @@ export default function MasterRegistries() {
   const openEdit = (item) => { 
     if (activeTab === 'route') {
       const scheds = Array.isArray(item.schedules) ? item.schedules : [];
-      const mTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('morning') || (s.dispatch_time && parseInt(s.dispatch_time.split(':')[0], 10) < 12 && s.dispatch_type !== 'ON_DEMAND'));
-      const eTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('evening') || (s.dispatch_time && parseInt(s.dispatch_time.split(':')[0], 10) >= 12 && parseInt(s.dispatch_time.split(':')[0], 10) < 21 && s.dispatch_type !== 'ON_DEMAND'));
+      const mTrip = scheds.find(s => (s.trip_name && s.trip_name.toLowerCase().includes('morning')) || (s.priority_order === 1 && (!s.trip_name || !s.trip_name.toLowerCase().includes('evening'))));
+      const eTrip = scheds.find(s => (s.trip_name && s.trip_name.toLowerCase().includes('evening')) || (s.priority_order === 2 && (!s.trip_name || !s.trip_name.toLowerCase().includes('morning'))));
       
-      let mDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      if (mTrip && mTrip.selected_days) {
-        try {
-          const parsed = typeof mTrip.selected_days === 'string' ? JSON.parse(mTrip.selected_days) : mTrip.selected_days;
-          if (Array.isArray(parsed) && parsed.length > 0) mDays = parsed;
-        } catch(e) {}
-      }
+      const dayMap = {
+        mon: 'Monday', monday: 'Monday',
+        tue: 'Tuesday', tuesday: 'Tuesday',
+        wed: 'Wednesday', wednesday: 'Wednesday',
+        thu: 'Thursday', thursday: 'Thursday',
+        fri: 'Friday', friday: 'Friday',
+        sat: 'Saturday', saturday: 'Saturday',
+        sun: 'Sunday', sunday: 'Sunday'
+      };
 
-      let eDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      if (eTrip && eTrip.selected_days) {
-        try {
-          const parsed = typeof eTrip.selected_days === 'string' ? JSON.parse(eTrip.selected_days) : eTrip.selected_days;
-          if (Array.isArray(parsed) && parsed.length > 0) eDays = parsed;
-        } catch(e) {}
-      }
+      const parseDays = (trip) => {
+        if (!trip || !trip.selected_days) return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        let d = trip.selected_days;
+        if (typeof d === 'string') {
+          try { d = JSON.parse(d); } catch (e) { d = d.split(','); }
+        }
+        if (Array.isArray(d)) {
+          const clean = [];
+          for (const item of d) {
+            const k = String(item).trim().toLowerCase().slice(0, 3);
+            const standard = dayMap[k];
+            if (standard && !clean.includes(standard)) clean.push(standard);
+          }
+          if (clean.length > 0) return clean;
+        }
+        return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      };
+
+      const mDays = parseDays(mTrip);
+      const eDays = parseDays(eTrip);
 
       setEditingItem(item);
       setForm({
