@@ -242,7 +242,7 @@ export default function LEDDashboard() {
     // Calculate live counts for each route
     routesMap.forEach(r => {
       const rTickets = rawTickets.filter(t =>
-        checkRoutesMatch(t.route_name, r.route_name, t.ticket_route || t.party_route, r.route_code)
+        checkRoutesMatch(t.route_name, r.route_name, null, r.route_code)
       );
       r.total_count = rTickets.length;
       r.unbilled_count = rTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;

@@ -462,7 +462,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   routes.forEach(r => {
     r.unbilled_count = enrichedTickets.filter(t =>
       !t.is_billed && t.current_stage !== 'Cancelled' &&
-      routesMatch(t.route_name, r.route_name, t.ticket_route || t.party_route, r.route_code)
+      routesMatch(t.route_name, r.route_name, null, r.route_code)
     ).length;
   });
 
@@ -484,7 +484,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     );
 
     const mTickets = enrichedTickets.filter(t =>
-      routesMatch(t.route_name, r.route_name, t.ticket_route || t.party_route, r.route_code) &&
+      routesMatch(t.route_name, r.route_name, null, r.route_code) &&
       (
         (!eveningSched && morningSched) ||
         (!morningSched && !eveningSched) ||
@@ -493,7 +493,7 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     );
 
     const eTickets = enrichedTickets.filter(t =>
-      routesMatch(t.route_name, r.route_name, t.ticket_route || t.party_route, r.route_code) &&
+      routesMatch(t.route_name, r.route_name, null, r.route_code) &&
       (
         (!morningSched && eveningSched) ||
         (t.dispatch_slot && t.dispatch_slot.toLowerCase() === 'evening')
@@ -623,11 +623,11 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
     );
     if (selectedRouteObj) {
       filteredTickets = filteredTickets.filter(t =>
-        routesMatch(t.route_name, selectedRouteObj.route_name, t.ticket_route || t.party_route, selectedRouteObj.route_code)
+        routesMatch(t.route_name, selectedRouteObj.route_name, null, selectedRouteObj.route_code)
       );
     } else {
       filteredTickets = filteredTickets.filter(t =>
-        routesMatch(t.route_name, routeFilter, t.ticket_route || t.party_route, routeFilter)
+        routesMatch(t.route_name, routeFilter, null, routeFilter)
       );
     }
   }
