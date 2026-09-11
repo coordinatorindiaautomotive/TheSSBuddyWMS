@@ -115,18 +115,22 @@ async function createRoute(req, res) {
     // Check if custom morning / evening provided or fallback
     if (morning_enabled !== undefined || evening_enabled !== undefined) {
       if (morning_enabled) {
-        const mDays = morning_days ? (typeof morning_days === 'string' ? morning_days : JSON.stringify(morning_days)) : defaultDays;
+        const mDaysArr = Array.isArray(morning_days) ? morning_days : (typeof morning_days === 'string' ? JSON.parse(morning_days) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+        const mFreq = mDaysArr.length === 7 ? 'DAILY' : 'WEEKLY_SPECIFIC_DAYS';
+        const mDays = JSON.stringify(mDaysArr);
         await dbAsync.run(`
           INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
-          VALUES (?, 'Morning Shift', 'FIXED_TIME', 'WEEKLY_SPECIFIC_DAYS', ?, ?, ?, 1, 1, ?)
-        `, [routeId, mDays, morning_cutoff || '08:00', morning_dispatch || '09:30', whId]);
+          VALUES (?, 'Morning Shift', 'FIXED_TIME', ?, ?, ?, ?, 1, 1, ?)
+        `, [routeId, mFreq, mDays, morning_cutoff || '08:00', morning_dispatch || '09:30', whId]);
       }
       if (evening_enabled) {
-        const eDays = evening_days ? (typeof evening_days === 'string' ? evening_days : JSON.stringify(evening_days)) : defaultDays;
+        const eDaysArr = Array.isArray(evening_days) ? evening_days : (typeof evening_days === 'string' ? JSON.parse(evening_days) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+        const eFreq = eDaysArr.length === 7 ? 'DAILY' : 'WEEKLY_SPECIFIC_DAYS';
+        const eDays = JSON.stringify(eDaysArr);
         await dbAsync.run(`
           INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
-          VALUES (?, 'Evening Shift', 'FIXED_TIME', 'WEEKLY_SPECIFIC_DAYS', ?, ?, ?, 1, 2, ?)
-        `, [routeId, eDays, evening_cutoff || '18:00', evening_dispatch || '19:30', whId]);
+          VALUES (?, 'Evening Shift', 'FIXED_TIME', ?, ?, ?, ?, 1, 2, ?)
+        `, [routeId, eFreq, eDays, evening_cutoff || '18:00', evening_dispatch || '19:30', whId]);
       }
     } else {
       // Default initial schedule
@@ -175,8 +179,6 @@ async function updateRoute(req, res) {
 
     // If morning/evening settings were passed in edit form, update them directly
     if (morning_enabled !== undefined || evening_enabled !== undefined) {
-      const defaultDays = selected_days ? (typeof selected_days === 'string' ? selected_days : JSON.stringify(selected_days)) : JSON.stringify(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
-
       // Remove all previous schedules for this route to cleanly refresh with user's choices
       await dbAsync.run(`
         DELETE FROM route_schedules 
@@ -184,19 +186,23 @@ async function updateRoute(req, res) {
       `, [id]);
 
       if (morning_enabled) {
-        const mDays = morning_days ? (typeof morning_days === 'string' ? morning_days : JSON.stringify(morning_days)) : defaultDays;
+        const mDaysArr = Array.isArray(morning_days) ? morning_days : (typeof morning_days === 'string' ? JSON.parse(morning_days) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+        const mFreq = mDaysArr.length === 7 ? 'DAILY' : 'WEEKLY_SPECIFIC_DAYS';
+        const mDays = JSON.stringify(mDaysArr);
         await dbAsync.run(`
           INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
-          VALUES (?, 'Morning Shift', 'FIXED_TIME', 'WEEKLY_SPECIFIC_DAYS', ?, ?, ?, 1, 1, ?)
-        `, [id, mDays, morning_cutoff || '08:00', morning_dispatch || '09:30', whId]);
+          VALUES (?, 'Morning Shift', 'FIXED_TIME', ?, ?, ?, ?, 1, 1, ?)
+        `, [id, mFreq, mDays, morning_cutoff || '08:00', morning_dispatch || '09:30', whId]);
       }
 
       if (evening_enabled) {
-        const eDays = evening_days ? (typeof evening_days === 'string' ? evening_days : JSON.stringify(evening_days)) : defaultDays;
+        const eDaysArr = Array.isArray(evening_days) ? evening_days : (typeof evening_days === 'string' ? JSON.parse(evening_days) : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+        const eFreq = eDaysArr.length === 7 ? 'DAILY' : 'WEEKLY_SPECIFIC_DAYS';
+        const eDays = JSON.stringify(eDaysArr);
         await dbAsync.run(`
           INSERT INTO route_schedules (route_id, trip_name, dispatch_type, frequency, selected_days, cutoff_time, dispatch_time, is_active, priority_order, warehouse_id)
-          VALUES (?, 'Evening Shift', 'FIXED_TIME', 'WEEKLY_SPECIFIC_DAYS', ?, ?, ?, 1, 2, ?)
-        `, [id, eDays, evening_cutoff || '18:00', evening_dispatch || '19:30', whId]);
+          VALUES (?, 'Evening Shift', 'FIXED_TIME', ?, ?, ?, ?, 1, 2, ?)
+        `, [id, eFreq, eDays, evening_cutoff || '18:00', evening_dispatch || '19:30', whId]);
       }
     }
 

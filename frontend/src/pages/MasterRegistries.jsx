@@ -1073,11 +1073,31 @@ export default function MasterRegistries() {
                 ) : paginate(filtered(routes, ['route_code', 'route_name'])).map(r => {
                   const scheds = Array.isArray(r.schedules) ? r.schedules : [];
                   
-                  // Find Morning trip
-                  const morningTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('morning') || (s.dispatch_time && parseInt(s.dispatch_time.split(':')[0], 10) < 12 && s.dispatch_type !== 'ON_DEMAND'));
+                  // Find Morning trip (strictly by trip_name or priority 1)
+                  const morningTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('morning') || (s.priority_order === 1 && !s.trip_name?.toLowerCase().includes('evening')));
                   
-                  // Find Evening trip
-                  const eveningTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('evening') || (s.dispatch_time && parseInt(s.dispatch_time.split(':')[0], 10) >= 12 && parseInt(s.dispatch_time.split(':')[0], 10) < 21 && s.dispatch_type !== 'ON_DEMAND'));
+                  // Find Evening trip (strictly by trip_name or priority 2)
+                  const eveningTrip = scheds.find(s => s.trip_name?.toLowerCase().includes('evening') || (s.priority_order === 2 && !s.trip_name?.toLowerCase().includes('morning')));
+
+                  const renderTripBadge = (trip) => {
+                    if (!trip) return null;
+                    let d = trip.selected_days;
+                    if (typeof d === 'string') {
+                      try { d = JSON.parse(d); } catch (e) {}
+                    }
+                    if (Array.isArray(d)) {
+                      if (d.length === 7) {
+                        return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">Daily</span>;
+                      }
+                      if (d.length === 6 && !d.includes('Sunday')) {
+                        return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">Mon-Sat</span>;
+                      }
+                      if (d.length > 0) {
+                        return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">{d.map(x => String(x).slice(0, 3)).join(', ')}</span>;
+                      }
+                    }
+                    return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-700">{trip.frequency === 'DAILY' ? 'Daily' : 'Custom'}</span>;
+                  };
 
                   return (
                     <tr key={r.id} className="hover:bg-blue-50/40 transition-colors">
@@ -1100,20 +1120,7 @@ export default function MasterRegistries() {
                                 <Sunrise className="w-3 h-3 text-amber-600" />
                                 Active
                               </span>
-                              {morningTrip.frequency === 'WEEKLY_SPECIFIC_DAYS' && morningTrip.selected_days ? (
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
-                                  {(() => {
-                                    try {
-                                      const d = typeof morningTrip.selected_days === 'string' ? JSON.parse(morningTrip.selected_days) : morningTrip.selected_days;
-                                      return Array.isArray(d) && d.length < 7 ? d.map(x => x.slice(0, 3)).join(', ') : 'Daily';
-                                    } catch(e) { return 'Custom'; }
-                                  })()}
-                                </span>
-                              ) : (
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-700">
-                                  Daily (All Days)
-                                </span>
-                              )}
+                              {renderTripBadge(morningTrip)}
                             </div>
                             <div className="text-[11px] font-mono text-slate-600">
                               Cutoff: <strong className="text-amber-800">{fmtTime12(morningTrip.cutoff_time)}</strong> • Disp: <strong className="text-blue-800">{fmtTime12(morningTrip.dispatch_time)}</strong>
@@ -1135,20 +1142,7 @@ export default function MasterRegistries() {
                                 <Sunset className="w-3 h-3 text-indigo-600" />
                                 Active
                               </span>
-                              {eveningTrip.frequency === 'WEEKLY_SPECIFIC_DAYS' && eveningTrip.selected_days ? (
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
-                                  {(() => {
-                                    try {
-                                      const d = typeof eveningTrip.selected_days === 'string' ? JSON.parse(eveningTrip.selected_days) : eveningTrip.selected_days;
-                                      return Array.isArray(d) && d.length < 7 ? d.map(x => x.slice(0, 3)).join(', ') : 'Daily';
-                                    } catch(e) { return 'Custom'; }
-                                  })()}
-                                </span>
-                              ) : (
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-700">
-                                  Daily (All Days)
-                                </span>
-                              )}
+                              {renderTripBadge(eveningTrip)}
                             </div>
                             <div className="text-[11px] font-mono text-slate-600">
                               Cutoff: <strong className="text-amber-800">{fmtTime12(eveningTrip.cutoff_time)}</strong> • Disp: <strong className="text-blue-800">{fmtTime12(eveningTrip.dispatch_time)}</strong>
