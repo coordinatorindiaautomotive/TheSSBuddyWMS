@@ -73,7 +73,7 @@ export default function LEDDashboard() {
   // Fetch Dashboard Data
   useEffect(() => {
     fetchDashboard();
-  }, [date, selectedRouteId, selectedSlot, activeWarehouse]);
+  }, [date, activeWarehouse]);
 
   // Auto Refresh Countdown
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function LEDDashboard() {
     }, 1000);
 
     return () => clearInterval(countdownInterval);
-  }, [date, selectedRouteId, selectedSlot, activeWarehouse]);
+  }, [date, activeWarehouse]);
 
   // Socket event listener
   useEffect(() => {
@@ -115,10 +115,10 @@ export default function LEDDashboard() {
       const res = await axios.get('/api/led/dashboard', {
         params: {
           date: date || 'ALL',
-          route_id: selectedRouteId,
-          dispatch_slot: selectedSlot,
+          route_id: 'ALL',
+          dispatch_slot: 'ALL',
           page: 1,
-          limit: 500
+          limit: 1000
         }
       });
       setData(res.data);
