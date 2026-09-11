@@ -335,6 +335,24 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
         existingRouteNames.add(cleanRouteName.toLowerCase());
       }
     }
+
+    if (routes.length === 0) {
+      const allDistinctRoutes = await dbAsync.all(`
+        SELECT DISTINCT route FROM pick_tickets WHERE route IS NOT NULL AND TRIM(route) != '' ORDER BY route ASC
+      `);
+      for (const tr of (allDistinctRoutes || [])) {
+        const cleanRouteName = String(tr.route || '').trim();
+        if (cleanRouteName && !existingRouteNames.has(cleanRouteName.toLowerCase())) {
+          routes.push({
+            id: tempId++,
+            route_code: cleanRouteName.substring(0, 10).toUpperCase(),
+            route_name: cleanRouteName,
+            warehouse_id: warehouseId
+          });
+          existingRouteNames.add(cleanRouteName.toLowerCase());
+        }
+      }
+    }
   } catch (e) {}
 
   // 2. Fetch Route Schedules for active warehouse

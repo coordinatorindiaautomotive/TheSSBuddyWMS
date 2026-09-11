@@ -159,8 +159,59 @@ export default function LEDDashboard() {
     }
   };
 
-  // Extract selected route object and slot cycles
-  const routesList = data?.routes || [];
+  // Master Routes Fallback State
+  const [masterRoutes, setMasterRoutes] = useState([]);
+
+  useEffect(() => {
+    axios.get('/api/masters/routes')
+      .then(res => setMasterRoutes(res.data || []))
+      .catch(() => {});
+  }, [activeWarehouse]);
+
+  // Aggregate all available routes to ensure dropdown is NEVER empty
+  const routesMap = new Map();
+
+  // 1. From API data.routes
+  (data?.routes || []).forEach(r => {
+    const name = String(r.route_name || r.name || '').trim();
+    if (name) {
+      routesMap.set(name.toLowerCase(), {
+        id: r.id || name,
+        route_name: name,
+        route_code: r.route_code || name.substring(0, 10).toUpperCase(),
+        unbilled_count: r.unbilled_count || 0
+      });
+    }
+  });
+
+  // 2. From Master Routes API
+  masterRoutes.forEach(mr => {
+    const name = String(mr.route_name || mr.name || '').trim();
+    if (name && !routesMap.has(name.toLowerCase())) {
+      routesMap.set(name.toLowerCase(), {
+        id: mr.id || name,
+        route_name: name,
+        route_code: mr.route_code || name.substring(0, 10).toUpperCase(),
+        unbilled_count: 0
+      });
+    }
+  });
+
+  // 3. From any loaded Pick Tickets
+  (data?.tickets?.items || []).forEach(t => {
+    const name = String(t.route_name || t.route || '').trim();
+    if (name && !routesMap.has(name.toLowerCase())) {
+      routesMap.set(name.toLowerCase(), {
+        id: name,
+        route_name: name,
+        route_code: name.substring(0, 10).toUpperCase(),
+        unbilled_count: !t.is_billed ? 1 : 0
+      });
+    }
+  });
+
+  const routesList = Array.from(routesMap.values()).sort((a, b) => a.route_name.localeCompare(b.route_name));
+
   const selectedRouteObj = selectedRouteId !== 'ALL' 
     ? routesList.find(r => String(r.id) === String(selectedRouteId) || String(r.route_name || '').toLowerCase() === String(selectedRouteId).toLowerCase())
     : null;
@@ -171,6 +222,20 @@ export default function LEDDashboard() {
   // Filter tickets list based on Search & Unbilled Toggle
   const allTickets = data?.tickets?.items || [];
   const filteredTickets = allTickets.filter((t) => {
+    // Route Filter
+    if (selectedRouteId !== 'ALL') {
+      const targetRoute = (selectedRouteObj?.route_name || selectedRouteId).trim().toLowerCase();
+      const ticketRoute = String(t.route_name || t.route || '').trim().toLowerCase();
+      if (ticketRoute !== targetRoute && !ticketRoute.includes(targetRoute) && !targetRoute.includes(ticketRoute)) {
+        return false;
+      }
+    }
+
+    // Slot Filter
+    if (selectedSlot !== 'ALL') {
+      if (String(t.dispatch_slot || '').toLowerCase() !== selectedSlot.toLowerCase()) return false;
+    }
+
     // Unbilled filter
     if (showUnbilledOnly && t.is_billed) return false;
 
