@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
+import SearchableSelect from '../components/SearchableSelect';
 import {
   Receipt,
   Route as RouteIcon,
@@ -296,16 +297,18 @@ export default function RouteBillStatus() {
             <label className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1">
               <RouteIcon className="w-3.5 h-3.5 text-indigo-600" /> Route <span className="text-red-500 font-bold ml-0.5">*</span>
             </label>
-            <select
+            <SearchableSelect
               value={selectedRoute}
               onChange={(e) => setSelectedRoute(e.target.value)}
-              className="w-full bg-slate-50 border border-indigo-200 rounded-xl p-2.5 text-xs text-slate-900 font-extrabold focus:border-indigo-600 focus:bg-white focus:outline-none transition-colors"
-            >
-              <option value="">-- Select Route --</option>
-              {routes.map(r => (
-                <option key={r.id} value={r.id}>{r.route_name}</option>
-              ))}
-            </select>
+              placeholder="-- Select Route --"
+              searchPlaceholder="Search Route Name..."
+              options={routes.map(r => ({
+                value: String(r.id),
+                label: r.route_name,
+                sublabel: r.route_code ? `Code: ${r.route_code}` : null
+              }))}
+              className="bg-slate-50 border-indigo-200 font-extrabold"
+            />
           </div>
 
           {/* From Date */}
@@ -339,16 +342,18 @@ export default function RouteBillStatus() {
             <label className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1">
               <Filter className="w-3.5 h-3.5 text-indigo-600" /> Status
             </label>
-            <select
+            <SearchableSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full bg-slate-50 border border-indigo-200 rounded-xl p-2.5 text-xs text-slate-900 font-semibold focus:border-indigo-600 focus:bg-white focus:outline-none transition-colors"
-            >
-              <option value="pending">Pending & Partially Billed</option>
-              <option value="billed">Billed / Dispatched</option>
-              <option value="dispatched">Dispatched Only</option>
-              <option value="all">All Status</option>
-            </select>
+              options={[
+                { value: 'pending', label: 'Pending & Partially Billed' },
+                { value: 'billed', label: 'Billed / Dispatched' },
+                { value: 'dispatched', label: 'Dispatched Only' },
+                { value: 'all', label: 'All Status' }
+              ]}
+              className="bg-slate-50 border-indigo-200 font-semibold"
+              minSearchItems={10}
+            />
           </div>
 
           {/* Text Search */}

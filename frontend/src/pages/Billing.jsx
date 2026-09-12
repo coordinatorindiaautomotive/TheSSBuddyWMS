@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useToast } from '../context/ToastContext';
+import SearchableSelect from '../components/SearchableSelect';
 import {
   Receipt,
   Plus,
@@ -558,25 +559,26 @@ export default function Billing() {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Select Pending Ticket <span className="text-red-500 font-bold ml-0.5">*</span></label>
-                    <select
+                    <SearchableSelect
                       value={formData.pick_ticket_id}
                       onChange={(e) => handleTicketSelect(e.target.value)}
-                      required
                       disabled={!!editingId}
-                      className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#004c8f] focus:outline-none disabled:bg-slate-100"
-                    >
-                      <option value="">-- Choose Pending Ticket --</option>
-                      {editingId && selectedTicket && (
-                        <option value={formData.pick_ticket_id}>
-                          {selectedTicket.ticket_no} - {selectedTicket.party_name} ({selectedTicket.qty_in_pick_ticket} Qty)
-                        </option>
-                      )}
-                      {pendingTickets.map(t => (
-                        <option key={t.id} value={t.id}>
-                          {t.ticket_no} - {t.party_name} ({t.qty_in_pick_ticket} Qty)
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="-- Choose Pending Ticket --"
+                      searchPlaceholder="Search Ticket No, Party Name or Code..."
+                      options={[
+                        ...(editingId && selectedTicket ? [{
+                          value: String(formData.pick_ticket_id),
+                          label: `${selectedTicket.ticket_no} - ${selectedTicket.party_name}`,
+                          sublabel: `${selectedTicket.qty_in_pick_ticket} Qty • Route: ${selectedTicket.route || 'Direct'}`
+                        }] : []),
+                        ...pendingTickets.map(t => ({
+                          value: String(t.id),
+                          label: `${t.ticket_no} - ${t.party_name}`,
+                          sublabel: `${t.qty_in_pick_ticket} Qty • Route: ${t.route || 'Direct'}`,
+                          badge: t.party_code
+                        }))
+                      ]}
+                    />
                   </div>
 
                   {/* Prefilled Ticket Context Details Box */}
@@ -630,20 +632,23 @@ export default function Billing() {
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Invoice Bill No <span className="text-red-500 font-bold ml-0.5">*</span></label>
                     <div className="flex gap-2">
-                      <select
-                        value={formData.prefix}
-                        onChange={(e) => {
-                          const pr = e.target.value;
-                          setFormData({ ...formData, prefix: pr });
-                          loadSuggestedBillNo(pr);
-                        }}
-                        className="bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 w-32 focus:border-[#004c8f] focus:outline-none cursor-pointer"
-                      >
-                        <option value="RS/">RS/</option>
-                        <option value="STI/">STI/</option>
-                        <option value="CSI/">CSI/</option>
-                        <option value="FREE">Free Text</option>
-                      </select>
+                      <div className="w-36 shrink-0">
+                        <SearchableSelect
+                          value={formData.prefix}
+                          onChange={(e) => {
+                            const pr = e.target.value;
+                            setFormData({ ...formData, prefix: pr });
+                            loadSuggestedBillNo(pr);
+                          }}
+                          options={[
+                            { value: 'RS/', label: 'RS/' },
+                            { value: 'STI/', label: 'STI/' },
+                            { value: 'CSI/', label: 'CSI/' },
+                            { value: 'FREE', label: 'Free Text' }
+                          ]}
+                          minSearchItems={10}
+                        />
+                      </div>
 
                       <input
                         type="text"
@@ -660,32 +665,32 @@ export default function Billing() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Checker <span className="text-red-500 font-bold ml-0.5">*</span></label>
-                      <select
+                      <SearchableSelect
                         value={formData.checker_id}
                         onChange={(e) => setFormData({ ...formData, checker_id: e.target.value })}
-                        required
-                        className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#004c8f] focus:outline-none"
-                      >
-                        <option value="">-- Choose Checker --</option>
-                        {checkers.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
+                        placeholder="-- Choose Checker --"
+                        searchPlaceholder="Search Checker..."
+                        options={checkers.map(c => ({
+                          value: String(c.id),
+                          label: c.name,
+                          sublabel: c.employee_code || null
+                        }))}
+                      />
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Helper <span className="text-red-500 font-bold ml-0.5">*</span></label>
-                      <select
+                      <SearchableSelect
                         value={formData.helper_id}
                         onChange={(e) => setFormData({ ...formData, helper_id: e.target.value })}
-                        required
-                        className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#004c8f] focus:outline-none"
-                      >
-                        <option value="">-- Choose Helper --</option>
-                        {helpers.map(h => (
-                          <option key={h.id} value={h.id}>{h.name}</option>
-                        ))}
-                      </select>
+                        placeholder="-- Choose Helper --"
+                        searchPlaceholder="Search Helper..."
+                        options={helpers.map(h => ({
+                          value: String(h.id),
+                          label: h.name,
+                          sublabel: h.employee_code || null
+                        }))}
+                      />
                     </div>
 
                     <div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { useToast } from '../context/ToastContext';
+import SearchableSelect from '../components/SearchableSelect';
 import {
   Truck,
   UserCheck,
@@ -865,18 +866,19 @@ export default function DispatchPlanning() {
                 </div>
 
                 {uniqueRoutes.length > 0 && (
-                  <select
-                    value={routeFilter}
-                    onChange={(e) => setRouteFilter(e.target.value)}
-                    className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#004c8f] shrink-0"
-                  >
-                    <option value="">All Routes</option>
-                    {uniqueRoutes.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-48 shrink-0">
+                    <SearchableSelect
+                      value={routeFilter}
+                      onChange={(e) => setRouteFilter(e.target.value)}
+                      placeholder="All Routes"
+                      searchPlaceholder="Search Route..."
+                      options={[
+                        { value: '', label: 'All Routes' },
+                        ...uniqueRoutes.map((r) => ({ value: r, label: r }))
+                      ]}
+                      className="bg-slate-50 font-bold"
+                    />
+                  </div>
                 )}
               </div>
 
@@ -996,36 +998,34 @@ export default function DispatchPlanning() {
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
                   Assigned Driver <span className="text-red-500 font-bold ml-0.5">*</span>
                 </label>
-                <select
+                <SearchableSelect
                   value={driverId}
                   onChange={(e) => setDriverId(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#004c8f]"
-                  required
-                >
-                  {data.drivers?.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} {d.phone ? `(${d.phone})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="-- Select Assigned Driver --"
+                  searchPlaceholder="Search Driver Name or Phone..."
+                  options={(data.drivers || []).map((d) => ({
+                    value: String(d.id),
+                    label: d.name,
+                    sublabel: d.phone ? `Phone: ${d.phone}` : null
+                  }))}
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
                   Assigned Vehicle <span className="text-red-500 font-bold ml-0.5">*</span>
                 </label>
-                <select
+                <SearchableSelect
                   value={vehicleId}
                   onChange={(e) => setVehicleId(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#004c8f]"
-                  required
-                >
-                  {data.vehicles?.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.vehicle_number} — {v.capacity_tons || 10} Tons ({v.vehicle_type || 'Truck'})
-                    </option>
-                  ))}
-                </select>
+                  placeholder="-- Select Assigned Vehicle --"
+                  searchPlaceholder="Search Vehicle No or Type..."
+                  options={(data.vehicles || []).map((v) => ({
+                    value: String(v.id),
+                    label: v.vehicle_number,
+                    sublabel: `${v.capacity_tons || 10} Tons • ${v.vehicle_type || 'Truck'}`
+                  }))}
+                />
               </div>
 
               <div>

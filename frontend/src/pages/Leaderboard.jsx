@@ -22,6 +22,8 @@ import {
   X,
   Printer
 } from 'lucide-react';
+import SearchableSelect from '../components/SearchableSelect';
+
 
 const initials = (name = '') =>
   name
@@ -259,20 +261,24 @@ export default function Leaderboard() {
         {/* Live Indicator, Refresh Interval Dropdown & Manual Refresh Button */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Refresh Frequency Dropdown */}
-          <div className="flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-2 rounded-2xl shadow-sm">
-            <Clock className="w-3.5 h-3.5 text-[#004c8f]" />
-            <span className="text-xs font-bold text-slate-700">Auto Sync:</span>
-            <select
-              value={refreshSpeed}
-              onChange={(e) => setRefreshSpeed(e.target.value)}
-              className="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1 text-xs font-extrabold text-slate-800 focus:outline-none focus:border-[#004c8f] cursor-pointer"
-            >
-              <option value="30000">30 Seconds</option>
-              <option value="60000">1 Minute</option>
-              <option value="300000">5 Minutes</option>
-              <option value="900000">15 Minutes</option>
-              <option value="0">Manual Only</option>
-            </select>
+          <div className="flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-1.5 rounded-2xl shadow-sm">
+            <Clock className="w-3.5 h-3.5 text-[#004c8f] shrink-0" />
+            <span className="text-xs font-bold text-slate-700 shrink-0">Auto Sync:</span>
+            <div className="w-36">
+              <SearchableSelect
+                value={refreshSpeed}
+                onChange={(val) => setRefreshSpeed(val)}
+                options={[
+                  { value: '30000', label: '30 Seconds' },
+                  { value: '60000', label: '1 Minute' },
+                  { value: '300000', label: '5 Minutes' },
+                  { value: '900000', label: '15 Minutes' },
+                  { value: '0', label: 'Manual Only' }
+                ]}
+                placeholder="Sync Interval..."
+                className="py-1 text-xs font-extrabold"
+              />
+            </div>
           </div>
 
           {/* Live Status & Manual Refresh Button */}

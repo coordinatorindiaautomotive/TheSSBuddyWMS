@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useToast } from '../context/ToastContext';
+import SearchableSelect from '../components/SearchableSelect';
 import { MapPin, CheckCircle, XCircle, Clock, FileCheck, RotateCcw } from 'lucide-react';
 
 export default function DeliveryBoard() {
@@ -157,15 +158,16 @@ export default function DeliveryBoard() {
                 <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">
                   Delivery Status
                 </label>
-                <select
+                <SearchableSelect
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="input-enterprise text-xs font-semibold"
-                >
-                  <option value="Delivered">Delivered (Success)</option>
-                  <option value="Partial">Partial Delivery</option>
-                  <option value="Failed">Failed / Rejected</option>
-                </select>
+                  options={[
+                    { value: 'Delivered', label: 'Delivered (Success)' },
+                    { value: 'Partial', label: 'Partial Delivery' },
+                    { value: 'Failed', label: 'Failed / Rejected' }
+                  ]}
+                  minSearchItems={10}
+                />
               </div>
 
               <div>

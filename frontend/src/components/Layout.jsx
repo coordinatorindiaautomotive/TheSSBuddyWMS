@@ -23,8 +23,10 @@ import {
   ChevronRight,
   Menu,
   X,
-  Radio
+  Radio,
+  Sparkles
 } from 'lucide-react';
+import SearchableSelect from './SearchableSelect';
 
 export default function Layout({ children }) {
   const { user, activeWarehouse, warehouses, switchWarehouse, logout, isSuperAdmin } = useAuth();
@@ -287,21 +289,24 @@ export default function Layout({ children }) {
             </div>
 
             {/* Warehouse Switcher / Assigned Badge in Header */}
-            <div className="flex items-center gap-1 sm:gap-2 bg-white/10 border border-white/20 rounded-xl px-2 sm:px-3 py-1.5 text-xs text-white max-w-[150px] sm:max-w-xs">
+            <div className="flex items-center gap-1 sm:gap-2 bg-white/10 border border-white/20 rounded-xl px-2 sm:px-3 py-1 text-xs text-white min-w-[140px] sm:min-w-[200px] max-w-[260px]">
               <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
-              <span className="hidden sm:inline font-semibold text-slate-200 shrink-0">Warehouse:</span>
+              <span className="hidden sm:inline font-semibold text-slate-200 shrink-0">WH:</span>
               {Boolean(user && (['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user?.role) || (user?.username && user?.username.toLowerCase() === 'admin')) && warehouses.length > 1) ? (
-                <select
-                  value={activeWarehouse?.id || ''}
-                  onChange={(e) => switchWarehouse(e.target.value)}
-                  className="bg-transparent text-white font-bold focus:outline-none cursor-pointer text-xs w-full min-w-0 truncate"
-                >
-                  {warehouses.map(w => (
-                    <option key={w.id} value={w.id} className="bg-[#003366] text-white">
-                      {w.warehouse_name} ({w.warehouse_code})
-                    </option>
-                  ))}
-                </select>
+                <div className="w-full">
+                  <SearchableSelect
+                    value={String(activeWarehouse?.id || '')}
+                    onChange={(val) => switchWarehouse(val)}
+                    options={warehouses.map(w => ({
+                      value: String(w.id),
+                      label: `${w.warehouse_name} (${w.warehouse_code})`
+                    }))}
+                    placeholder="Warehouse..."
+                    searchPlaceholder="Search WH..."
+                    dark={true}
+                    className="!min-h-[30px] !py-1 !px-2 !bg-transparent !border-none !text-xs !text-white font-bold"
+                  />
+                </div>
               ) : (
                 <span className="font-extrabold text-cyan-200 truncate text-xs" title={`${activeWarehouse?.warehouse_name || 'Warehouse'} (${activeWarehouse?.warehouse_code || 'WH'})`}>
                   {activeWarehouse?.warehouse_code || activeWarehouse?.warehouse_name || 'WH'}

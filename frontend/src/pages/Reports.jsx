@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import SearchableSelect from '../components/SearchableSelect';
 import {
   BarChart3,
   Download,
@@ -309,16 +310,19 @@ export default function Reports() {
           {reportType.includes('lifecycle') && (
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">Select Route</label>
-              <select
+              <SearchableSelect
                 value={selectedRoute}
                 onChange={(e) => setSelectedRoute(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#004c8f] focus:bg-white focus:outline-none cursor-pointer"
-              >
-                <option value="">-- All Routes --</option>
-                {routesList.map(r => (
-                  <option key={r.id || r.route_name} value={r.route_name}>{r.route_name}</option>
-                ))}
-              </select>
+                placeholder="-- All Routes --"
+                searchPlaceholder="Search Route Name..."
+                options={[
+                  { value: '', label: '-- All Routes --' },
+                  ...routesList.map(r => ({
+                    value: r.route_name,
+                    label: r.route_name
+                  }))
+                ]}
+              />
             </div>
           )}
 
@@ -326,15 +330,16 @@ export default function Reports() {
           {reportType.includes('lifecycle') && (
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">Status Filter</label>
-              <select
+              <SearchableSelect
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 font-semibold focus:border-[#004c8f] focus:bg-white focus:outline-none cursor-pointer"
-              >
-                <option value="">-- All Statuses --</option>
-                <option value="Dispatched">Dispatched / Delivered</option>
-                <option value="Pending">Pending Dispatch</option>
-              </select>
+                options={[
+                  { value: '', label: '-- All Statuses --' },
+                  { value: 'Dispatched', label: 'Dispatched / Delivered' },
+                  { value: 'Pending', label: 'Pending Dispatch' }
+                ]}
+                minSearchItems={10}
+              />
             </div>
           )}
 

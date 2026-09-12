@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Upload, FileSpreadsheet, CheckCircle2, Download, HelpCircle, ShieldAlert } from 'lucide-react';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function Import() {
   const { user, isSuperAdmin } = useAuth();
@@ -29,21 +30,28 @@ export default function Import() {
 
   const handleImport = async (e) => {
     e.preventDefault();
-    if (!file) return;
-    setUploading(true);
+    if (!file) {
+      toast.error('Please select an Excel (.xlsx / .xls) file first.');
+      return;
+    }
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('entity_type', entityType);
+    formData.append('entityType', entityType);
 
+    setUploading(true);
     try {
-      const res = await axios.post('/api/import/upload', formData, {
+      const res = await axios.post('/api/import/excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      toast.success(res.data.message || 'Excel data imported successfully!');
+      toast.success(res.data?.message || 'Data imported successfully!');
       setFile(null);
+      // Reset input
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput) fileInput.value = '';
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error processing Excel import.');
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to import Excel file. Check format.');
     } finally {
       setUploading(false);
     }
@@ -69,17 +77,19 @@ export default function Import() {
               <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
                 Select Data Category to Import <span className="text-red-500 font-bold ml-0.5">*</span>
               </label>
-              <select
+              <SearchableSelect
                 value={entityType}
-                onChange={(e) => setEntityType(e.target.value)}
-                className="input-enterprise text-xs font-semibold"
-              >
-                <option value="FullReport">🌟 Full Pick-to-Delivery Master Report (Auto Routes, Salesmen, Parties, Tickets & Bills)</option>
-                <option value="PickTickets">Pick Tickets (.xlsx / .xls)</option>
-                <option value="Parties">Customer Parties (.xlsx / .xls)</option>
-                <option value="Drivers">Drivers Master (.xlsx / .xls)</option>
-                <option value="Vehicles">Vehicles Master (.xlsx / .xls)</option>
-              </select>
+                onChange={(val) => setEntityType(val)}
+                options={[
+                  { value: 'FullReport', label: '🌟 Full Pick-to-Delivery Master Report (Auto Routes, Salesmen, Parties, Tickets & Bills)' },
+                  { value: 'PickTickets', label: 'Pick Tickets (.xlsx / .xls)' },
+                  { value: 'Parties', label: 'Customer Parties (.xlsx / .xls)' },
+                  { value: 'Drivers', label: 'Drivers Master (.xlsx / .xls)' },
+                  { value: 'Vehicles', label: 'Vehicles Master (.xlsx / .xls)' }
+                ]}
+                placeholder="Select category..."
+                className="py-2.5 text-xs font-semibold"
+              />
             </div>
 
             <div>

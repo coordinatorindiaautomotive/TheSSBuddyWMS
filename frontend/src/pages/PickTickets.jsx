@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useToast } from '../context/ToastContext';
+import SearchableSelect from '../components/SearchableSelect';
 import {
   ClipboardList,
   Plus,
@@ -722,15 +723,17 @@ export default function PickTickets() {
                   <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
                     Order Priority <span className="text-red-500 font-bold ml-0.5">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                    className="w-full h-11 bg-slate-50 border border-slate-300 rounded-xl px-3.5 text-xs text-slate-900 font-semibold focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors cursor-pointer"
-                  >
-                    <option value="Normal">Normal</option>
-                    <option value="High">High</option>
-                    <option value="Urgent">Urgent</option>
-                  </select>
+                    options={[
+                      { value: 'Normal', label: 'Normal' },
+                      { value: 'High', label: 'High' },
+                      { value: 'Urgent', label: 'Urgent' }
+                    ]}
+                    className="h-11"
+                    minSearchItems={10}
+                  />
                 </div>
               </div>
 
@@ -832,17 +835,18 @@ export default function PickTickets() {
                   <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
                     Picker <span className="text-red-500 font-bold ml-0.5">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
                     value={formData.picker_id}
                     onChange={(e) => setFormData({ ...formData, picker_id: e.target.value })}
-                    required
-                    className="w-full h-11 bg-white border border-slate-300 rounded-xl px-3.5 text-xs text-slate-900 font-semibold focus:border-[#004c8f] focus:outline-none cursor-pointer"
-                  >
-                    <option value="">-- Choose Picker --</option>
-                    {pickers.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.employee_code || `EMP-${p.id}`})</option>
-                    ))}
-                  </select>
+                    placeholder="-- Choose Picker --"
+                    searchPlaceholder="Search Picker Name or Code..."
+                    options={pickers.map(p => ({
+                      value: String(p.id),
+                      label: p.name,
+                      sublabel: p.employee_code || `EMP-${p.id}`
+                    }))}
+                    className="h-11"
+                  />
                 </div>
               </div>
 

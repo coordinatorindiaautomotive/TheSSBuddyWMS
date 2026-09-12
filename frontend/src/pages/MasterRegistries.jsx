@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import SearchableSelect from '../components/SearchableSelect';
 import {
   Store, MapPin, UserCheck, Briefcase, Truck, Warehouse as WarehouseIcon,
   Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, ToggleLeft, ToggleRight,
@@ -1721,19 +1722,33 @@ export default function MasterRegistries() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Delivery Route <span className="text-red-500 font-bold ml-0.5">*</span></label>
-                      <select value={f('route_name')} onChange={e => sf('route_name', e.target.value)} required
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
-                        <option value="">-- Select Route --</option>
-                        {(routes || []).map(r => <option key={r.id} value={r.route_name}>{r.route_name}</option>)}
-                      </select>
+                      <SearchableSelect
+                        value={f('route_name')}
+                        onChange={e => sf('route_name', e.target.value)}
+                        placeholder="-- Select Route --"
+                        searchPlaceholder="Search Route Name..."
+                        options={(routes || []).map(r => ({
+                          value: r.route_name,
+                          label: r.route_name,
+                          sublabel: r.route_code ? `Code: ${r.route_code}` : null
+                        }))}
+                        className="py-2.5 text-sm"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Assigned Salesman <span className="text-red-500 font-bold ml-0.5">*</span></label>
-                      <select value={f('salesman')} onChange={e => sf('salesman', e.target.value)} required
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
-                        <option value="">-- Select Salesman --</option>
-                        {(salesmen || []).map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                      </select>
+                      <SearchableSelect
+                        value={f('salesman')}
+                        onChange={e => sf('salesman', e.target.value)}
+                        placeholder="-- Select Salesman --"
+                        searchPlaceholder="Search Salesman..."
+                        options={(salesmen || []).map(s => ({
+                          value: s.name,
+                          label: s.name,
+                          sublabel: s.phone ? `Phone: ${s.phone}` : (s.territory ? `Territory: ${s.territory}` : null)
+                        }))}
+                        className="py-2.5 text-sm"
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1786,12 +1801,17 @@ export default function MasterRegistries() {
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Operational Floor Role <span className="text-red-500 font-bold ml-0.5">*</span></label>
-                      <select value={f('role')} onChange={e => sf('role', e.target.value)} required
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
-                        <option value="Picker">Picker (Fulfillment)</option>
-                        <option value="Checker">Checker (Quality Assurance)</option>
-                        <option value="Helper">Helper (Sorting &amp; Support)</option>
-                      </select>
+                      <SearchableSelect
+                        value={f('role')}
+                        onChange={e => sf('role', e.target.value)}
+                        options={[
+                          { value: 'Picker', label: 'Picker (Fulfillment)' },
+                          { value: 'Checker', label: 'Checker (Quality Assurance)' },
+                          { value: 'Helper', label: 'Helper (Sorting & Support)' }
+                        ]}
+                        className="py-2.5 text-sm"
+                        minSearchItems={10}
+                      />
                     </div>
                   </div>
                   <label className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
@@ -1854,14 +1874,20 @@ export default function MasterRegistries() {
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Vehicle Type <span className="text-red-500 font-bold ml-0.5">*</span></label>
-                      <select value={f('vehicle_type')} onChange={e => sf('vehicle_type', e.target.value)} required
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
-                        <option value="Truck">🚛 Truck</option>
-                        <option value="Van">🚐 Van</option>
-                        <option value="Mini-Truck">🛻 Mini-Truck</option>
-                        <option value="Tempo">🚌 Tempo</option>
-                        <option value="Container">📦 Container</option>
-                      </select>
+                      <SearchableSelect
+                        value={f('vehicle_type')}
+                        onChange={e => sf('vehicle_type', e.target.value)}
+                        placeholder="-- Select Vehicle Type --"
+                        searchPlaceholder="Search Vehicle Type..."
+                        options={[
+                          { value: 'Truck', label: '🚛 Truck' },
+                          { value: 'Van', label: '🚐 Van' },
+                          { value: 'Mini-Truck', label: '🛻 Mini-Truck' },
+                          { value: 'Tempo', label: '🚌 Tempo' },
+                          { value: 'Container', label: '📦 Container' }
+                        ]}
+                        className="py-2.5 text-sm"
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2221,24 +2247,37 @@ export default function MasterRegistries() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Security Access Role <span className="text-red-500 font-bold ml-0.5">*</span></label>
-                      <select value={f('role_name')} onChange={e => sf('role_name', e.target.value)} required
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
-                        <option value="Super Admin">Super Admin</option>
-                        <option value="Warehouse Admin">Warehouse Admin</option>
-                        <option value="Operator">Operator</option>
-                        <option value="Auditor">Auditor</option>
-                        <option value="Viewer">Viewer</option>
-                      </select>
+                      <SearchableSelect
+                        value={f('role_name')}
+                        onChange={val => sf('role_name', val)}
+                        options={[
+                          { value: 'Super Admin', label: 'Super Admin' },
+                          { value: 'Warehouse Admin', label: 'Warehouse Admin' },
+                          { value: 'Operator', label: 'Operator' },
+                          { value: 'Auditor', label: 'Auditor' },
+                          { value: 'Viewer', label: 'Viewer' }
+                        ]}
+                        placeholder="Select Role..."
+                        searchPlaceholder="Search roles..."
+                        className="py-3 text-sm font-semibold"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Authorized Warehouse Context</label>
-                      <select value={f('warehouse_id')} onChange={e => sf('warehouse_id', e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors">
-                        <option value="">Global / All Warehouses</option>
-                        {(warehouses || []).map(wh => (
-                          <option key={wh.id} value={wh.id}>{wh.warehouse_name || wh.name} ({wh.warehouse_code || wh.code})</option>
-                        ))}
-                      </select>
+                      <SearchableSelect
+                        value={f('warehouse_id')}
+                        onChange={val => sf('warehouse_id', val)}
+                        options={[
+                          { value: '', label: 'Global / All Warehouses' },
+                          ...(warehouses || []).map(wh => ({
+                            value: String(wh.id),
+                            label: `${wh.warehouse_name || wh.name} (${wh.warehouse_code || wh.code})`
+                          }))
+                        ]}
+                        placeholder="Select Warehouse..."
+                        searchPlaceholder="Search warehouse..."
+                        className="py-3 text-sm font-semibold"
+                      />
                     </div>
                   </div>
                   <label className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
@@ -2528,22 +2567,24 @@ export default function MasterRegistries() {
                       <label className="block text-[11px] font-extrabold text-slate-700 uppercase mb-1">
                         Shift Preset
                       </label>
-                      <select
-                        onChange={(e) => applyPreset(e.target.value)}
+                      <SearchableSelect
                         value={
                           scheduleForm.trip_name?.toLowerCase().includes('morning') ? 'MORNING' :
                           scheduleForm.trip_name?.toLowerCase().includes('evening') ? 'EVENING' :
                           scheduleForm.trip_name?.toLowerCase().includes('night') ? 'NIGHT' :
                           scheduleForm.dispatch_type === 'ON_DEMAND' ? 'ON_DEMAND' : 'CUSTOM'
                         }
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#004c8f]"
-                      >
-                        <option value="MORNING">🌅 Morning (08:00 - 09:30)</option>
-                        <option value="EVENING">🌆 Evening (18:00 - 19:30)</option>
-                        <option value="NIGHT">🌙 Night (21:00 - 22:30)</option>
-                        <option value="ON_DEMAND">⚡ On-Demand</option>
-                        <option value="CUSTOM">⚙️ Custom Trip</option>
-                      </select>
+                        onChange={(val) => applyPreset(val)}
+                        options={[
+                          { value: 'MORNING', label: '🌅 Morning (08:00 - 09:30)' },
+                          { value: 'EVENING', label: '🌆 Evening (18:00 - 19:30)' },
+                          { value: 'NIGHT', label: '🌙 Night (21:00 - 22:30)' },
+                          { value: 'ON_DEMAND', label: '⚡ On-Demand' },
+                          { value: 'CUSTOM', label: '⚙️ Custom Trip' }
+                        ]}
+                        placeholder="Preset..."
+                        className="py-2 text-xs font-bold"
+                      />
                     </div>
 
                     {/* Trip Name */}
@@ -2566,15 +2607,17 @@ export default function MasterRegistries() {
                       <label className="block text-[11px] font-extrabold text-slate-700 uppercase mb-1">
                         Frequency <span className="text-red-500 font-bold ml-0.5">*</span>
                       </label>
-                      <select
+                      <SearchableSelect
                         value={scheduleForm.frequency}
-                        onChange={(e) => setScheduleForm(prev => ({ ...prev, frequency: e.target.value }))}
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#004c8f]"
-                      >
-                        <option value="DAILY">Daily (Every Day)</option>
-                        <option value="WEEKLY_SPECIFIC_DAYS">Specific Days</option>
-                        <option value="ON_DEMAND">On-Demand Only</option>
-                      </select>
+                        onChange={(val) => setScheduleForm(prev => ({ ...prev, frequency: val }))}
+                        options={[
+                          { value: 'DAILY', label: 'Daily (Every Day)' },
+                          { value: 'WEEKLY_SPECIFIC_DAYS', label: 'Specific Days' },
+                          { value: 'ON_DEMAND', label: 'On-Demand Only' }
+                        ]}
+                        placeholder="Frequency..."
+                        className="py-2 text-xs font-semibold"
+                      />
                     </div>
 
                     {/* Cutoff Time */}
