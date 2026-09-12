@@ -42,11 +42,39 @@ body {
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* ── Global Focus Accessibility ───────────────────────────────────────────── */
-:focus-visible {
-  outline: 2px solid #004C8F;
-  outline-offset: 2px;
+/* ── Global Focus Accessibility (Tab Friendly) ─────────────────────────────── */
+:focus {
+  outline: none;
 }
+
+:focus-visible {
+  outline: 2px solid #004C8F !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(0, 76, 143, 0.2) !important;
+  transition: outline-offset 0.1s ease, box-shadow 0.1s ease;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid #004C8F !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(0, 76, 143, 0.25) !important;
+}
+
+/* Dark theme focus-visible */
+.bg-slate-900 :focus-visible,
+.bg-slate-800 :focus-visible,
+.dark :focus-visible {
+  outline: 2px solid #38BDF8 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3) !important;
+}
+
 
 /* ── Standard Enterprise Cards ────────────────────────────────────────────── */
 .card-enterprise {

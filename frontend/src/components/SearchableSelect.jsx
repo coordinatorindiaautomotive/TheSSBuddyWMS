@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, X } from 'lucide-react';
 
 export default function SearchableSelect({
@@ -111,6 +111,8 @@ export default function SearchableSelect({
     };
   }, [isOpen]);
 
+  const buttonRef = useRef(null);
+
   // Handle item selection
   const handleSelect = (option) => {
     if (disabled) return;
@@ -127,6 +129,10 @@ export default function SearchableSelect({
       };
       onChange(syntheticEvent, option);
     }
+    // Return focus to button after selection
+    setTimeout(() => {
+      buttonRef.current?.focus();
+    }, 10);
   };
 
   // Keyboard navigation
@@ -134,7 +140,7 @@ export default function SearchableSelect({
     if (disabled) return;
 
     if (!isOpen) {
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         setIsOpen(true);
       }
@@ -151,10 +157,24 @@ export default function SearchableSelect({
       e.preventDefault();
       if (filteredOptions[highlightIndex]) {
         handleSelect(filteredOptions[highlightIndex]);
+      } else {
+        setIsOpen(false);
       }
+    } else if (e.key === 'Tab') {
+      // When tabbing away from open dropdown, auto-select highlighted option if searching or close gracefully
+      if (search && filteredOptions[highlightIndex]) {
+        const selected = filteredOptions[highlightIndex];
+        const newVal = selected.value;
+        if (onChange) {
+          onChange({ target: { name: name || '', value: newVal } }, selected);
+        }
+      }
+      setIsOpen(false);
+      // Do not call preventDefault so native Tab advances to the next form field!
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setIsOpen(false);
+      buttonRef.current?.focus();
     }
   };
 
@@ -170,16 +190,16 @@ export default function SearchableSelect({
 
   // Theme styles
   const baseButtonClass = dark
-    ? 'bg-slate-900 border-slate-700 text-slate-100 hover:border-blue-500'
-    : 'bg-white border-slate-300 text-slate-900 hover:border-[#004c8f]';
+    ? 'bg-slate-900 border-slate-700 text-slate-100 hover:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:border-blue-400'
+    : 'bg-white border-slate-300 text-slate-900 hover:border-[#004c8f] focus-visible:ring-2 focus-visible:ring-[#004c8f] focus-visible:border-[#004c8f]';
 
   const menuBgClass = dark
     ? 'bg-slate-900 border-slate-700 text-slate-100'
     : 'bg-white border-slate-200 text-slate-900';
 
   const searchBgClass = dark
-    ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500'
-    : 'bg-white border-slate-300 text-slate-800 placeholder:text-slate-400';
+    ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500'
+    : 'bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-[#004c8f]';
 
   const itemHoverClass = dark
     ? 'hover:bg-slate-800 text-slate-200'
@@ -198,10 +218,12 @@ export default function SearchableSelect({
 
       {/* Main trigger button */}
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
+        tabIndex={disabled ? -1 : 0}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full min-h-[42px] px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 transition-all shadow-2xs text-left cursor-pointer disabled:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed ${baseButtonClass} ${className}`}
+        className={`w-full min-h-[42px] px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 transition-all shadow-2xs text-left cursor-pointer focus:outline-none disabled:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed ${baseButtonClass} ${className}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
