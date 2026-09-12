@@ -66,7 +66,7 @@ export default function LEDDashboard() {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 12;
+  const pageSize = 10;
 
   // Real-time Clock (IST)
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -337,9 +337,11 @@ export default function LEDDashboard() {
     : eveningCycles[0] || null;
 
   // Pagination for table
-  const totalPages = Math.ceil(filteredTickets.length / pageSize) || 1;
+  const cappedTickets = (filteredTickets || []).slice(0, 100);
+  const totalPages = Math.ceil(cappedTickets.length / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedTickets = filteredTickets.slice(startIndex, startIndex + pageSize);
+  const endIndex = Math.min(startIndex + pageSize, cappedTickets.length);
+  const paginatedTickets = cappedTickets.slice(startIndex, startIndex + pageSize);
 
   return (
     <div ref={containerRef} className="space-y-3.5 w-full p-2 sm:p-4 min-h-screen bg-slate-900 text-slate-100 selection:bg-blue-600 selection:text-white font-sans">
@@ -996,7 +998,10 @@ export default function LEDDashboard() {
         {filteredTickets.length > 0 && (
           <div className="px-4 py-3 bg-slate-900/90 border-t border-slate-700 flex flex-wrap items-center justify-between gap-2 text-xs">
             <span className="text-slate-400 font-medium">
-              Showing <strong className="text-white">{startIndex + 1}</strong> to <strong className="text-white">{Math.min(startIndex + pageSize, filteredTickets.length)}</strong> of <strong className="text-white">{filteredTickets.length}</strong> tickets
+              Showing <strong className="text-white">{cappedTickets.length > 0 ? startIndex + 1 : 0}</strong> to <strong className="text-white">{endIndex}</strong> of <strong className="text-white">{cappedTickets.length}</strong> tickets
+              {filteredTickets.length > 100 && (
+                <span className="text-[11px] text-slate-500 font-normal ml-1.5">(capped at max 100 — filter by route/date)</span>
+              )}
             </span>
 
             <div className="flex items-center gap-1.5">

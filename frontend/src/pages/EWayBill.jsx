@@ -183,10 +183,11 @@ export default function EWayBill() {
                 </tr>
               ) : (
                 (() => {
-                  const totalPages = Math.ceil(ewayBills.length / pageSize) || 1;
+                  const cappedEWB = (ewayBills || []).slice(0, 100);
+                  const totalPages = Math.ceil(cappedEWB.length / pageSize) || 1;
                   const startIndex = (currentPage - 1) * pageSize;
-                  const endIndex = Math.min(startIndex + pageSize, ewayBills.length);
-                  const paginatedData = ewayBills.slice(startIndex, startIndex + pageSize);
+                  const endIndex = Math.min(startIndex + pageSize, cappedEWB.length);
+                  const paginatedData = cappedEWB.slice(startIndex, startIndex + pageSize);
 
                   return (
                     paginatedData.map((e) => (
@@ -217,27 +218,42 @@ export default function EWayBill() {
         </div>
 
         {/* Pagination Controls Footer */}
-        {ewayBills.length > 0 && (
-          <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 text-xs">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer transition-all"
-            >
-              Previous
-            </button>
-            <span className="font-bold text-slate-700 px-2">
-              Page {currentPage} of {Math.ceil(ewayBills.length / pageSize) || 1}
-            </span>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(ewayBills.length / pageSize) || 1))}
-              disabled={currentPage >= (Math.ceil(ewayBills.length / pageSize) || 1)}
-              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer transition-all"
-            >
-              Next
-            </button>
-          </div>
-        )}
+        {ewayBills.length > 0 && (() => {
+          const cappedTotal = Math.min(ewayBills.length, 100);
+          const totalPages = Math.ceil(cappedTotal / pageSize) || 1;
+          const start = (currentPage - 1) * pageSize;
+          const end = Math.min(currentPage * pageSize, cappedTotal);
+
+          return (
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="text-slate-500 font-medium text-xs">
+                Showing <strong className="text-slate-900 font-bold">{cappedTotal > 0 ? start + 1 : 0}</strong> to <strong className="text-slate-900 font-bold">{end}</strong> of <strong className="text-slate-900 font-bold">{cappedTotal}</strong> records
+                {ewayBills.length > 100 && (
+                  <span className="text-[11px] text-slate-400 font-normal ml-1.5">(capped at max 100 — search/filter)</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer transition-all"
+                >
+                  Previous
+                </button>
+                <span className="font-bold text-slate-700 px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage >= totalPages}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

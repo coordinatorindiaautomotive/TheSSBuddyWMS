@@ -384,10 +384,11 @@ export default function PickTickets() {
     );
   });
 
-  const totalPages = Math.ceil(filteredTickets.length / pageSize) || 1;
+  const cappedTickets = filteredTickets.slice(0, 100);
+  const totalPages = Math.ceil(cappedTickets.length / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, filteredTickets.length);
-  const paginatedTickets = filteredTickets.slice(startIndex, startIndex + pageSize);
+  const endIndex = Math.min(startIndex + pageSize, cappedTickets.length);
+  const paginatedTickets = cappedTickets.slice(startIndex, startIndex + pageSize);
 
   return (
     <div className="space-y-3">
@@ -552,24 +553,32 @@ export default function PickTickets() {
             <p className="text-slate-400 text-xs mt-1">Try adjusting your search or create a new ticket</p>
           </div>
         ) : (
-          <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 text-xs">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer"
-            >
-              Previous
-            </button>
-            <span className="font-bold text-slate-800 px-2">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage >= totalPages}
-              className="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer"
-            >
-              Next
-            </button>
+          <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="text-slate-500 font-medium text-xs">
+              Showing <strong className="text-slate-900 font-bold">{cappedTickets.length > 0 ? startIndex + 1 : 0}</strong> to <strong className="text-slate-900 font-bold">{endIndex}</strong> of <strong className="text-slate-900 font-bold">{cappedTickets.length}</strong> tickets
+              {filteredTickets.length > 100 && (
+                <span className="text-[11px] text-slate-400 font-normal ml-1.5">(capped at max 100 — use search to filter)</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+              >
+                Previous
+              </button>
+              <span className="font-bold text-slate-800 px-2">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage >= totalPages}
+                className="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>
