@@ -186,7 +186,7 @@ function routesMatch(rName1, rName2, rCode1, rCode2) {
   const keys1 = [normalizeRouteKey(rName1), normalizeRouteKey(rCode1)].filter(k => k && k !== 'unassigned');
   const keys2 = [normalizeRouteKey(rName2), normalizeRouteKey(rCode2)].filter(k => k && k !== 'unassigned');
   if (keys1.length === 0 || keys2.length === 0) return false;
-  return keys1.some(k1 => keys2.some(k2 => k1 === k2 || k1.includes(k2) || k2.includes(k1)));
+  return keys1.some(k1 => keys2.some(k2 => k1 === k2));
 }
 
 function normalizeDateStr(d) {
@@ -300,10 +300,16 @@ async function getPartyBillStatus(req, res) {
       if (targetRoute || (routeId && routeId !== 'ALL')) {
         const targetRouteName = targetRoute ? targetRoute.route_name : routeId;
         const targetRouteCode = targetRoute ? targetRoute.route_code : routeId;
-        const isPartyMatch = validPartyCodes.has(pCodeUpper);
-        const isTicketRouteMatch = routesMatch(t.route, targetRouteName, t.route, targetRouteCode);
+        
+        const hasTicketRoute = t.route && normalizeRouteKey(t.route) !== '' && normalizeRouteKey(t.route) !== 'unassigned';
+        let isMatch = false;
+        if (hasTicketRoute) {
+          isMatch = routesMatch(t.route, targetRouteName, t.route, targetRouteCode);
+        } else {
+          isMatch = validPartyCodes.has(pCodeUpper);
+        }
 
-        if (!isPartyMatch && !isTicketRouteMatch) {
+        if (!isMatch) {
           continue;
         }
 

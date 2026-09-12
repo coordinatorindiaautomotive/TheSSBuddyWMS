@@ -70,16 +70,9 @@ export default function RouteBillStatus() {
     }
   };
 
-  useEffect(() => {
-    if (selectedRoute) {
-      fetchBillStatus();
-    }
-  }, [selectedRoute]);
-
   const fetchBillStatus = async () => {
     if (!selectedRoute) {
-      setHasSearched(false);
-      setData([]);
+      toast.warning('Please select a route first.');
       return;
     }
     setLoading(true);
@@ -96,6 +89,7 @@ export default function RouteBillStatus() {
       });
       const partyList = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
       setData(partyList);
+      setCurrentPage(1);
 
       // Auto-check billed tickets that are not yet dispatched
       const autoChecked = [];
@@ -109,6 +103,7 @@ export default function RouteBillStatus() {
       setSelectedTicketsToDispatch(autoChecked);
     } catch (err) {
       console.error('Error fetching bill status:', err);
+      toast.error('Failed to load route bill status.');
       setData([]);
     } finally {
       setLoading(false);
@@ -120,6 +115,10 @@ export default function RouteBillStatus() {
     setStatusFilter('pending');
     setSearch('');
     setDefaultDates();
+    setData([]);
+    setHasSearched(false);
+    setSelectedTicketsToDispatch([]);
+    setCurrentPage(1);
   };
 
   const handleToggleDispatchCheck = (id) => {
@@ -495,16 +494,16 @@ export default function RouteBillStatus() {
       )}
 
       {/* Main Table Section */}
-      {!selectedRoute ? (
-        <div className="bg-white border-2 border-dashed border-indigo-200 rounded-2xl p-16 text-center print:hidden shadow-sm">
+      {!hasSearched ? (
+        <div className="bg-white border-2 border-dashed border-indigo-200 rounded-2xl p-12 sm:p-16 text-center print:hidden shadow-sm">
           <RouteIcon className="w-12 h-12 text-indigo-500 mx-auto mb-4" />
-          <h3 className="text-slate-800 font-extrabold text-lg mb-1">Please Select a Route</h3>
-          <p className="text-slate-500 font-medium text-sm">
-            Choose a route from the filter bar above and click <span className="text-indigo-600 font-bold">"Apply"</span> to view Party Bill Status.
+          <h3 className="text-slate-800 font-extrabold text-lg mb-1">Route Bill Status Tracker</h3>
+          <p className="text-slate-500 font-medium text-sm max-w-md mx-auto">
+            Select route and filter parameters above, then click <span className="text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">"Apply"</span> to fetch and view real-time party bill status.
           </p>
         </div>
-      ) : data.length === 0 && hasSearched ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center shadow-sm">
+      ) : filteredData.length === 0 ? (
+        <div className="bg-white border border-slate-200 rounded-2xl p-12 sm:p-16 text-center shadow-sm">
           <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
           <p className="text-emerald-700 font-extrabold text-base">No Pick Tickets found for selected filter criteria.</p>
         </div>
