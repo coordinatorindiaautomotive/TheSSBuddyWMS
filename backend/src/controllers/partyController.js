@@ -18,11 +18,10 @@ async function getParties(req, res) {
 
 async function getPartyByCode(req, res) {
   try {
-    const { code } = req.params;
-    const whId = req.activeWarehouseId || 1;
+    const cleanCode = String(code || '').trim().toUpperCase();
     const party = await dbAsync.get(
-      'SELECT * FROM parties WHERE (party_code = ? OR party_code LIKE ?) AND (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1)',
-      [code, `%${code}%`, whId, whId]
+      'SELECT * FROM parties WHERE UPPER(TRIM(party_code)) = ? AND (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1)',
+      [cleanCode, whId, whId]
     );
     if (!party) {
       return res.status(404).json({ message: 'Party Code not found in Master for active warehouse.' });

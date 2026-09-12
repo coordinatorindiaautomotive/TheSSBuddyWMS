@@ -25,6 +25,18 @@ function formatSecondsToHMS(totalSec) {
   return `${h}:${m}:${s}`;
 }
 
+function normalizeRouteKey(r) {
+  if (!r) return '';
+  return String(r).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function routesMatch(rName1, rName2, rCode1, rCode2) {
+  const keys1 = [normalizeRouteKey(rName1), normalizeRouteKey(rCode1)].filter(k => k && k !== 'unassigned');
+  const keys2 = [normalizeRouteKey(rName2), normalizeRouteKey(rCode2)].filter(k => k && k !== 'unassigned');
+  if (keys1.length === 0 || keys2.length === 0) return false;
+  return keys1.some(k1 => keys2.some(k2 => k1 === k2));
+}
+
 function isScheduleActiveOnDate(schedule, targetDate) {
   if (!schedule.is_active) return false;
   if (schedule.dispatch_type === 'ON_DEMAND') return true;
@@ -258,10 +270,8 @@ async function getOperationsConsoleData(warehouseId) {
   const criticalAlerts = [];
 
   for (const r of routes) {
-    const rKey = (r.route_name || '').trim().toLowerCase();
     const routeTickets = (pickTickets || []).filter(t => {
-      const trName = (t.route || '').trim().toLowerCase();
-      return trName === rKey || (rKey && trName && (trName.includes(rKey) || rKey.includes(trName)));
+      return routesMatch(t.route, r.route_name, t.route, r.route_code);
     });
 
     let totalTickets = 0;

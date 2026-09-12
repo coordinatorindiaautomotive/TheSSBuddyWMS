@@ -20,7 +20,7 @@ async function mobileLogin(req, res) {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
-    const driver = await dbAsync.get('SELECT * FROM drivers WHERE phone = ? OR name LIKE ? LIMIT 1', [user.username, `%${user.full_name}%`]);
+    const driver = await dbAsync.get('SELECT * FROM drivers WHERE phone = ? OR LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1', [user.username, user.full_name || '']);
 
     const token = jwt.sign(
       {

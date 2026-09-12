@@ -121,11 +121,11 @@ function normalizeRouteKey(r) {
   return String(r).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function routesMatch(rName1, rName2) {
-  const k1 = normalizeRouteKey(rName1);
-  const k2 = normalizeRouteKey(rName2);
-  if (!k1 || !k2) return false;
-  return k1 === k2;
+function routesMatch(rName1, rName2, rCode1, rCode2) {
+  const keys1 = [normalizeRouteKey(rName1), normalizeRouteKey(rCode1)].filter(k => k && k !== 'unassigned');
+  const keys2 = [normalizeRouteKey(rName2), normalizeRouteKey(rCode2)].filter(k => k && k !== 'unassigned');
+  if (keys1.length === 0 || keys2.length === 0) return false;
+  return keys1.some(k1 => keys2.some(k2 => k1 === k2));
 }
 
 function determineTicketStage(ticket, billing, dispatchParty) {

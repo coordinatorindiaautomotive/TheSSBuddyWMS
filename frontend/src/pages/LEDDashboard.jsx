@@ -175,11 +175,11 @@ export default function LEDDashboard() {
     return String(r).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   };
 
-  const checkRoutesMatch = (r1, r2) => {
-    const k1 = normalizeRouteKey(r1);
-    const k2 = normalizeRouteKey(r2);
-    if (!k1 || !k2) return false;
-    return k1 === k2;
+  const checkRoutesMatch = (r1, r2, c1, c2) => {
+    const keys1 = [normalizeRouteKey(r1), normalizeRouteKey(c1)].filter(k => k && k !== 'unassigned');
+    const keys2 = [normalizeRouteKey(r2), normalizeRouteKey(c2)].filter(k => k && k !== 'unassigned');
+    if (keys1.length === 0 || keys2.length === 0) return false;
+    return keys1.some(k1 => keys2.some(k2 => k1 === k2));
   };
 
   // Extract all tickets
