@@ -54,7 +54,7 @@ export default function Layout({ children }) {
 
   const operationsNav = [
     { label: 'Dashboard Panel', path: '/dashboard', icon: LayoutDashboard, iconColor: 'text-indigo-600', badgeBg: 'bg-indigo-50' },
-    { label: 'Dispatch Control - LED', path: '/led', icon: Radio, iconColor: 'text-red-600', badgeBg: 'bg-red-50' },
+    { label: 'Dispatch Control Panel', path: '/led', icon: Radio, iconColor: 'text-red-600', badgeBg: 'bg-red-50' },
     { label: 'Dispatch Planning', path: '/dispatch-planning', icon: Truck, iconColor: 'text-blue-600', badgeBg: 'bg-blue-50' },
     { label: 'Pick Ticket Entry', path: '/pick-tickets', icon: ClipboardList, iconColor: 'text-amber-600', badgeBg: 'bg-amber-50' },
     { label: 'Billing Entry', path: '/billing', icon: Receipt, iconColor: 'text-emerald-600', badgeBg: 'bg-emerald-50' },
