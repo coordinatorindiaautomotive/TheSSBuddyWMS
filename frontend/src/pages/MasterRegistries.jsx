@@ -427,6 +427,12 @@ export default function MasterRegistries() {
       if (activeTab === 'route' && (!payload.route_code || payload.route_code.trim() === '')) {
         payload.route_code = getNextRouteCode();
       }
+      if (activeTab === 'return_remarks' && (!payload.code || payload.code.trim() === '')) {
+        payload.code = getNextReturnRemarkCode();
+      }
+      if (activeTab === 'arrange_teams' && (!payload.team_code || payload.team_code.trim() === '')) {
+        payload.team_code = getNextArrangeTeamCode();
+      }
 
       if (editingItem) {
         if (activeTab === 'party')         await axios.put(`/api/parties/${editingItem.id}`, payload);
@@ -459,7 +465,11 @@ export default function MasterRegistries() {
       }
       setShowModal(false);
       fetchAll();
-    } catch (e) { toast.error(e.response?.data?.message || 'Error saving record.'); }
+    } catch (e) {
+      console.error('Master Save Error:', e);
+      const errMsg = e.response?.data?.message || (e.response?.status ? `HTTP ${e.response.status}: ${e.response.statusText || 'Server Error'}` : e.message) || 'Error saving record.';
+      toast.error(errMsg);
+    }
     finally { setSubmitting(false); }
   };
 

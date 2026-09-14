@@ -838,8 +838,8 @@ async function ensureReturnRemarksTable() {
     await dbAsync.exec(`
       CREATE TABLE IF NOT EXISTS return_remarks_master (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        code VARCHAR(100) NOT NULL,
-        name VARCHAR(255) NOT NULL,
+        code VARCHAR(100) NULL,
+        name VARCHAR(255) NULL,
         is_active TINYINT DEFAULT 1,
         warehouse_id INT NULL DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -850,14 +850,24 @@ async function ensureReturnRemarksTable() {
       await dbAsync.exec(`
         CREATE TABLE IF NOT EXISTS return_remarks_master (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          code TEXT NOT NULL,
-          name TEXT NOT NULL,
+          code TEXT,
+          name TEXT,
           is_active INTEGER DEFAULT 1,
           warehouse_id INTEGER DEFAULT 1,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
       `);
     } catch (e2) {}
+  }
+
+  const migrations = [
+    'ALTER TABLE return_remarks_master ADD COLUMN code VARCHAR(100) NULL;',
+    'ALTER TABLE return_remarks_master ADD COLUMN name VARCHAR(255) NULL;',
+    'ALTER TABLE return_remarks_master ADD COLUMN is_active TINYINT DEFAULT 1;',
+    'ALTER TABLE return_remarks_master ADD COLUMN warehouse_id INT NULL DEFAULT 1;'
+  ];
+  for (const m of migrations) {
+    try { await dbAsync.exec(m); } catch (e) {}
   }
 }
 
@@ -878,7 +888,7 @@ async function getReturnRemarks(req, res) {
 async function createReturnRemark(req, res) {
   try {
     await ensureReturnRemarksTable();
-    const whId = req.activeWarehouseId || 1;
+    const whId = req.activeWarehouseId ? parseInt(req.activeWarehouseId, 10) : 1;
     let { code, name, remark_name, description, is_active } = req.body;
     const finalName = (name || remark_name || description || '').trim();
     if (!finalName) {
@@ -898,14 +908,24 @@ async function createReturnRemark(req, res) {
       finalCode = `RR-${String(maxNum + 1).padStart(2, '0')}`;
     }
     const activeVal = is_active !== undefined ? (is_active ? 1 : 0) : 1;
-    const result = await dbAsync.run(`
-      INSERT INTO return_remarks_master (code, name, is_active, warehouse_id)
-      VALUES (?, ?, ?, ?)
-    `, [finalCode, finalName, activeVal, whId]);
-    return res.json({ message: 'Return remark created successfully!', id: result.id });
+
+    let result;
+    try {
+      result = await dbAsync.run(`
+        INSERT INTO return_remarks_master (code, name, is_active, warehouse_id)
+        VALUES (?, ?, ?, ?)
+      `, [finalCode, finalName, activeVal, whId]);
+    } catch (e1) {
+      result = await dbAsync.run(`
+        INSERT INTO return_remarks_master (code, name, is_active)
+        VALUES (?, ?, ?)
+      `, [finalCode, finalName, activeVal]);
+    }
+
+    return res.json({ message: 'Return remark created successfully!', id: result?.id || 1 });
   } catch (err) {
     console.error('createReturnRemark error:', err);
-    return res.status(500).json({ message: err.message || 'Error creating return remark.' });
+    return res.status(500).json({ message: err.sqlMessage || err.message || 'Error creating return remark.' });
   }
 }
 
@@ -928,7 +948,7 @@ async function updateReturnRemark(req, res) {
     return res.json({ message: 'Return remark updated successfully!' });
   } catch (err) {
     console.error('updateReturnRemark error:', err);
-    return res.status(500).json({ message: err.message || 'Error updating return remark.' });
+    return res.status(500).json({ message: err.sqlMessage || err.message || 'Error updating return remark.' });
   }
 }
 
@@ -940,7 +960,7 @@ async function deleteReturnRemark(req, res) {
     return res.json({ message: 'Return remark deleted successfully!' });
   } catch (err) {
     console.error('deleteReturnRemark error:', err);
-    return res.status(500).json({ message: 'Error deleting return remark.' });
+    return res.status(500).json({ message: err.sqlMessage || err.message || 'Error deleting return remark.' });
   }
 }
 
@@ -950,8 +970,8 @@ async function ensureArrangeTeamsTable() {
     await dbAsync.exec(`
       CREATE TABLE IF NOT EXISTS arrange_teams_master (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        team_code VARCHAR(100) NOT NULL,
-        team_name VARCHAR(255) NOT NULL,
+        team_code VARCHAR(100) NULL,
+        team_name VARCHAR(255) NULL,
         is_active TINYINT DEFAULT 1,
         warehouse_id INT NULL DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -962,14 +982,24 @@ async function ensureArrangeTeamsTable() {
       await dbAsync.exec(`
         CREATE TABLE IF NOT EXISTS arrange_teams_master (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          team_code TEXT NOT NULL,
-          team_name TEXT NOT NULL,
+          team_code TEXT,
+          team_name TEXT,
           is_active INTEGER DEFAULT 1,
           warehouse_id INTEGER DEFAULT 1,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
       `);
     } catch (e2) {}
+  }
+
+  const migrations = [
+    'ALTER TABLE arrange_teams_master ADD COLUMN team_code VARCHAR(100) NULL;',
+    'ALTER TABLE arrange_teams_master ADD COLUMN team_name VARCHAR(255) NULL;',
+    'ALTER TABLE arrange_teams_master ADD COLUMN is_active TINYINT DEFAULT 1;',
+    'ALTER TABLE arrange_teams_master ADD COLUMN warehouse_id INT NULL DEFAULT 1;'
+  ];
+  for (const m of migrations) {
+    try { await dbAsync.exec(m); } catch (e) {}
   }
 }
 
@@ -990,7 +1020,7 @@ async function getArrangeTeams(req, res) {
 async function createArrangeTeam(req, res) {
   try {
     await ensureArrangeTeamsTable();
-    const whId = req.activeWarehouseId || 1;
+    const whId = req.activeWarehouseId ? parseInt(req.activeWarehouseId, 10) : 1;
     let { team_code, code, team_name, name, is_active } = req.body;
     const finalName = (team_name || name || '').trim();
     if (!finalName) {
@@ -1010,14 +1040,24 @@ async function createArrangeTeam(req, res) {
       finalCode = `TM-${String(maxNum + 1).padStart(2, '0')}`;
     }
     const activeVal = is_active !== undefined ? (is_active ? 1 : 0) : 1;
-    const result = await dbAsync.run(`
-      INSERT INTO arrange_teams_master (team_code, team_name, is_active, warehouse_id)
-      VALUES (?, ?, ?, ?)
-    `, [finalCode, finalName, activeVal, whId]);
-    return res.json({ message: 'Arrange team created successfully!', id: result.id });
+
+    let result;
+    try {
+      result = await dbAsync.run(`
+        INSERT INTO arrange_teams_master (team_code, team_name, is_active, warehouse_id)
+        VALUES (?, ?, ?, ?)
+      `, [finalCode, finalName, activeVal, whId]);
+    } catch (e1) {
+      result = await dbAsync.run(`
+        INSERT INTO arrange_teams_master (team_code, team_name, is_active)
+        VALUES (?, ?, ?)
+      `, [finalCode, finalName, activeVal]);
+    }
+
+    return res.json({ message: 'Arrange team created successfully!', id: result?.id || 1 });
   } catch (err) {
     console.error('createArrangeTeam error:', err);
-    return res.status(500).json({ message: err.message || 'Error creating arrange team.' });
+    return res.status(500).json({ message: err.sqlMessage || err.message || 'Error creating arrange team.' });
   }
 }
 
@@ -1040,7 +1080,7 @@ async function updateArrangeTeam(req, res) {
     return res.json({ message: 'Arrange team updated successfully!' });
   } catch (err) {
     console.error('updateArrangeTeam error:', err);
-    return res.status(500).json({ message: err.message || 'Error updating arrange team.' });
+    return res.status(500).json({ message: err.sqlMessage || err.message || 'Error updating arrange team.' });
   }
 }
 
@@ -1052,7 +1092,7 @@ async function deleteArrangeTeam(req, res) {
     return res.json({ message: 'Arrange team deleted successfully!' });
   } catch (err) {
     console.error('deleteArrangeTeam error:', err);
-    return res.status(500).json({ message: 'Error deleting arrange team.' });
+    return res.status(500).json({ message: err.sqlMessage || err.message || 'Error deleting arrange team.' });
   }
 }
 
