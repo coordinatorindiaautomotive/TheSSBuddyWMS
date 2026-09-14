@@ -15,7 +15,11 @@ import {
   Building2,
   RefreshCw,
   Radio,
-  ArrowRight
+  ArrowRight,
+  Undo2,
+  Boxes,
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import {
   AreaChart,
@@ -71,37 +75,86 @@ export default function Dashboard() {
       title: 'Total Pick Tickets',
       value: kpis?.totalPickTickets || 0,
       subtext: 'Created in system',
-      icon: ClipboardList
+      icon: ClipboardList,
+      link: '/pick-tickets'
     },
     {
       title: 'Pending Picking',
       value: kpis?.pendingPicking || 0,
       subtext: 'Awaiting floor pick',
-      icon: Clock
+      icon: Clock,
+      link: '/pick-tickets'
     },
     {
       title: 'Pending Billing',
       value: kpis?.pendingBilling || 0,
       subtext: 'Picked & awaiting invoice',
-      icon: Receipt
+      icon: Receipt,
+      link: '/billing'
     },
     {
       title: 'Dispatched Orders',
       value: kpis?.dispatchedOrders || 0,
       subtext: 'Manifested & departed',
-      icon: Truck
+      icon: Truck,
+      link: '/dispatch'
     },
     {
       title: 'Total Billed Value',
       value: `₹${(kpis?.totalBilledAmount || 0).toLocaleString('en-IN')}`,
       subtext: 'Invoice revenue',
-      icon: TrendingUp
+      icon: TrendingUp,
+      link: '/billing'
     },
     {
       title: 'Fleet & Logistics',
       value: `${kpis?.activeDrivers || 0} / ${kpis?.totalVehicles || 0}`,
       subtext: 'Drivers & Vehicles',
-      icon: Building2
+      icon: Building2,
+      link: '/masters'
+    }
+  ];
+
+  const inventoryKpis = [
+    {
+      title: 'Return Today',
+      value: kpis?.returnsToday || 0,
+      subtext: 'Materials returned today',
+      icon: Undo2,
+      badgeBg: 'bg-rose-50 text-rose-600',
+      link: '/return/register'
+    },
+    {
+      title: 'Pending DMS',
+      value: kpis?.pendingDmsReturns || 0,
+      subtext: 'Awaiting STR allocation',
+      icon: AlertCircle,
+      badgeBg: 'bg-amber-50 text-amber-600',
+      link: '/return/dms-pending'
+    },
+    {
+      title: 'Arrange Today',
+      value: kpis?.arrangesToday || 0,
+      subtext: 'Floor STI requisitions',
+      icon: Boxes,
+      badgeBg: 'bg-blue-50 text-[#004C8F]',
+      link: '/arrange/register'
+    },
+    {
+      title: 'Pending Pick Ticket',
+      value: kpis?.pendingPickTicketArranges || 0,
+      subtext: 'Requisitions to convert',
+      icon: Sparkles,
+      badgeBg: 'bg-indigo-50 text-indigo-600',
+      link: '/arrange/register'
+    },
+    {
+      title: 'Arrange -> Converted',
+      value: kpis?.arrangeBillingConverted || 0,
+      subtext: 'Fulfillment completed',
+      icon: CheckCircle2,
+      badgeBg: 'bg-emerald-50 text-emerald-600',
+      link: '/arrange/reports'
     }
   ];
 
@@ -112,15 +165,16 @@ export default function Dashboard() {
         {statCards.map((card, idx) => {
           const Icon = card.icon;
           return (
-            <div
+            <Link
+              to={card.link}
               key={idx}
-              className="card-enterprise p-3.5 space-y-2 hover:border-slate-300 transition-colors"
+              className="card-enterprise p-3.5 space-y-2 hover:border-[#003366] hover:shadow-md transition-all cursor-pointer block group"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-[#003366]">
                   {card.title}
                 </span>
-                <div className="p-1.5 rounded-lg bg-slate-100 text-[#004C8F]">
+                <div className="p-1.5 rounded-lg bg-slate-100 text-[#004C8F] group-hover:bg-[#003366] group-hover:text-white transition-colors">
                   <Icon className="w-3.5 h-3.5" />
                 </div>
               </div>
@@ -128,9 +182,50 @@ export default function Dashboard() {
                 <h3 className="text-lg font-bold text-slate-900">{card.value}</h3>
                 <p className="text-[11px] text-slate-400 font-medium">{card.subtext}</p>
               </div>
-            </div>
+            </Link>
           );
         })}
+      </div>
+
+      {/* Inventory & Floor Operations KPI Ribbon */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#003366]"></span>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#003366]">
+              Inventory &amp; Floor Operations Pulse
+            </h4>
+          </div>
+          <span className="text-[11px] text-slate-400 font-semibold">Live Return &amp; Arrange Metrics</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {inventoryKpis.map((card, idx) => {
+            const Icon = card.icon;
+            return (
+              <Link
+                to={card.link}
+                key={idx}
+                className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-white hover:border-[#003366] hover:shadow-sm transition-all block group cursor-pointer"
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">
+                    {card.title}
+                  </span>
+                  <div className={`p-1.5 rounded-lg ${card.badgeBg}`}>
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+                <div className="text-base font-black text-slate-900 group-hover:text-[#003366]">
+                  {card.value}
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                  {card.subtext}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       {/* Analytics Chart & Route Summary Grid */}

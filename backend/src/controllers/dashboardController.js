@@ -42,6 +42,17 @@ async function getStats(req, res) {
     const activeDrivers = await dbAsync.get(`SELECT COUNT(*) as count FROM drivers ${whCondition}`, whParams);
     const totalVehicles = await dbAsync.get(`SELECT COUNT(*) as count FROM vehicles ${whCondition}`, whParams);
 
+    // Return & Arrange Operations KPIs
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const returnsToday = await dbAsync.get(`SELECT COUNT(*) as count FROM returns ${whCondition} AND return_date = ?`, [...whParams, todayStr]);
+    const pendingDmsReturns = await dbAsync.get(`SELECT COUNT(*) as count FROM returns ${whCondition} AND (is_dms_received = 0 OR is_dms_received IS NULL)`, whParams);
+    const totalReturns = await dbAsync.get(`SELECT COUNT(*) as count FROM returns ${whCondition}`, whParams);
+
+    const arrangesToday = await dbAsync.get(`SELECT COUNT(*) as count FROM arranges ${whCondition} AND arrange_date = ?`, [...whParams, todayStr]);
+    const pendingPickTicketArranges = await dbAsync.get(`SELECT COUNT(*) as count FROM arranges ${whCondition} AND pick_ticket_id IS NULL`, whParams);
+    const arrangeBillingConverted = await dbAsync.get(`SELECT COUNT(*) as count FROM arranges ${whCondition} AND (pick_ticket_id IS NOT NULL OR billing_id IS NOT NULL)`, whParams);
+    const totalArranges = await dbAsync.get(`SELECT COUNT(*) as count FROM arranges ${whCondition}`, whParams);
+
     // 2. Route Breakdown (Isolated by active warehouse)
     const routeBreakdown = await dbAsync.all(`
       SELECT 
@@ -100,7 +111,14 @@ async function getStats(req, res) {
         dispatchedOrders: dispatchedOrders.count || 0,
         totalBilledAmount: billedAmount.total || 0,
         activeDrivers: activeDrivers.count || 0,
-        totalVehicles: totalVehicles.count || 0
+        totalVehicles: totalVehicles.count || 0,
+        returnsToday: returnsToday?.count || 0,
+        pendingDmsReturns: pendingDmsReturns?.count || 0,
+        totalReturns: totalReturns?.count || 0,
+        arrangesToday: arrangesToday?.count || 0,
+        pendingPickTicketArranges: pendingPickTicketArranges?.count || 0,
+        arrangeBillingConverted: arrangeBillingConverted?.count || 0,
+        totalArranges: totalArranges?.count || 0
       },
       routeBreakdown,
       recentActivity,

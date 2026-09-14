@@ -4,6 +4,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import SearchableSelect from '../components/SearchableSelect';
 import {
+  Undo2, Boxes,
   Store, MapPin, UserCheck, Briefcase, Truck, Warehouse as WarehouseIcon,
   Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, ToggleLeft, ToggleRight,
   User, Phone, FileText, Route as RouteIcon, ShieldCheck, Lock,
@@ -18,6 +19,8 @@ const TABS = [
   { id: 'vehicle',   label: 'Vehicle Fleet',      icon: Briefcase },
   { id: 'route',     label: 'Route Master',       icon: RouteIcon },
   { id: 'salesman',  label: 'Salesman Master',    icon: User },
+  { id: 'return_remarks', label: 'Return Remarks', icon: Undo2 },
+  { id: 'arrange_teams',  label: 'Arrange Teams',  icon: Boxes },
   { id: 'warehouse', label: 'Warehouse Master',   icon: WarehouseIcon },
   { id: 'user',      label: 'User Accounts',      icon: ShieldCheck },
   { id: 'system',    label: 'Database & Settings',icon: Lock },
@@ -69,6 +72,8 @@ export default function MasterRegistries() {
   const [salesmen,   setSalesmen]   = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [users,      setUsers]      = useState([]);
+  const [returnRemarks, setReturnRemarks] = useState([]);
+  const [arrangeTeams,  setArrangeTeams]  = useState([]);
 
   // Extra form state for user
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -187,6 +192,8 @@ export default function MasterRegistries() {
         axios.get('/api/masters/vehicles'),
         axios.get('/api/masters/routes'),
         axios.get('/api/masters/salesmen'),
+        axios.get('/api/masters/return-remarks'),
+        axios.get('/api/masters/arrange-teams'),
       ];
 
       if (isSuperAdmin) {
@@ -196,7 +203,7 @@ export default function MasterRegistries() {
 
       const results = await Promise.allSettled(promises);
 
-      const [pR, wR, dR, vR, rR, sR] = results;
+      const [pR, wR, dR, vR, rR, sR, rrR, atR] = results;
 
       if (pR.status === 'fulfilled') setParties(Array.isArray(pR.value.data) ? pR.value.data : []);
       if (wR.status === 'fulfilled') setWorkers(Array.isArray(wR.value.data) ? wR.value.data : []);
@@ -204,10 +211,12 @@ export default function MasterRegistries() {
       if (vR.status === 'fulfilled') setVehicles(Array.isArray(vR.value.data) ? vR.value.data : []);
       if (rR.status === 'fulfilled') setRoutes(Array.isArray(rR.value.data) ? rR.value.data : []);
       if (sR.status === 'fulfilled') setSalesmen(Array.isArray(sR.value.data) ? sR.value.data : []);
+      if (rrR && rrR.status === 'fulfilled') setReturnRemarks(Array.isArray(rrR.value.data) ? rrR.value.data : []);
+      if (atR && atR.status === 'fulfilled') setArrangeTeams(Array.isArray(atR.value.data) ? atR.value.data : []);
 
       if (isSuperAdmin) {
-        const whR = results[6];
-        const uR = results[7];
+        const whR = results[8];
+        const uR = results[9];
         if (whR && whR.status === 'fulfilled') setWarehouses(Array.isArray(whR.value.data) ? whR.value.data : []);
         if (uR && uR.status === 'fulfilled') setUsers(Array.isArray(uR.value.data) ? uR.value.data : []);
       }
@@ -332,6 +341,8 @@ export default function MasterRegistries() {
       evening_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     };
     if (activeTab === 'salesman')  return { name:'' };
+    if (activeTab === 'return_remarks') return { code:'', name:'', is_active:true };
+    if (activeTab === 'arrange_teams')  return { team_code:'', team_name:'', is_active:true };
     if (activeTab === 'warehouse') return { warehouse_code:'', warehouse_name:'', prefix_logic:'', contact_person:'', phone:'', email:'', address:'', is_active:true };
     if (activeTab === 'user')      return { full_name:'', email:'', password:'', role_name:'Operator', warehouse_id:'', is_active:true };
     return {};
@@ -362,6 +373,8 @@ export default function MasterRegistries() {
       else if (activeTab === 'vehicle')   await axios.delete(`/api/masters/vehicles/${id}`);
       else if (activeTab === 'route')     await axios.delete(`/api/masters/routes/${id}`);
       else if (activeTab === 'salesman')  await axios.delete(`/api/masters/salesmen/${id}`);
+      else if (activeTab === 'return_remarks') await axios.delete(`/api/masters/return-remarks/${id}`);
+      else if (activeTab === 'arrange_teams')  await axios.delete(`/api/masters/arrange-teams/${id}`);
       else if (activeTab === 'warehouse') await axios.delete(`/api/masters/warehouses/${id}`);
       else if (activeTab === 'user')      await axios.delete(`/api/masters/users/${id}`);
       toast.success('Record deleted successfully!');
@@ -390,6 +403,8 @@ export default function MasterRegistries() {
         else if (activeTab === 'vehicle')   await axios.put(`/api/masters/vehicles/${editingItem.id}`, payload);
         else if (activeTab === 'route')     await axios.put(`/api/masters/routes/${editingItem.id}`, payload);
         else if (activeTab === 'salesman')  await axios.put(`/api/masters/salesmen/${editingItem.id}`, payload);
+        else if (activeTab === 'return_remarks') await axios.put(`/api/masters/return-remarks/${editingItem.id}`, payload);
+        else if (activeTab === 'arrange_teams')  await axios.put(`/api/masters/arrange-teams/${editingItem.id}`, payload);
         else if (activeTab === 'warehouse') await axios.put(`/api/masters/warehouses/${editingItem.id}`, payload);
         else if (activeTab === 'user')      await axios.put(`/api/masters/users/${editingItem.id}`, payload);
         toast.success('Record updated successfully!');
@@ -404,6 +419,8 @@ export default function MasterRegistries() {
         else if (activeTab === 'vehicle')   await axios.post('/api/masters/vehicles', payload);
         else if (activeTab === 'route')     await axios.post('/api/masters/routes', payload);
         else if (activeTab === 'salesman')  await axios.post('/api/masters/salesmen', payload);
+        else if (activeTab === 'return_remarks') await axios.post('/api/masters/return-remarks', payload);
+        else if (activeTab === 'arrange_teams')  await axios.post('/api/masters/arrange-teams', payload);
         else if (activeTab === 'warehouse') await axios.post('/api/masters/warehouses', payload);
         else if (activeTab === 'user')      await axios.post('/api/masters/users', payload);
         toast.success('Record created successfully!');
@@ -647,7 +664,7 @@ export default function MasterRegistries() {
   // ── Counts ──────────────────────────────────────────────────────────────────
   const tabCounts = {
     party: (parties || []).length, worker: (workers || []).length, driver: (drivers || []).length,
-    vehicle: (vehicles || []).length, route: (routes || []).length, salesman: (salesmen || []).length,
+    vehicle: (vehicles || []).length, route: (routes || []).length, salesman: (salesmen || []).length, return_remarks: (returnRemarks || []).length, arrange_teams: (arrangeTeams || []).length,
     warehouse: (warehouses || []).length, user: (users || []).length,
   };
 
@@ -754,6 +771,8 @@ export default function MasterRegistries() {
       case 'vehicle': return '+ ADD VEHICLE';
       case 'route': return '+ ADD ROUTE';
       case 'salesman': return '+ ADD SALESMAN';
+      case 'return_remarks': return '+ ADD RETURN REMARK';
+      case 'arrange_teams': return '+ ADD ARRANGE TEAM';
       case 'warehouse': return '+ ADD WAREHOUSE';
       case 'user': return '+ ADD USER ACCOUNT';
       default: return '+ ADD NEW RECORD';
@@ -1289,6 +1308,103 @@ export default function MasterRegistries() {
             </table>
           </div>
           <PaginationFooter totalItems={filtered(salesmen, ['name']).length} label="salesmen" />
+        </div>
+      )}
+
+      
+      {/* ═══════════════════════════════════════════════════════════════
+          RETURN REMARKS MASTER TABLE
+      ═══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'return_remarks' && (
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-[#003366] border-b-4 border-[#ed1c24] px-6 py-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <Undo2 className="w-4 h-4 text-red-400" /> Return Remarks Master
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Predefined return reasons and quality inspection flags</p>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="bg-emerald-900/40 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg font-bold">
+                {(returnRemarks || []).filter(r => r.is_active).length} Active
+              </span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
+                  <TH>Remark Code</TH>
+                  <TH>Reason / Description</TH>
+                  <TH>Operational Status</TH>
+                  <TH>Management Actions</TH>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  <tr><td colSpan={4} className="text-center py-12 text-slate-400 text-sm font-semibold">Loading return remarks...</td></tr>
+                ) : filtered(returnRemarks, ['code', 'name']).length === 0 ? (
+                  <EmptyTable colSpan={4} message="No return remarks found" />
+                ) : paginate(filtered(returnRemarks, ['code', 'name'])).map(r => (
+                  <tr key={r.id} className="hover:bg-blue-50/40 transition-colors">
+                    <TD><span className="font-mono font-bold text-red-700 bg-red-50 px-2.5 py-1 rounded-lg border border-red-200">{r.code}</span></TD>
+                    <TD><span className="font-bold text-slate-900 text-sm">{r.name}</span></TD>
+                    <TD><StatusBadge active={r.is_active} /></TD>
+                    <TD><ActionBtns item={r} /></TD>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <PaginationFooter totalItems={filtered(returnRemarks, ['code', 'name']).length} label="return remarks" />
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          ARRANGE TEAMS MASTER TABLE
+      ═══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'arrange_teams' && (
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-[#003366] border-b-4 border-[#ed1c24] px-6 py-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <Boxes className="w-4 h-4 text-cyan-400" /> Arrange Teams Master
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Picking and floor arrangement teams (shared with Floor Working module)</p>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="bg-emerald-900/40 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg font-bold">
+                {(arrangeTeams || []).filter(t => t.is_active).length} Active
+              </span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-[#003366] border-b-4 border-[#ed1c24]">
+                  <TH>Team Code</TH>
+                  <TH>Team Name</TH>
+                  <TH>Operational Status</TH>
+                  <TH>Management Actions</TH>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  <tr><td colSpan={4} className="text-center py-12 text-slate-400 text-sm font-semibold">Loading arrange teams...</td></tr>
+                ) : filtered(arrangeTeams, ['team_code', 'team_name']).length === 0 ? (
+                  <EmptyTable colSpan={4} message="No arrange teams found" />
+                ) : paginate(filtered(arrangeTeams, ['team_code', 'team_name'])).map(t => (
+                  <tr key={t.id} className="hover:bg-blue-50/40 transition-colors">
+                    <TD><span className="font-mono font-bold text-cyan-700 bg-cyan-50 px-2.5 py-1 rounded-lg border border-cyan-200">{t.team_code}</span></TD>
+                    <TD><span className="font-bold text-slate-900 text-sm">{t.team_name}</span></TD>
+                    <TD><StatusBadge active={t.is_active} /></TD>
+                    <TD><ActionBtns item={t} /></TD>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <PaginationFooter totalItems={filtered(arrangeTeams, ['team_code', 'team_name']).length} label="arrange teams" />
         </div>
       )}
 
@@ -2170,6 +2286,65 @@ export default function MasterRegistries() {
                   <input value={f('name')} onChange={e => sf('name', e.target.value)} required placeholder="e.g. Rajesh Kumar"
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors" />
                 </div>
+              )}
+
+              
+              {/* ── RETURN REMARKS FORM ── */}
+              {activeTab === 'return_remarks' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Remark Code <span className="text-slate-400 font-normal">(Auto-assigned if left blank)</span>
+                    </label>
+                    <input
+                      value={f('code')}
+                      onChange={e => sf('code', e.target.value.toUpperCase())}
+                      placeholder="e.g. RR-01"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-slate-900 uppercase focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Return Reason / Description <span className="text-red-500 font-bold ml-0.5">*</span>
+                    </label>
+                    <input
+                      value={f('name')}
+                      onChange={e => sf('name', e.target.value)}
+                      required
+                      placeholder="e.g. Customer Return / Damaged Goods"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* ── ARRANGE TEAMS FORM ── */}
+              {activeTab === 'arrange_teams' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Team Code <span className="text-slate-400 font-normal">(Auto-assigned if left blank)</span>
+                    </label>
+                    <input
+                      value={f('team_code')}
+                      onChange={e => sf('team_code', e.target.value.toUpperCase())}
+                      placeholder="e.g. TM-01"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-slate-900 uppercase focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Arrange Team Name <span className="text-red-500 font-bold ml-0.5">*</span>
+                    </label>
+                    <input
+                      value={f('team_name')}
+                      onChange={e => sf('team_name', e.target.value)}
+                      required
+                      placeholder="e.g. Team Alpha - Fast Pick"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:border-[#004c8f] focus:bg-white focus:outline-none transition-colors"
+                    />
+                  </div>
+                </>
               )}
 
               {/* ── WAREHOUSE FORM ── */}

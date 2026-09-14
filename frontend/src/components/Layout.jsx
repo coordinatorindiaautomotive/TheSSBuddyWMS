@@ -24,7 +24,10 @@ import {
   Menu,
   X,
   Radio,
-  Sparkles
+  Sparkles,
+  Undo2,
+  Boxes,
+  AlertCircle
 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 
@@ -63,6 +66,12 @@ export default function Layout({ children }) {
     ...(isSuper ? [{ label: 'CSV Excel Import', path: '/import', icon: Upload, iconColor: 'text-pink-600', badgeBg: 'bg-pink-50' }] : [])
   ];
 
+  const inventoryNav = [
+    { label: 'Material Return', path: '/return/register', rootPath: '/return', icon: Undo2, iconColor: 'text-rose-600', badgeBg: 'bg-rose-50' },
+    { label: 'Pending DMS Queue', path: '/return/dms-pending', rootPath: '/return/dms-pending', icon: AlertCircle, iconColor: 'text-amber-600', badgeBg: 'bg-amber-50' },
+    { label: 'Material Arrange', path: '/arrange/register', rootPath: '/arrange', icon: Boxes, iconColor: 'text-cyan-600', badgeBg: 'bg-cyan-50' }
+  ];
+
   const mastersNav = [
     { label: 'Master Registries', path: '/masters', icon: Layers, iconColor: 'text-cyan-600', badgeBg: 'bg-cyan-50' }
   ];
@@ -84,6 +93,7 @@ export default function Layout({ children }) {
           const Icon = item.icon;
           const isActive =
             location.pathname === item.path ||
+            (item.rootPath && location.pathname.startsWith(item.rootPath) && (item.rootPath === '/return/dms-pending' ? location.pathname === '/return/dms-pending' : location.pathname !== '/return/dms-pending')) ||
             (item.path !== '/' && location.pathname.startsWith(item.path) && item.path !== '/dispatch' && item.path !== '/masters');
 
           return (
@@ -155,6 +165,7 @@ export default function Layout({ children }) {
           {/* Mobile Nav Links */}
           <nav className="p-3 overflow-y-auto max-h-[calc(100vh-170px)]">
             {renderNavSection('Operations', operationsNav, true)}
+            {renderNavSection('Inventory Operations', inventoryNav, true)}
             {renderNavSection('Master Registries', mastersNav, true)}
             {renderNavSection('System Admin', adminNav, true)}
           </nav>
@@ -219,6 +230,7 @@ export default function Layout({ children }) {
           {/* Desktop Scrollable Navigation */}
           <nav className="p-3 overflow-y-auto max-h-[calc(100vh-120px)]">
             {renderNavSection('Operations', operationsNav, false)}
+            {renderNavSection('Inventory Operations', inventoryNav, false)}
             {renderNavSection('Master Registries', mastersNav, false)}
             {renderNavSection('System Admin', adminNav, false)}
           </nav>

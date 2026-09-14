@@ -29,6 +29,8 @@ const mobileApiController = require('./controllers/mobileApiController');
 const auditLogController = require('./controllers/auditLogController');
 const systemSettingsController = require('./controllers/systemSettingsController');
 const ledController = require('./controllers/ledController');
+const returnController = require('./controllers/returnController');
+const arrangeController = require('./controllers/arrangeController');
 
 const app = express();
 const server = http.createServer(app);
@@ -175,6 +177,39 @@ apiRouter.get('/masters/users', requireSuperAdmin, masterController.getUsers);
 apiRouter.post('/masters/users', requireSuperAdmin, masterController.createUser);
 apiRouter.put('/masters/users/:id', requireSuperAdmin, masterController.updateUser);
 apiRouter.delete('/masters/users/:id', requireSuperAdmin, masterController.deleteUser);
+
+// Return Remarks Master API
+apiRouter.get('/masters/return-remarks', masterController.getReturnRemarks);
+apiRouter.post('/masters/return-remarks', masterController.createReturnRemark);
+apiRouter.put('/masters/return-remarks/:id', masterController.updateReturnRemark);
+apiRouter.delete('/masters/return-remarks/:id', masterController.deleteReturnRemark);
+
+// Arrange Teams Master API
+apiRouter.get('/masters/arrange-teams', masterController.getArrangeTeams);
+apiRouter.post('/masters/arrange-teams', masterController.createArrangeTeam);
+apiRouter.put('/masters/arrange-teams/:id', masterController.updateArrangeTeam);
+apiRouter.delete('/masters/arrange-teams/:id', masterController.deleteArrangeTeam);
+
+// Return Operations API
+apiRouter.get('/returns/suggest-next-no', returnController.suggestNextNo);
+apiRouter.get('/returns/reports', returnController.getReturnReports);
+apiRouter.get('/returns/invoices-lookup', returnController.searchInvoices);
+apiRouter.get('/returns', returnController.getReturns);
+apiRouter.get('/returns/:id', returnController.getReturnById);
+apiRouter.post('/returns', returnController.createReturn);
+apiRouter.put('/returns/:id', returnController.updateReturn);
+apiRouter.put('/returns/:id/dms', returnController.markDmsReceived);
+apiRouter.delete('/returns/:id', returnController.deleteReturn);
+
+// Arrange Operations API
+apiRouter.get('/arranges/suggest-next-no', arrangeController.suggestNextNo);
+apiRouter.get('/arranges/reports', arrangeController.getArrangeReports);
+apiRouter.get('/arranges', arrangeController.getArranges);
+apiRouter.get('/arranges/:id', arrangeController.getArrangeById);
+apiRouter.post('/arranges', arrangeController.createArrange);
+apiRouter.put('/arranges/:id', arrangeController.updateArrange);
+apiRouter.post('/arranges/:id/convert-to-pick-ticket', arrangeController.convertToPickTicket);
+apiRouter.delete('/arranges/:id', arrangeController.deleteArrange);
 
 // Bulk Import
 apiRouter.post('/import/upload', requireSuperAdmin, upload.single('file'), importController.importExcel);

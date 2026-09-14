@@ -832,6 +832,156 @@ async function deleteUser(req, res) {
   }
 }
 
+// 8. Return Remarks Master CRUD
+async function getReturnRemarks(req, res) {
+  try {
+    const whId = req.activeWarehouseId || 1;
+    const remarks = await dbAsync.all(`
+      SELECT * FROM return_remarks_master 
+      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM return_remarks_master WHERE warehouse_id = ?))
+      ORDER BY name ASC
+    `, [whId, whId, whId]);
+    return res.json(remarks || []);
+  } catch (err) {
+    console.error('getReturnRemarks error:', err);
+    return res.status(500).json({ message: 'Error fetching return remarks.' });
+  }
+}
+
+async function createReturnRemark(req, res) {
+  try {
+    const whId = req.activeWarehouseId || 1;
+    let { code, name, is_active } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: 'Remark name is required.' });
+    }
+    if (!code || !code.trim()) {
+      const all = await dbAsync.all('SELECT code, id FROM return_remarks_master');
+      let maxNum = 0;
+      (all || []).forEach(r => {
+        const match = String(r.code || '').match(/RR-?(\d+)/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      });
+      code = `RR-${String(maxNum + 1).padStart(2, '0')}`;
+    }
+    const activeVal = is_active !== undefined ? (is_active ? 1 : 0) : 1;
+    const result = await dbAsync.run(`
+      INSERT INTO return_remarks_master (code, name, is_active, warehouse_id)
+      VALUES (?, ?, ?, ?)
+    `, [code.trim(), name.trim(), activeVal, whId]);
+    return res.json({ message: 'Return remark created successfully!', id: result.id });
+  } catch (err) {
+    console.error('createReturnRemark error:', err);
+    return res.status(500).json({ message: 'Error creating return remark.' });
+  }
+}
+
+async function updateReturnRemark(req, res) {
+  try {
+    const { id } = req.params;
+    const { code, name, is_active } = req.body;
+    const activeVal = is_active !== undefined ? (is_active ? 1 : 0) : 1;
+    await dbAsync.run(`
+      UPDATE return_remarks_master
+      SET code = ?, name = ?, is_active = ?
+      WHERE id = ?
+    `, [code, name, activeVal, id]);
+    return res.json({ message: 'Return remark updated successfully!' });
+  } catch (err) {
+    console.error('updateReturnRemark error:', err);
+    return res.status(500).json({ message: 'Error updating return remark.' });
+  }
+}
+
+async function deleteReturnRemark(req, res) {
+  try {
+    const { id } = req.params;
+    await dbAsync.run('DELETE FROM return_remarks_master WHERE id = ?', [id]);
+    return res.json({ message: 'Return remark deleted successfully!' });
+  } catch (err) {
+    console.error('deleteReturnRemark error:', err);
+    return res.status(500).json({ message: 'Error deleting return remark.' });
+  }
+}
+
+// 9. Arrange Teams Master CRUD (Shared with Floor Working)
+async function getArrangeTeams(req, res) {
+  try {
+    const whId = req.activeWarehouseId || 1;
+    const teams = await dbAsync.all(`
+      SELECT * FROM arrange_teams_master 
+      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM arrange_teams_master WHERE warehouse_id = ?))
+      ORDER BY team_name ASC
+    `, [whId, whId, whId]);
+    return res.json(teams || []);
+  } catch (err) {
+    console.error('getArrangeTeams error:', err);
+    return res.status(500).json({ message: 'Error fetching arrange teams.' });
+  }
+}
+
+async function createArrangeTeam(req, res) {
+  try {
+    const whId = req.activeWarehouseId || 1;
+    let { team_code, team_name, is_active } = req.body;
+    if (!team_name || !team_name.trim()) {
+      return res.status(400).json({ message: 'Team name is required.' });
+    }
+    if (!team_code || !team_code.trim()) {
+      const all = await dbAsync.all('SELECT team_code, id FROM arrange_teams_master');
+      let maxNum = 0;
+      (all || []).forEach(t => {
+        const match = String(t.team_code || '').match(/TM-?(\d+)/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      });
+      team_code = `TM-${String(maxNum + 1).padStart(2, '0')}`;
+    }
+    const activeVal = is_active !== undefined ? (is_active ? 1 : 0) : 1;
+    const result = await dbAsync.run(`
+      INSERT INTO arrange_teams_master (team_code, team_name, is_active, warehouse_id)
+      VALUES (?, ?, ?, ?)
+    `, [team_code.trim(), team_name.trim(), activeVal, whId]);
+    return res.json({ message: 'Arrange team created successfully!', id: result.id });
+  } catch (err) {
+    console.error('createArrangeTeam error:', err);
+    return res.status(500).json({ message: 'Error creating arrange team.' });
+  }
+}
+
+async function updateArrangeTeam(req, res) {
+  try {
+    const { id } = req.params;
+    const { team_code, team_name, is_active } = req.body;
+    const activeVal = is_active !== undefined ? (is_active ? 1 : 0) : 1;
+    await dbAsync.run(`
+      UPDATE arrange_teams_master
+      SET team_code = ?, team_name = ?, is_active = ?
+      WHERE id = ?
+    `, [team_code, team_name, activeVal, id]);
+    return res.json({ message: 'Arrange team updated successfully!' });
+  } catch (err) {
+    console.error('updateArrangeTeam error:', err);
+    return res.status(500).json({ message: 'Error updating arrange team.' });
+  }
+}
+
+async function deleteArrangeTeam(req, res) {
+  try {
+    const { id } = req.params;
+    await dbAsync.run('DELETE FROM arrange_teams_master WHERE id = ?', [id]);
+    return res.json({ message: 'Arrange team deleted successfully!' });
+  } catch (err) {
+    console.error('deleteArrangeTeam error:', err);
+    return res.status(500).json({ message: 'Error deleting arrange team.' });
+  }
+}
+
 module.exports = {
   getWarehouses,
   createWarehouse,
@@ -870,5 +1020,15 @@ module.exports = {
   getUsers,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+
+  getReturnRemarks,
+  createReturnRemark,
+  updateReturnRemark,
+  deleteReturnRemark,
+
+  getArrangeTeams,
+  createArrangeTeam,
+  updateArrangeTeam,
+  deleteArrangeTeam
 };

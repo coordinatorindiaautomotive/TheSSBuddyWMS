@@ -23,6 +23,15 @@ import DispatchDetail from './pages/DispatchDetail';
 import Tracking from './pages/Tracking';
 import DeliveryBoard from './pages/DeliveryBoard';
 import LEDDashboard from './pages/LEDDashboard';
+import ReturnEntry from './pages/ReturnEntry';
+import ReturnRegister from './pages/ReturnRegister';
+import DmsPending from './pages/DmsPending';
+import ReturnDetail from './pages/ReturnDetail';
+import ReturnReports from './pages/ReturnReports';
+import ArrangeEntry from './pages/ArrangeEntry';
+import ArrangeRegister from './pages/ArrangeRegister';
+import ArrangeDetail from './pages/ArrangeDetail';
+import ArrangeReports from './pages/ArrangeReports';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -67,6 +76,24 @@ export default function App() {
                             <Route path="/control-tower" element={<LEDDashboard />} />
                             <Route path="/led" element={<LEDDashboard />} />
                             <Route path="/ewaybill" element={<EWayBill />} />
+
+                            {/* Return Module Routes */}
+                            <Route path="/return/new" element={<ReturnEntry />} />
+                            <Route path="/return/edit/:id" element={<ReturnEntry />} />
+                            <Route path="/return/register" element={<ReturnRegister />} />
+                            <Route path="/return/dms-pending" element={<DmsPending />} />
+                            <Route path="/return/view/:id" element={<ReturnDetail />} />
+                            <Route path="/return/reports" element={<ReturnReports />} />
+                            <Route path="/return" element={<Navigate to="/return/register" replace />} />
+
+                            {/* Arrange Module Routes */}
+                            <Route path="/arrange/new" element={<ArrangeEntry />} />
+                            <Route path="/arrange/edit/:id" element={<ArrangeEntry />} />
+                            <Route path="/arrange/register" element={<ArrangeRegister />} />
+                            <Route path="/arrange/view/:id" element={<ArrangeDetail />} />
+                            <Route path="/arrange/reports" element={<ArrangeReports />} />
+                            <Route path="/arrange" element={<Navigate to="/arrange/register" replace />} />
+
                             <Route path="/masters" element={<MasterRegistries />} />
                             <Route path="/parties" element={<MasterRegistries />} />
                             <Route path="/vehicles" element={<MasterRegistries />} />

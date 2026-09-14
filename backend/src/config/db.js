@@ -74,7 +74,7 @@ async function connectMySQL(cfg) {
   console.log(`✅ MySQL Connected successfully! Database: ${cfg.mysql.database} @ ${cfg.mysql.host}:${cfg.mysql.port}`);
 }
 
-function connectSQLite(cfg) {
+async function connectSQLite(cfg) {
   if (!sqlite3) {
     console.warn('⚠️ SQLite3 driver not loaded (native addon missing). Running in Memory Fallback mode until MySQL is configured in UI.');
     isConnected = false;
@@ -86,20 +86,24 @@ function connectSQLite(cfg) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  sqliteDb = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      console.error('⚠️ SQLite Connection Error:', err.message);
-      isConnected = false;
-    } else {
-      console.log(`✅ SQLite Database connected (${path.basename(dbPath)})`);
-      isConnected = true;
-      activeDbType = 'SQLITE';
-    }
-  });
+  return new Promise((resolve, reject) => {
+    sqliteDb = new sqlite3.Database(dbPath, (err) => {
+      if (err) {
+        console.error('⚠️ SQLite Connection Error:', err.message);
+        isConnected = false;
+        reject(err);
+      } else {
+        console.log(`✅ SQLite Database connected (${path.basename(dbPath)})`);
+        isConnected = true;
+        activeDbType = 'SQLITE';
+        resolve();
+      }
+    });
 
-  sqliteDb.on('error', (err) => {
-    console.error('⚠️ SQLite Runtime Error:', err.message);
-    isConnected = false;
+    sqliteDb.on('error', (err) => {
+      console.error('⚠️ SQLite Runtime Error:', err.message);
+      isConnected = false;
+    });
   });
 }
 
@@ -109,7 +113,7 @@ async function ensureConnected() {
     await connectMySQL(cfg);
   } else if (activeDbType === 'SQLITE' && !sqliteDb) {
     const cfg = getDbConfig();
-    connectSQLite(cfg);
+    await connectSQLite(cfg);
   }
 }
 
@@ -189,10 +193,12 @@ async function initDatabase() {
       await connectMySQL(cfg);
     } catch (err) {
       console.error(`⚠️ MySQL Initialization Failed: ${err.message}. Falling back to SQLite temporary store...`);
-      connectSQLite(cfg);
+      try {
+        await connectSQLite(cfg);
+      } catch (e) {}
     }
   } else {
-    connectSQLite(cfg);
+    await connectSQLite(cfg);
   }
 
   if (activeDbType === 'MYSQL' && isConnected) {
@@ -634,6 +640,122 @@ async function initMySQLSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  // 19. Return Remarks Master
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS return_remarks_master (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      code VARCHAR(100) NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      is_active TINYINT DEFAULT 1,
+      warehouse_id INT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  // 20. Arrange Teams Master
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS arrange_teams_master (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      team_code VARCHAR(100) NOT NULL,
+      team_name VARCHAR(255) NOT NULL,
+      is_active TINYINT DEFAULT 1,
+      warehouse_id INT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  // 21. Returns
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS returns (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      return_no VARCHAR(100) UNIQUE NOT NULL,
+      return_date VARCHAR(50) NOT NULL,
+      party_code VARCHAR(100) NOT NULL,
+      party_name VARCHAR(255) NOT NULL,
+      remark_id INT NULL,
+      remark_name VARCHAR(255) NULL,
+      is_dms_received TINYINT DEFAULT 0,
+      str_no VARCHAR(100) NULL,
+      status VARCHAR(50) DEFAULT 'Pending DMS',
+      total_qty INT DEFAULT 0,
+      total_value DECIMAL(15,2) DEFAULT 0,
+      internal_remarks TEXT NULL,
+      attachment_url TEXT NULL,
+      warehouse_id INT NOT NULL,
+      created_by VARCHAR(100) DEFAULT 'System',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NULL,
+      INDEX idx_ret_wh (warehouse_id),
+      INDEX idx_ret_no (return_no),
+      INDEX idx_ret_party (party_code),
+      INDEX idx_ret_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  // 22. Return Items
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS return_items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      return_id INT NOT NULL,
+      part_no VARCHAR(100) NOT NULL,
+      part_name VARCHAR(255) NOT NULL,
+      reference_invoice_no VARCHAR(100) NULL,
+      qty INT NOT NULL DEFAULT 1,
+      rate DECIMAL(15,2) DEFAULT 0,
+      value DECIMAL(15,2) DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (return_id) REFERENCES returns(id) ON DELETE CASCADE,
+      INDEX idx_ret_items_parent (return_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  // 23. Arranges
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS arranges (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      arrange_no VARCHAR(100) UNIQUE NOT NULL,
+      arrange_date VARCHAR(50) NOT NULL,
+      sti_no VARCHAR(100) NOT NULL,
+      str_no VARCHAR(100) NOT NULL,
+      arrange_by_team_id INT NULL,
+      arrange_by_team_name VARCHAR(255) NULL,
+      arrange_for VARCHAR(50) NOT NULL DEFAULT 'Party',
+      destination_code VARCHAR(100) NULL,
+      destination_name VARCHAR(255) NULL,
+      status VARCHAR(50) DEFAULT 'Created',
+      pick_ticket_id INT NULL,
+      pick_ticket_no VARCHAR(100) NULL,
+      billing_id INT NULL,
+      billing_no VARCHAR(100) NULL,
+      total_qty INT DEFAULT 0,
+      remarks TEXT NULL,
+      warehouse_id INT NOT NULL,
+      created_by VARCHAR(100) DEFAULT 'System',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NULL,
+      INDEX idx_arr_wh (warehouse_id),
+      INDEX idx_arr_no (arrange_no),
+      INDEX idx_arr_sti (sti_no),
+      INDEX idx_arr_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  // 24. Arrange Items
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS arrange_items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      arrange_id INT NOT NULL,
+      part_no VARCHAR(100) NOT NULL,
+      part_name VARCHAR(255) NOT NULL,
+      required_qty INT NOT NULL DEFAULT 1,
+      available_qty INT DEFAULT 0,
+      remarks VARCHAR(255) NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (arrange_id) REFERENCES arranges(id) ON DELETE CASCADE,
+      INDEX idx_arr_items_parent (arrange_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
 }
 
 async function initSQLiteSchema() {
@@ -986,6 +1108,112 @@ async function initSQLiteSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // 19. Return Remarks Master
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS return_remarks_master (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      warehouse_id INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // 20. Arrange Teams Master
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS arrange_teams_master (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      team_code TEXT NOT NULL,
+      team_name TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      warehouse_id INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // 21. Returns
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS returns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      return_no TEXT UNIQUE NOT NULL,
+      return_date TEXT NOT NULL,
+      party_code TEXT NOT NULL,
+      party_name TEXT NOT NULL,
+      remark_id INTEGER,
+      remark_name TEXT,
+      is_dms_received INTEGER DEFAULT 0,
+      str_no TEXT,
+      status TEXT DEFAULT 'Pending DMS',
+      total_qty INTEGER DEFAULT 0,
+      total_value REAL DEFAULT 0,
+      internal_remarks TEXT,
+      attachment_url TEXT,
+      warehouse_id INTEGER NOT NULL,
+      created_by TEXT DEFAULT 'System',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME
+    );
+  `);
+
+  // 22. Return Items
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS return_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      return_id INTEGER NOT NULL,
+      part_no TEXT NOT NULL,
+      part_name TEXT NOT NULL,
+      reference_invoice_no TEXT,
+      qty INTEGER NOT NULL DEFAULT 1,
+      rate REAL DEFAULT 0,
+      value REAL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (return_id) REFERENCES returns (id) ON DELETE CASCADE
+    );
+  `);
+
+  // 23. Arranges
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS arranges (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      arrange_no TEXT UNIQUE NOT NULL,
+      arrange_date TEXT NOT NULL,
+      sti_no TEXT NOT NULL,
+      str_no TEXT NOT NULL,
+      arrange_by_team_id INTEGER,
+      arrange_by_team_name TEXT,
+      arrange_for TEXT NOT NULL DEFAULT 'Party',
+      destination_code TEXT,
+      destination_name TEXT,
+      status TEXT DEFAULT 'Created',
+      pick_ticket_id INTEGER,
+      pick_ticket_no TEXT,
+      billing_id INTEGER,
+      billing_no TEXT,
+      total_qty INTEGER DEFAULT 0,
+      remarks TEXT,
+      warehouse_id INTEGER NOT NULL,
+      created_by TEXT DEFAULT 'System',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME
+    );
+  `);
+
+  // 24. Arrange Items
+  await dbAsync.exec(`
+    CREATE TABLE IF NOT EXISTS arrange_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      arrange_id INTEGER NOT NULL,
+      part_no TEXT NOT NULL,
+      part_name TEXT NOT NULL,
+      required_qty INTEGER NOT NULL DEFAULT 1,
+      available_qty INTEGER DEFAULT 0,
+      remarks TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (arrange_id) REFERENCES arranges (id) ON DELETE CASCADE
+    );
+  `);
 }
 
 async function ensureDefaultSeed() {
@@ -1007,6 +1235,44 @@ async function ensureDefaultSeed() {
       `, ['admin', 'admin@thessbuddy.com', pwdHash, 'System Super Admin', whId]);
 
       console.log('✅ Default SuperAdmin created: (Username: admin / Password: admin123)');
+    }
+
+    // Seed default Return Remarks if empty
+    const existingReturnRemarks = await dbAsync.get('SELECT id FROM return_remarks_master LIMIT 1');
+    if (!existingReturnRemarks) {
+      const defaultRemarks = [
+        { code: 'RR-01', name: 'Customer Return / Excess Order' },
+        { code: 'RR-02', name: 'Damaged in Transit' },
+        { code: 'RR-03', name: 'Defective / Quality Issue' },
+        { code: 'RR-04', name: 'Wrong Part Dispatched' },
+        { code: 'RR-05', name: 'DMS Stock Reconciliation' },
+        { code: 'RR-06', name: 'Party Order Cancelled' }
+      ];
+      for (const r of defaultRemarks) {
+        await dbAsync.run(`
+          INSERT INTO return_remarks_master (code, name, is_active, warehouse_id)
+          VALUES (?, ?, 1, 1)
+        `, [r.code, r.name]);
+      }
+      console.log('✅ Default Return Remarks seeded.');
+    }
+
+    // Seed default Arrange Teams if empty
+    const existingArrangeTeams = await dbAsync.get('SELECT id FROM arrange_teams_master LIMIT 1');
+    if (!existingArrangeTeams) {
+      const defaultTeams = [
+        { code: 'TM-01', name: 'Team Alpha - Fast Pick' },
+        { code: 'TM-02', name: 'Team Bravo - Bulk Arrangement' },
+        { code: 'TM-03', name: 'Team Charlie - Retail Fulfillment' },
+        { code: 'TM-04', name: 'Team Delta - Stock Replenishment' }
+      ];
+      for (const t of defaultTeams) {
+        await dbAsync.run(`
+          INSERT INTO arrange_teams_master (team_code, team_name, is_active, warehouse_id)
+          VALUES (?, ?, 1, 1)
+        `, [t.code, t.name]);
+      }
+      console.log('✅ Default Arrange Teams seeded.');
     }
 
     // Seed default route schedules if routes exist but have no schedules
