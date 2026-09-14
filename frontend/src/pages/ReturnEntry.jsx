@@ -23,7 +23,9 @@ import {
   ArrowRight,
   Upload,
   CheckCircle2,
-  Receipt
+  Receipt,
+  Sparkles,
+  Search
 } from 'lucide-react';
 
 export default function ReturnEntry() {
@@ -41,12 +43,14 @@ export default function ReturnEntry() {
 
   // Form State
   const [returnNo, setReturnNo] = useState('');
+  const [refInvoiceNo, setRefInvoiceNo] = useState('');
+  const [selectedInvoiceMeta, setSelectedInvoiceMeta] = useState(null);
   const [returnDate, setReturnDate] = useState(new Date().toISOString().slice(0, 10));
   const [partyCode, setPartyCode] = useState('');
   const [partyName, setPartyName] = useState('');
   const [remarkId, setRemarkId] = useState('');
   const [remarkName, setRemarkName] = useState('');
-  const [isDmsReceived, setIsDmsReceived] = useState(0); // 0 = No (Pending DMS), 1 = Yes
+  const [isDmsReceived, setIsDmsReceived] = useState(0); // 0 = No (Pending DMS), 1 = Yes (DMS Received)
   const [strNo, setStrNo] = useState('');
   const [internalRemarks, setInternalRemarks] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
@@ -72,6 +76,8 @@ export default function ReturnEntry() {
   useEffect(() => {
     if (partyCode) {
       fetchPartyInvoices(partyCode);
+    } else {
+      setInvoicesList([]);
     }
   }, [partyCode]);
 
@@ -92,7 +98,12 @@ export default function ReturnEntry() {
     try {
       const res = await axios.get('/api/returns/suggest-next-no');
       if (res.data?.suggestedNo) {
-        setReturnNo(res.data.suggestedNo);
+        const nextNo = res.data.suggestedNo;
+        setReturnNo(nextNo);
+        // Automatically set DMS Received to YES when Return No is populated
+        if (nextNo && nextNo.trim().length > 0) {
+          setIsDmsReceived(1);
+        }
       }
     } catch (err) {
       console.error('Error getting return no:', err);
@@ -114,6 +125,7 @@ export default function ReturnEntry() {
       const res = await axios.get(`/api/returns/${retId}`);
       const ret = res.data;
       setReturnNo(ret.return_no || '');
+      setRefInvoiceNo(ret.ref_invoice_no || '');
       setReturnDate(ret.return_date || new Date().toISOString().slice(0, 10));
       setPartyCode(ret.party_code || '');
       setPartyName(ret.party_name || '');
@@ -130,7 +142,7 @@ export default function ReturnEntry() {
             id: idx + 1,
             part_no: it.part_no || '',
             part_name: it.part_name || '',
-            reference_invoice_no: it.reference_invoice_no || '',
+            reference_invoice_no: it.reference_invoice_no || ret.ref_invoice_no || '',
             qty: it.qty || 1,
             rate: it.rate || 0,
             value: it.value || (it.qty * it.rate)
@@ -144,6 +156,16 @@ export default function ReturnEntry() {
     }
   };
 
+  // Reactive Return No change: typing/entering Return No sets DMS Received to YES
+  const handleReturnNoChange = (val) => {
+    setReturnNo(val);
+    if (val && val.trim().length > 0) {
+      setIsDmsReceived(1);
+    } else {
+      setIsDmsReceived(0);
+    }
+  };
+
   const handlePartyChange = (val) => {
     setPartyCode(val);
     const selected = parties.find((p) => p.party_code === val);
@@ -151,6 +173,25 @@ export default function ReturnEntry() {
       setPartyName(selected.party_name);
     } else {
       setPartyName('');
+    }
+    // Clear previously selected ref invoice when party changes
+    setRefInvoiceNo('');
+    setSelectedInvoiceMeta(null);
+  };
+
+  const handleRefInvoiceSelect = (val) => {
+    setRefInvoiceNo(val);
+    const invMeta = invoicesList.find((i) => i.bill_no === val);
+    setSelectedInvoiceMeta(invMeta || null);
+
+    // Auto default ref invoice in part item rows where empty
+    if (val) {
+      setItems((prev) =>
+        prev.map((it) => ({
+          ...it,
+          reference_invoice_no: it.reference_invoice_no || val
+        }))
+      );
     }
   };
 
@@ -179,7 +220,7 @@ export default function ReturnEntry() {
   const addItemRow = () => {
     setItems([
       ...items,
-      { id: Date.now(), part_no: '', part_name: '', reference_invoice_no: '', qty: 1, rate: 0, value: 0 }
+      { id: Date.now(), part_no: '', part_name: '', reference_invoice_no: refInvoiceNo || '', qty: 1, rate: 0, value: 0 }
     ]);
   };
 
@@ -195,6 +236,8 @@ export default function ReturnEntry() {
   const handleReset = () => {
     if (!isEdit) {
       fetchNextReturnNo();
+      setRefInvoiceNo('');
+      setSelectedInvoiceMeta(null);
       setPartyCode('');
       setPartyName('');
       setRemarkId('');
@@ -214,7 +257,17 @@ export default function ReturnEntry() {
     e.preventDefault();
 
     if (!partyCode) {
-      toast.show('Please select a valid Party.', 'warning');
+      toast.show('Please select a valid Customer Party from Party Master.', 'warning');
+      return;
+    }
+
+    if (!refInvoiceNo || !refInvoiceNo.trim()) {
+      toast.show('Ref Invoice / Invoice Bill No * is required (against which return is processed).', 'warning');
+      return;
+    }
+
+    if (!returnNo || !returnNo.trim()) {
+      toast.show('Return No * is mandatory.', 'warning');
       return;
     }
 
@@ -231,7 +284,8 @@ export default function ReturnEntry() {
 
     setLoading(true);
     const payload = {
-      return_no: returnNo,
+      return_no: returnNo.trim(),
+      ref_invoice_no: refInvoiceNo.trim(),
       return_date: returnDate,
       party_code: partyCode,
       party_name: partyName,
@@ -245,7 +299,7 @@ export default function ReturnEntry() {
       items: items.map((it) => ({
         part_no: it.part_no.trim(),
         part_name: it.part_name.trim(),
-        reference_invoice_no: it.reference_invoice_no ? it.reference_invoice_no.trim() : null,
+        reference_invoice_no: it.reference_invoice_no ? it.reference_invoice_no.trim() : refInvoiceNo.trim(),
         qty: parseInt(it.qty, 10) || 1,
         rate: parseFloat(it.rate) || 0,
         value: parseFloat(it.value) || 0
@@ -307,34 +361,59 @@ export default function ReturnEntry() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Section 1: Header & Party Metadata */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Layers className="w-4 h-4 text-[#004C8F]" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#003366]">
-              1. Return Header &amp; Customer Details
-            </h3>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#004C8F]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#003366]">
+                1. Return Header &amp; Customer Details
+              </h3>
+            </div>
+            {isDmsReceived === 1 ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> DMS Received: YES
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600" /> DMS Received: NO (Pending)
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Auto Return No */}
+            {/* Return No (Editable & triggers DMS Received = YES on entry) */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                Return No <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase">
+                  Return No <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={fetchNextReturnNo}
+                  className="text-[10px] font-bold text-[#004C8F] hover:underline flex items-center gap-0.5 cursor-pointer"
+                  title="Auto generate next sequence number"
+                >
+                  <Sparkles className="w-3 h-3" /> Auto
+                </button>
+              </div>
               <div className="relative">
                 <Hash className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   type="text"
                   required
-                  readOnly
+                  placeholder="e.g. RET-20260914-0001 or DMS-RET-101"
                   value={returnNo}
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-[#003366]"
+                  onChange={(e) => handleReturnNoChange(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-[#003366] focus:ring-2 focus:ring-[#003366] focus:border-[#003366] focus:outline-hidden"
                 />
               </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Entering Return No automatically activates <strong className="text-emerald-700">DMS Received: YES</strong>
+              </p>
             </div>
 
             {/* Return Date */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                 Return Date <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -344,39 +423,109 @@ export default function ReturnEntry() {
                   required
                   value={returnDate}
                   onChange={(e) => setReturnDate(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-[#003366] focus:outline-hidden"
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-[#003366] focus:outline-hidden"
                 />
               </div>
             </div>
 
-            {/* Party Selection (SearchableSelect) */}
+            {/* Customer Party Selection (From Party Master under Master Registries) */}
             <div className="sm:col-span-2">
-              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                Select Customer Party <span className="text-red-500">*</span>
+              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                Select Customer Party <span className="text-red-500">*</span> <span className="text-[10px] font-normal text-slate-500">(from Party Master)</span>
               </label>
               <SearchableSelect
                 value={partyCode}
                 onChange={handlePartyChange}
-                placeholder="Search and select party by code or name..."
+                placeholder="Search party by name or code..."
+                searchPlaceholder="Type customer party name or code..."
                 options={parties.map((p) => ({
                   value: p.party_code,
                   label: `${p.party_name} (${p.party_code})`,
-                  subtext: `Route: ${p.route_name || 'Direct'} | City: ${p.city || '—'}`
+                  sublabel: `Route: ${p.route_name || 'Direct'} • City: ${p.city || '—'}`,
+                  badge: p.party_code
                 }))}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+            {/* Ref Invoice - (Jiske Against return honi hai) like in billing module as Invoice Bill No * */}
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                Ref Invoice (Invoice Bill No) <span className="text-red-500">*</span>{' '}
+                <span className="text-[10px] font-normal text-slate-500">
+                  (Against which return is processed)
+                </span>
+              </label>
+              <div className="relative">
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <Receipt className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 z-10" />
+                    <input
+                      type="text"
+                      list="party-invoices-master-list"
+                      required
+                      placeholder={
+                        partyCode
+                          ? invoicesList.length > 0
+                            ? 'Select or type Invoice / Bill No (e.g. RS/2026/012)...'
+                            : 'Enter Ref Invoice Bill No...'
+                          : 'Select Customer Party first...'
+                      }
+                      value={refInvoiceNo}
+                      onChange={(e) => handleRefInvoiceSelect(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-[#003366] focus:ring-2 focus:ring-[#003366] focus:outline-hidden"
+                    />
+                    <datalist id="party-invoices-master-list">
+                      {invoicesList.map((inv, i) => (
+                        <option key={i} value={inv.bill_no}>
+                          {`${inv.bill_no} — ₹${Number(inv.invoice_amount || 0).toLocaleString('en-IN')} (${inv.billing_date || 'Date N/A'})`}
+                        </option>
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoice helper hint / badge */}
+              {selectedInvoiceMeta ? (
+                <div className="mt-1.5 flex items-center gap-2 text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>
+                    Matched Invoice: <strong>{selectedInvoiceMeta.bill_no}</strong> • Value: ₹{Number(selectedInvoiceMeta.invoice_amount || 0).toLocaleString('en-IN')} • Date: {selectedInvoiceMeta.billing_date}
+                  </span>
+                </div>
+              ) : invoicesList.length > 0 ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+                  <span className="font-semibold text-slate-600">Recent Invoices for Party:</span>
+                  {invoicesList.slice(0, 3).map((inv, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleRefInvoiceSelect(inv.bill_no)}
+                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono font-bold transition-colors cursor-pointer"
+                    >
+                      {inv.bill_no} (₹{inv.invoice_amount})
+                    </button>
+                  ))}
+                </div>
+              ) : partyCode ? (
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Type the original Invoice / Bill Number if not listed in recent dispatches.
+                </p>
+              ) : null}
+            </div>
+
             {/* Return Reason Master Dropdown */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                 Return Reason / Remark <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
                 value={remarkId}
                 onChange={handleRemarkChange}
                 placeholder="Select Return Reason..."
+                searchPlaceholder="Search return reason..."
                 options={remarksList.map((r) => ({
                   value: String(r.id),
                   label: `${r.name} (${r.code})`
@@ -384,16 +533,40 @@ export default function ReturnEntry() {
               />
             </div>
 
-            {/* DMS Flag Segmented Radio */}
+            {/* STR Number */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                DMS Allocation Status <span className="text-red-500">*</span>
+              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                DMS / STR Number{' '}
+                {isDmsReceived === 1 ? (
+                  <span className="text-red-500 font-bold">* (Mandatory)</span>
+                ) : (
+                  <span className="text-slate-400 font-normal">(Optional)</span>
+                )}
               </label>
-              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+              <input
+                type="text"
+                placeholder={isDmsReceived === 1 ? 'Enter mandatory STR No...' : 'STR No. if available...'}
+                required={isDmsReceived === 1}
+                value={strNo}
+                onChange={(e) => setStrNo(e.target.value)}
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold focus:ring-2 focus:ring-[#003366] focus:outline-hidden ${
+                  isDmsReceived === 1
+                    ? 'bg-amber-50/60 border border-amber-300 text-amber-900 placeholder:text-amber-400 font-mono'
+                    : 'bg-white border border-slate-300 text-slate-800'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* DMS Allocation Status Toggle Segment */}
+          <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-600">DMS Allocation Mode:</span>
+              <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsDmsReceived(0)}
-                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                  className={`py-1 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isDmsReceived === 0
                       ? 'bg-white text-amber-700 shadow-xs border border-amber-300'
                       : 'text-slate-600 hover:text-slate-900'
@@ -404,7 +577,7 @@ export default function ReturnEntry() {
                 <button
                   type="button"
                   onClick={() => setIsDmsReceived(1)}
-                  className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                  className={`py-1 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isDmsReceived === 1
                       ? 'bg-[#003366] text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -415,23 +588,11 @@ export default function ReturnEntry() {
               </div>
             </div>
 
-            {/* Conditional Mandatory STR No */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                DMS / STR Number {isDmsReceived === 1 ? <span className="text-red-500">* (Mandatory)</span> : <span className="text-slate-400 font-normal">(Optional)</span>}
-              </label>
-              <input
-                type="text"
-                placeholder={isDmsReceived === 1 ? "Enter mandatory STR No..." : "STR No. if available..."}
-                required={isDmsReceived === 1}
-                value={strNo}
-                onChange={(e) => setStrNo(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold focus:ring-2 focus:ring-[#003366] focus:outline-hidden ${
-                  isDmsReceived === 1
-                    ? 'bg-amber-50/60 border border-amber-300 text-amber-900 placeholder:text-amber-400'
-                    : 'bg-white border border-slate-200 text-slate-800'
-                }`}
-              />
+            <div className="text-[11px] text-slate-500">
+              Current Flow:{' '}
+              <strong className={isDmsReceived === 1 ? 'text-emerald-700' : 'text-amber-700'}>
+                {isDmsReceived === 1 ? 'Direct DMS Received Record' : 'Pending DMS Reconciliation Queue'}
+              </strong>
             </div>
           </div>
         </div>
@@ -496,19 +657,12 @@ export default function ReturnEntry() {
                     <td className="p-2.5">
                       <input
                         type="text"
-                        list={`invoices-list-${idx}`}
+                        list="party-invoices-master-list"
                         placeholder="e.g. INV-2026-0881"
                         value={row.reference_invoice_no}
                         onChange={(e) => handleItemChange(idx, 'reference_invoice_no', e.target.value)}
                         className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-mono text-slate-700 focus:border-[#003366] focus:outline-hidden"
                       />
-                      <datalist id={`invoices-list-${idx}`}>
-                        {invoicesList.map((inv, i) => (
-                          <option key={i} value={inv.bill_no}>
-                            {`${inv.bill_no} - ₹${inv.invoice_amount} (${inv.billing_date})`}
-                          </option>
-                        ))}
-                      </datalist>
                     </td>
                     <td className="p-2.5 text-right">
                       <input

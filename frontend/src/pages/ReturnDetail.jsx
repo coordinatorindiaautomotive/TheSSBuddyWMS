@@ -131,6 +131,9 @@ export default function ReturnDetail() {
             <div className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">Customer / Party Details:</div>
             <div className="font-black text-sm text-slate-900">{data.party_name}</div>
             <div className="text-slate-600 font-mono">Party Code: {data.party_code}</div>
+            <div className="text-slate-700">
+              Ref Invoice: <span className="font-mono font-bold text-[#003366] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">{data.ref_invoice_no || 'N/A'}</span>
+            </div>
             <div className="text-slate-600">Return Reason: <span className="font-bold text-slate-800">{data.remark_name || 'Standard Return'}</span></div>
           </div>
 

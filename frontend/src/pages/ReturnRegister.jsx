@@ -338,6 +338,7 @@ export default function ReturnRegister() {
             <thead className="bg-[#003366] text-white font-extrabold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="p-3">Return No</th>
+                <th className="p-3">Ref Invoice</th>
                 <th className="p-3">Date</th>
                 <th className="p-3 min-w-[180px]">Customer Party</th>
                 <th className="p-3">Reason / Remark</th>
@@ -352,14 +353,14 @@ export default function ReturnRegister() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-slate-400 font-bold">
+                  <td colSpan={11} className="p-8 text-center text-slate-400 font-bold">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[#003366]" />
                     Loading Return records...
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-slate-400 font-medium">
+                  <td colSpan={11} className="p-8 text-center text-slate-400 font-medium">
                     No return entries found matching your criteria.
                   </td>
                 </tr>
@@ -370,6 +371,15 @@ export default function ReturnRegister() {
                       <Link to={`/return/view/${r.id}`} className="hover:underline">
                         {r.return_no}
                       </Link>
+                    </td>
+                    <td className="p-3 font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
+                      {r.ref_invoice_no ? (
+                        <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-800 border border-slate-200">
+                          {r.ref_invoice_no}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-normal">—</span>
+                      )}
                     </td>
                     <td className="p-3 text-slate-600 font-medium whitespace-nowrap">{r.return_date}</td>
                     <td className="p-3">

@@ -670,6 +670,7 @@ async function initMySQLSchema() {
     CREATE TABLE IF NOT EXISTS returns (
       id INT AUTO_INCREMENT PRIMARY KEY,
       return_no VARCHAR(100) UNIQUE NOT NULL,
+      ref_invoice_no VARCHAR(100) NULL,
       return_date VARCHAR(50) NOT NULL,
       party_code VARCHAR(100) NOT NULL,
       party_name VARCHAR(255) NOT NULL,
@@ -692,6 +693,10 @@ async function initMySQLSchema() {
       INDEX idx_ret_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  try {
+    await dbAsync.exec('ALTER TABLE returns ADD COLUMN ref_invoice_no VARCHAR(100) NULL;');
+  } catch (e) {}
 
   // 22. Return Items
   await dbAsync.exec(`
@@ -1138,6 +1143,7 @@ async function initSQLiteSchema() {
     CREATE TABLE IF NOT EXISTS returns (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       return_no TEXT UNIQUE NOT NULL,
+      ref_invoice_no TEXT,
       return_date TEXT NOT NULL,
       party_code TEXT NOT NULL,
       party_name TEXT NOT NULL,
@@ -1156,6 +1162,10 @@ async function initSQLiteSchema() {
       updated_at DATETIME
     );
   `);
+
+  try {
+    await dbAsync.exec('ALTER TABLE returns ADD COLUMN ref_invoice_no TEXT;');
+  } catch (e) {}
 
   // 22. Return Items
   await dbAsync.exec(`

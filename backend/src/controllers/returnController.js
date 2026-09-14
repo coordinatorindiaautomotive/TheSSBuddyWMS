@@ -55,8 +55,8 @@ async function getReturns(req, res) {
 
     if (search && search.trim()) {
       const s = `%${search.trim()}%`;
-      whereClause += ' AND (r.return_no LIKE ? OR r.party_name LIKE ? OR r.party_code LIKE ? OR r.str_no LIKE ? OR r.remark_name LIKE ?)';
-      params.push(s, s, s, s, s);
+      whereClause += ' AND (r.return_no LIKE ? OR r.ref_invoice_no LIKE ? OR r.party_name LIKE ? OR r.party_code LIKE ? OR r.str_no LIKE ? OR r.remark_name LIKE ?)';
+      params.push(s, s, s, s, s, s);
     }
 
     if (party && party.trim()) {
@@ -142,6 +142,7 @@ async function createReturn(req, res) {
 
     let {
       return_no,
+      ref_invoice_no,
       return_date,
       party_code,
       party_name,
@@ -201,7 +202,7 @@ async function createReturn(req, res) {
       return {
         part_no: (it.part_no || '').trim(),
         part_name: (it.part_name || '').trim(),
-        reference_invoice_no: (it.reference_invoice_no || '').trim(),
+        reference_invoice_no: (it.reference_invoice_no || ref_invoice_no || '').trim(),
         qty: q,
         rate: r,
         value: val
@@ -212,13 +213,14 @@ async function createReturn(req, res) {
 
     const result = await dbAsync.run(`
       INSERT INTO returns (
-        return_no, return_date, party_code, party_name,
+        return_no, ref_invoice_no, return_date, party_code, party_name,
         remark_id, remark_name, is_dms_received, str_no,
         status, total_qty, total_value, internal_remarks,
         attachment_url, warehouse_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       return_no.trim(),
+      ref_invoice_no ? ref_invoice_no.trim() : null,
       retDate,
       party_code.trim(),
       party_name.trim(),
@@ -282,6 +284,7 @@ async function updateReturn(req, res) {
 
     let {
       return_no,
+      ref_invoice_no,
       return_date,
       party_code,
       party_name,
@@ -325,7 +328,7 @@ async function updateReturn(req, res) {
           id,
           (it.part_no || '').trim(),
           (it.part_name || '').trim(),
-          (it.reference_invoice_no || '').trim(),
+          (it.reference_invoice_no || ref_invoice_no || '').trim(),
           q,
           r,
           val
@@ -339,6 +342,7 @@ async function updateReturn(req, res) {
       UPDATE returns
       SET 
         return_no = ?,
+        ref_invoice_no = ?,
         return_date = ?,
         party_code = ?,
         party_name = ?,
@@ -355,6 +359,7 @@ async function updateReturn(req, res) {
       WHERE id = ?
     `, [
       return_no || existing.return_no,
+      ref_invoice_no !== undefined ? ref_invoice_no : existing.ref_invoice_no,
       return_date || existing.return_date,
       party_code || existing.party_code,
       party_name || existing.party_name,
