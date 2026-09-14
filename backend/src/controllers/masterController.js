@@ -838,9 +838,8 @@ async function getReturnRemarks(req, res) {
     const whId = req.activeWarehouseId || 1;
     const remarks = await dbAsync.all(`
       SELECT * FROM return_remarks_master 
-      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM return_remarks_master WHERE warehouse_id = ?))
-      ORDER BY name ASC
-    `, [whId, whId, whId]);
+      ORDER BY id ASC
+    `);
     return res.json(remarks || []);
   } catch (err) {
     console.error('getReturnRemarks error:', err);
@@ -851,11 +850,13 @@ async function getReturnRemarks(req, res) {
 async function createReturnRemark(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    let { code, name, is_active } = req.body;
-    if (!name || !name.trim()) {
-      return res.status(400).json({ message: 'Remark name is required.' });
+    let { code, name, remark_name, description, is_active } = req.body;
+    const finalName = (name || remark_name || description || '').trim();
+    if (!finalName) {
+      return res.status(400).json({ message: 'Return remark name/description is required.' });
     }
-    if (!code || !code.trim()) {
+    let finalCode = (code || '').trim();
+    if (!finalCode) {
       const all = await dbAsync.all('SELECT code, id FROM return_remarks_master');
       let maxNum = 0;
       (all || []).forEach(r => {
@@ -865,34 +866,39 @@ async function createReturnRemark(req, res) {
           if (num > maxNum) maxNum = num;
         }
       });
-      code = `RR-${String(maxNum + 1).padStart(2, '0')}`;
+      finalCode = `RR-${String(maxNum + 1).padStart(2, '0')}`;
     }
     const activeVal = is_active !== undefined ? (is_active ? 1 : 0) : 1;
     const result = await dbAsync.run(`
       INSERT INTO return_remarks_master (code, name, is_active, warehouse_id)
       VALUES (?, ?, ?, ?)
-    `, [code.trim(), name.trim(), activeVal, whId]);
+    `, [finalCode, finalName, activeVal, whId]);
     return res.json({ message: 'Return remark created successfully!', id: result.id });
   } catch (err) {
     console.error('createReturnRemark error:', err);
-    return res.status(500).json({ message: 'Error creating return remark.' });
+    return res.status(500).json({ message: err.message || 'Error creating return remark.' });
   }
 }
 
 async function updateReturnRemark(req, res) {
   try {
     const { id } = req.params;
-    const { code, name, is_active } = req.body;
+    let { code, name, remark_name, description, is_active } = req.body;
+    const finalName = (name || remark_name || description || '').trim();
+    let finalCode = (code || '').trim();
+    if (!finalCode) {
+      finalCode = `RR-${String(id).padStart(2, '0')}`;
+    }
     const activeVal = is_active !== undefined ? (is_active ? 1 : 0) : 1;
     await dbAsync.run(`
       UPDATE return_remarks_master
       SET code = ?, name = ?, is_active = ?
       WHERE id = ?
-    `, [code, name, activeVal, id]);
+    `, [finalCode, finalName, activeVal, id]);
     return res.json({ message: 'Return remark updated successfully!' });
   } catch (err) {
     console.error('updateReturnRemark error:', err);
-    return res.status(500).json({ message: 'Error updating return remark.' });
+    return res.status(500).json({ message: err.message || 'Error updating return remark.' });
   }
 }
 
@@ -913,9 +919,8 @@ async function getArrangeTeams(req, res) {
     const whId = req.activeWarehouseId || 1;
     const teams = await dbAsync.all(`
       SELECT * FROM arrange_teams_master 
-      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM arrange_teams_master WHERE warehouse_id = ?))
-      ORDER BY team_name ASC
-    `, [whId, whId, whId]);
+      ORDER BY id ASC
+    `);
     return res.json(teams || []);
   } catch (err) {
     console.error('getArrangeTeams error:', err);
@@ -926,11 +931,13 @@ async function getArrangeTeams(req, res) {
 async function createArrangeTeam(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    let { team_code, team_name, is_active } = req.body;
-    if (!team_name || !team_name.trim()) {
+    let { team_code, code, team_name, name, is_active } = req.body;
+    const finalName = (team_name || name || '').trim();
+    if (!finalName) {
       return res.status(400).json({ message: 'Team name is required.' });
     }
-    if (!team_code || !team_code.trim()) {
+    let finalCode = (team_code || code || '').trim();
+    if (!finalCode) {
       const all = await dbAsync.all('SELECT team_code, id FROM arrange_teams_master');
       let maxNum = 0;
       (all || []).forEach(t => {
@@ -940,34 +947,39 @@ async function createArrangeTeam(req, res) {
           if (num > maxNum) maxNum = num;
         }
       });
-      team_code = `TM-${String(maxNum + 1).padStart(2, '0')}`;
+      finalCode = `TM-${String(maxNum + 1).padStart(2, '0')}`;
     }
     const activeVal = is_active !== undefined ? (is_active ? 1 : 0) : 1;
     const result = await dbAsync.run(`
       INSERT INTO arrange_teams_master (team_code, team_name, is_active, warehouse_id)
       VALUES (?, ?, ?, ?)
-    `, [team_code.trim(), team_name.trim(), activeVal, whId]);
+    `, [finalCode, finalName, activeVal, whId]);
     return res.json({ message: 'Arrange team created successfully!', id: result.id });
   } catch (err) {
     console.error('createArrangeTeam error:', err);
-    return res.status(500).json({ message: 'Error creating arrange team.' });
+    return res.status(500).json({ message: err.message || 'Error creating arrange team.' });
   }
 }
 
 async function updateArrangeTeam(req, res) {
   try {
     const { id } = req.params;
-    const { team_code, team_name, is_active } = req.body;
+    let { team_code, code, team_name, name, is_active } = req.body;
+    const finalName = (team_name || name || '').trim();
+    let finalCode = (team_code || code || '').trim();
+    if (!finalCode) {
+      finalCode = `TM-${String(id).padStart(2, '0')}`;
+    }
     const activeVal = is_active !== undefined ? (is_active ? 1 : 0) : 1;
     await dbAsync.run(`
       UPDATE arrange_teams_master
       SET team_code = ?, team_name = ?, is_active = ?
       WHERE id = ?
-    `, [team_code, team_name, activeVal, id]);
+    `, [finalCode, finalName, activeVal, id]);
     return res.json({ message: 'Arrange team updated successfully!' });
   } catch (err) {
     console.error('updateArrangeTeam error:', err);
-    return res.status(500).json({ message: 'Error updating arrange team.' });
+    return res.status(500).json({ message: err.message || 'Error updating arrange team.' });
   }
 }
 

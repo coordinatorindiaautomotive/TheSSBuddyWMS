@@ -255,11 +255,41 @@ export default function MasterRegistries() {
     return `RT-${String(maxNum + 1).padStart(2, '0')}`;
   };
 
+  const getNextReturnRemarkCode = () => {
+    if (!Array.isArray(returnRemarks) || returnRemarks.length === 0) return 'RR-01';
+    let maxNum = 0;
+    returnRemarks.forEach(r => {
+      const code = r?.code || `RR-${r?.id || 1}`;
+      const match = String(code).match(/RR-?(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    });
+    return `RR-${String(maxNum + 1).padStart(2, '0')}`;
+  };
+
+  const getNextArrangeTeamCode = () => {
+    if (!Array.isArray(arrangeTeams) || arrangeTeams.length === 0) return 'TM-01';
+    let maxNum = 0;
+    arrangeTeams.forEach(t => {
+      const code = t?.team_code || t?.code || `TM-${t?.id || 1}`;
+      const match = String(code).match(/TM-?(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    });
+    return `TM-${String(maxNum + 1).padStart(2, '0')}`;
+  };
+
   const openAdd  = () => { 
     setEditingItem(null); 
     const df = defaultForm();
     if (activeTab === 'worker') df.employee_code = getNextWorkerCode();
     if (activeTab === 'route') df.route_code = getNextRouteCode();
+    if (activeTab === 'return_remarks') df.code = getNextReturnRemarkCode();
+    if (activeTab === 'arrange_teams') df.team_code = getNextArrangeTeamCode();
     setForm(df); 
     setConfirmPassword(''); 
     setShowModal(true); 
@@ -341,8 +371,8 @@ export default function MasterRegistries() {
       evening_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     };
     if (activeTab === 'salesman')  return { name:'' };
-    if (activeTab === 'return_remarks') return { code:'', name:'', is_active:true };
-    if (activeTab === 'arrange_teams')  return { team_code:'', team_name:'', is_active:true };
+    if (activeTab === 'return_remarks') return { code: getNextReturnRemarkCode(), name:'', is_active:true };
+    if (activeTab === 'arrange_teams')  return { team_code: getNextArrangeTeamCode(), team_name:'', is_active:true };
     if (activeTab === 'warehouse') return { warehouse_code:'', warehouse_name:'', prefix_logic:'', contact_person:'', phone:'', email:'', address:'', is_active:true };
     if (activeTab === 'user')      return { full_name:'', email:'', password:'', role_name:'Operator', warehouse_id:'', is_active:true };
     return {};
@@ -351,12 +381,14 @@ export default function MasterRegistries() {
   const handleToggleStatus = async (item) => {
     try {
       const newStatus = !item.is_active;
-      if (activeTab === 'party')     await axios.put(`/api/parties/${item.id}`, { ...item, is_active: newStatus });
-      if (activeTab === 'worker')    await axios.put(`/api/masters/workers/${item.id}`, { ...item, is_active: newStatus });
-      if (activeTab === 'driver')    await axios.put(`/api/masters/drivers/${item.id}`, { ...item, is_active: newStatus });
-      if (activeTab === 'vehicle')   await axios.put(`/api/masters/vehicles/${item.id}`, { ...item, is_active: newStatus });
-      if (activeTab === 'warehouse') await axios.put(`/api/masters/warehouses/${item.id}`, { ...item, is_active: newStatus });
-      if (activeTab === 'user')      await axios.put(`/api/masters/users/${item.id}`, { ...item, is_active: newStatus });
+      if (activeTab === 'party')          await axios.put(`/api/parties/${item.id}`, { ...item, is_active: newStatus });
+      else if (activeTab === 'worker')    await axios.put(`/api/masters/workers/${item.id}`, { ...item, is_active: newStatus });
+      else if (activeTab === 'driver')    await axios.put(`/api/masters/drivers/${item.id}`, { ...item, is_active: newStatus });
+      else if (activeTab === 'vehicle')   await axios.put(`/api/masters/vehicles/${item.id}`, { ...item, is_active: newStatus });
+      else if (activeTab === 'return_remarks') await axios.put(`/api/masters/return-remarks/${item.id}`, { ...item, is_active: newStatus });
+      else if (activeTab === 'arrange_teams')  await axios.put(`/api/masters/arrange-teams/${item.id}`, { ...item, is_active: newStatus });
+      else if (activeTab === 'warehouse') await axios.put(`/api/masters/warehouses/${item.id}`, { ...item, is_active: newStatus });
+      else if (activeTab === 'user')      await axios.put(`/api/masters/users/${item.id}`, { ...item, is_active: newStatus });
       toast.success('Record status updated!');
       fetchAll();
     } catch { toast.error('Error toggling status.'); }
@@ -1802,14 +1834,16 @@ export default function MasterRegistries() {
             <div className="bg-[#003366] border-b-4 border-[#ed1c24] px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#004c8f] flex items-center justify-center shadow shrink-0">
-                  {activeTab === 'party'     && <Store className="w-5 h-5 text-white" />}
-                  {activeTab === 'worker'    && <UserCheck className="w-5 h-5 text-white" />}
-                  {activeTab === 'driver'    && <Truck className="w-5 h-5 text-white" />}
-                  {activeTab === 'vehicle'   && <Briefcase className="w-5 h-5 text-white" />}
-                  {activeTab === 'route'     && <RouteIcon className="w-5 h-5 text-white" />}
-                  {activeTab === 'salesman'  && <User className="w-5 h-5 text-white" />}
-                  {activeTab === 'warehouse' && <WarehouseIcon className="w-5 h-5 text-white" />}
-                  {activeTab === 'user'      && <ShieldCheck className="w-5 h-5 text-white" />}
+                  {activeTab === 'party'          && <Store className="w-5 h-5 text-white" />}
+                  {activeTab === 'worker'         && <UserCheck className="w-5 h-5 text-white" />}
+                  {activeTab === 'driver'         && <Truck className="w-5 h-5 text-white" />}
+                  {activeTab === 'vehicle'        && <Briefcase className="w-5 h-5 text-white" />}
+                  {activeTab === 'route'          && <RouteIcon className="w-5 h-5 text-white" />}
+                  {activeTab === 'salesman'       && <User className="w-5 h-5 text-white" />}
+                  {activeTab === 'return_remarks' && <Undo2 className="w-5 h-5 text-white" />}
+                  {activeTab === 'arrange_teams'  && <Boxes className="w-5 h-5 text-white" />}
+                  {activeTab === 'warehouse'      && <WarehouseIcon className="w-5 h-5 text-white" />}
+                  {activeTab === 'user'           && <ShieldCheck className="w-5 h-5 text-white" />}
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight">

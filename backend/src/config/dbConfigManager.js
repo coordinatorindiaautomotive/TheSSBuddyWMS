@@ -30,10 +30,12 @@ try { sqlite3 = require('sqlite3').verbose(); } catch (e) {}
 let PgClient = null;
 try { PgClient = require('pg').Client; } catch (e) {}
 
+const configPath = path.join(__dirname, '../../config.json');
+
 function getConfig() {
   let fileConfig = {};
   const possibleConfigPaths = [
-    path.join(__dirname, '../../config.json'),
+    configPath,
     path.join(__dirname, '../../../config.json'),
     path.join(process.cwd(), 'config.json'),
     path.join(process.cwd(), 'backend/config.json'),
