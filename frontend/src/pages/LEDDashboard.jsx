@@ -28,7 +28,13 @@ import {
   Calendar,
   AlertTriangle,
   FileText,
-  Check
+  Check,
+  Sparkles,
+  Package,
+  Activity,
+  ArrowUpRight,
+  Timer,
+  ChevronRight
 } from 'lucide-react';
 
 export default function LEDDashboard() {
@@ -60,7 +66,7 @@ export default function LEDDashboard() {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 12;
 
   // Real-time Clock (IST)
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -321,7 +327,7 @@ export default function LEDDashboard() {
   }, [rawTickets, selectedRoute, selectedRouteObj, selectedSlot, selectedStage, searchTerm]);
 
   // Filtered Set KPIs
-  const filteredCartons = filteredTickets.reduce((sum, t) => sum + (t.cartons || 1), 0);
+  const filteredCartons = filteredTickets.reduce((sum, t) => sum + (Number(t.cartons) || 1), 0);
   const filteredTotal = filteredTickets.length;
   const filteredPending = filteredTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;
   const filteredPicking = filteredTickets.filter(t => t.current_stage === 'Picking').length;
@@ -335,7 +341,7 @@ export default function LEDDashboard() {
   const morningCycles = data?.morningDispatch?.cycles || [];
   const eveningCycles = data?.eveningDispatch?.cycles || [];
 
-  // Accurate Shift Dispatch Cards Calculation
+  // Accurate Shift Dispatch Cards Calculation (Progress clamped 0-100%)
   const shiftCards = useMemo(() => {
     if (selectedRoute === 'ALL') {
       const allMorningTickets = rawTickets.filter(t => String(t.dispatch_slot || 'Morning').toLowerCase() === 'morning');
@@ -345,36 +351,38 @@ export default function LEDDashboard() {
       const mPending = allMorningTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;
       const mReady = allMorningTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length;
       const mDispatched = allMorningTickets.filter(t => t.current_stage === 'Dispatched').length;
-      const mProgress = mTotal > 0 ? Math.round(((mReady + mDispatched) / mTotal) * 100) : 100;
+      const mCalculated = mTotal > 0 ? Math.round(((mReady + mDispatched) / mTotal) * 100) : 100;
+      const mProgress = Math.min(100, Math.max(0, mCalculated));
 
       const eTotal = allEveningTickets.length;
       const ePending = allEveningTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;
       const eReady = allEveningTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length;
       const eDispatched = allEveningTickets.filter(t => t.current_stage === 'Dispatched').length;
-      const eProgress = eTotal > 0 ? Math.round(((eReady + eDispatched) / eTotal) * 100) : 100;
+      const eCalculated = eTotal > 0 ? Math.round(((eReady + eDispatched) / eTotal) * 100) : 100;
+      const eProgress = Math.min(100, Math.max(0, eCalculated));
 
       return [
         {
           id: 'morning_all',
           title: 'Morning Shift Dispatch',
-          subtitle: 'All Routes (Morning)',
+          subtitle: 'All Routes',
           slot: 'Morning',
           cutoff: '08:00 AM',
           dispatch: '10:00 AM',
-          status: mPending > 0 ? 'In Progress' : 'Completed',
-          statusColor: mPending > 0 ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200',
+          status: mPending > 0 ? 'In Progress' : 'Ready / Complete',
+          statusColor: mPending > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200',
           progress: mProgress,
           metrics: { total: mTotal, pending: mPending, ready: mReady, dispatched: mDispatched }
         },
         {
           id: 'evening_all',
           title: 'Evening Shift Dispatch',
-          subtitle: 'All Routes (Evening)',
+          subtitle: 'All Routes',
           slot: 'Evening',
           cutoff: '04:00 PM',
           dispatch: '06:00 PM',
-          status: ePending > 0 ? 'In Progress' : (eTotal > 0 ? 'Completed' : 'Upcoming'),
-          statusColor: ePending > 0 ? 'bg-indigo-50 text-indigo-800 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200',
+          status: ePending > 0 ? 'In Progress' : (eTotal > 0 ? 'Completed' : 'Scheduled'),
+          statusColor: ePending > 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200',
           progress: eProgress,
           metrics: { total: eTotal, pending: ePending, ready: eReady, dispatched: eDispatched }
         }
@@ -399,14 +407,16 @@ export default function LEDDashboard() {
     const mPending = mTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;
     const mReady = mTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length;
     const mDispatched = mTickets.filter(t => t.current_stage === 'Dispatched').length;
-    const mProgress = mTotal > 0 ? Math.round(((mReady + mDispatched) / mTotal) * 100) : 100;
+    const mCalculated = mTotal > 0 ? Math.round(((mReady + mDispatched) / mTotal) * 100) : 100;
+    const mProgress = Math.min(100, Math.max(0, mCalculated));
 
     const eTickets = routeTickets.filter(t => String(t.dispatch_slot || '').toLowerCase() === 'evening');
     const eTotal = eTickets.length;
     const ePending = eTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;
     const eReady = eTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length;
     const eDispatched = eTickets.filter(t => t.current_stage === 'Dispatched').length;
-    const eProgress = eTotal > 0 ? Math.round(((eReady + eDispatched) / eTotal) * 100) : 100;
+    const eCalculated = eTotal > 0 ? Math.round(((eReady + eDispatched) / eTotal) * 100) : 100;
+    const eProgress = Math.min(100, Math.max(0, eCalculated));
 
     if (rMorningCycle || mTotal > 0 || (!rEveningCycle && eTotal === 0)) {
       cards.push({
@@ -417,7 +427,7 @@ export default function LEDDashboard() {
         cutoff: rMorningCycle?.cutoff_time_formatted || '08:00 AM',
         dispatch: rMorningCycle?.dispatch_time_formatted || '10:00 AM',
         status: rMorningCycle?.status || (mPending > 0 ? 'In Progress' : 'Ready'),
-        statusColor: mPending > 0 ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        statusColor: mPending > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200',
         progress: mProgress,
         metrics: { total: mTotal, pending: mPending, ready: mReady, dispatched: mDispatched }
       });
@@ -431,8 +441,8 @@ export default function LEDDashboard() {
         slot: 'Evening',
         cutoff: rEveningCycle?.cutoff_time_formatted || '04:00 PM',
         dispatch: rEveningCycle?.dispatch_time_formatted || '06:00 PM',
-        status: rEveningCycle?.status || (ePending > 0 ? 'In Progress' : 'Upcoming'),
-        statusColor: ePending > 0 ? 'bg-indigo-50 text-indigo-800 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200',
+        status: rEveningCycle?.status || (ePending > 0 ? 'In Progress' : 'Scheduled'),
+        statusColor: ePending > 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200',
         progress: eProgress,
         metrics: { total: eTotal, pending: ePending, ready: eReady, dispatched: eDispatched }
       });
@@ -442,106 +452,113 @@ export default function LEDDashboard() {
   }, [selectedRoute, selectedRouteObj, rawTickets, morningCycles, eveningCycles]);
 
   // Pagination for table
-  const cappedTickets = (filteredTickets || []).slice(0, 100);
+  const cappedTickets = (filteredTickets || []).slice(0, 150);
   const totalPages = Math.ceil(cappedTickets.length / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, cappedTickets.length);
   const paginatedTickets = cappedTickets.slice(startIndex, startIndex + pageSize);
 
   return (
-    <div ref={containerRef} className="space-y-3 w-full max-w-full overflow-x-hidden">
+    <div ref={containerRef} className="space-y-4 w-full max-w-full overflow-x-hidden font-sans pb-6">
       
-      {/* ── Top Header Row with Right-Top Route Dropdown & Controls ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        
-        {/* Left: Brand Title & Live Pulse */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-[#003366] flex items-center justify-center text-white shadow-xs shrink-0">
-            <RouteIcon className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight whitespace-nowrap">
-                Dispatch Control Panel
-              </h1>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> LIVE SYNC
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
-              Route readiness, shift dispatch schedules &amp; fulfillment queue.
-            </p>
-          </div>
-        </div>
-
-        {/* Right-Top: Prominent Route Dropdown & Essential Status Tools */}
-        <div className="flex flex-wrap items-center gap-2 shrink-0 ml-auto">
+      {/* ── TOP CONTROL HEADER (Glassmorphism & Crisp Accents) ── */}
+      <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5">
           
-          {/* Route Selector Dropdown (Right Top) */}
-          <div className="w-52 sm:w-60 md:w-64 min-w-[190px]">
-            <SearchableSelect
-              value={selectedRoute}
-              onChange={(e) => {
-                setSelectedRoute(e.target.value);
-                setCurrentPage(1);
-              }}
-              options={routeSelectOptions}
-              placeholder="-- Select Delivery Route --"
-              searchPlaceholder="Search Route..."
-              className="bg-slate-50 border-indigo-200 font-extrabold text-xs text-slate-900 shadow-2xs"
-              minSearchItems={5}
-            />
+          {/* Left: Brand / Title & Status Pill */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#002855] to-[#004c8f] flex items-center justify-center text-white shadow-md shadow-blue-900/10 shrink-0">
+              <RouteIcon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                  Dispatch Control Panel
+                </h1>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                  LIVE SYNC
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                  <Timer className="w-3 h-3 text-amber-600" />
+                  {totalSystemPending} Total Pending
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium hidden sm:block mt-0.5">
+                Real-time route readiness, shift dispatch schedules &amp; fulfillment queue
+              </p>
+            </div>
           </div>
 
-          {/* Active Warehouse Badge */}
-          <div className="px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-[#004c8f] font-extrabold text-[11px] uppercase flex items-center gap-1 shrink-0">
-            <Building2 className="w-3.5 h-3.5 text-[#004c8f]" />
-            <span>{activeWarehouse ? (activeWarehouse.warehouse_code || activeWarehouse.warehouse_name) : 'WH-MAIN'}</span>
+          {/* Right: Route Dropdown, Warehouse, Clock & Fast Actions */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            
+            {/* Route Selector Dropdown */}
+            <div className="w-full sm:w-64 min-w-[200px]">
+              <SearchableSelect
+                value={selectedRoute}
+                onChange={(e) => {
+                  setSelectedRoute(e.target.value);
+                  setCurrentPage(1);
+                }}
+                options={routeSelectOptions}
+                placeholder="-- Select Delivery Route --"
+                searchPlaceholder="Search Route..."
+                className="bg-slate-50/80 border-slate-300 font-bold text-xs text-slate-900 rounded-xl shadow-2xs hover:border-[#004c8f] transition-all"
+                minSearchItems={5}
+              />
+            </div>
+
+            {/* Warehouse Badge */}
+            <div className="px-3 py-1.5 rounded-xl bg-slate-100/80 border border-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 shrink-0 shadow-2xs">
+              <Building2 className="w-3.5 h-3.5 text-[#004c8f]" />
+              <span>{activeWarehouse ? (activeWarehouse.warehouse_code || activeWarehouse.warehouse_name) : 'WH-MAIN'}</span>
+            </div>
+
+            {/* Real-time IST Digital Clock */}
+            <div className="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-mono font-bold text-xs flex items-center gap-1.5 shrink-0 shadow-sm border border-slate-800">
+              <Clock className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
+            </div>
+
+            {/* Refresh Button with Countdown */}
+            <button
+              type="button"
+              onClick={() => fetchDashboard()}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#003366] to-[#004c8f] hover:from-[#002244] hover:to-[#003366] active:scale-95 text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0"
+              title="Refresh Live Data"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">({refreshCountdown}s)</span>
+            </button>
+
+            {/* Fullscreen TV Mode Toggle */}
+            <button
+              type="button"
+              onClick={toggleFullScreen}
+              className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 cursor-pointer transition-all shadow-2xs shrink-0 active:scale-95"
+              title={isFullScreen ? 'Exit Full Screen' : 'Full Screen View'}
+            >
+              {isFullScreen ? <Minimize2 className="w-3.5 h-3.5 text-indigo-600" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
           </div>
-
-          {/* Real-time IST Digital Clock */}
-          <div className="px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-mono font-bold text-xs flex items-center gap-1 shrink-0 shadow-2xs">
-            <Clock className="w-3.5 h-3.5 text-slate-500" />
-            <span>{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
-          </div>
-
-          {/* Refresh Button */}
-          <button
-            type="button"
-            onClick={() => fetchDashboard()}
-            className="px-2.5 py-1.5 rounded-xl bg-[#003366] hover:bg-[#002244] active:scale-95 text-white font-extrabold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer shrink-0"
-            title="Refresh Live Data"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden lg:inline">({refreshCountdown}s)</span>
-          </button>
-
-          {/* Fullscreen TV Mode */}
-          <button
-            type="button"
-            onClick={toggleFullScreen}
-            className="p-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 cursor-pointer transition-colors shadow-2xs shrink-0"
-            title={isFullScreen ? 'Exit Full Screen' : 'Full Screen View'}
-          >
-            {isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-          </button>
         </div>
       </div>
 
-      {/* ── Filter & Search Toolbar (100% Fully Responsive) ─────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-3.5 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
+      {/* ── FILTER & SEARCH TOOLBAR (Clean Segmented Tabs & Responsive Search) ── */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-3 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         
-        {/* Left Group: Shift Selector & Stage Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Left: Shift & Stage Filter Groups */}
+        <div className="flex flex-wrap items-center gap-2.5">
           
           {/* Shift Slot Selector */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 shrink-0">
+          <div className="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0">
             <button
               type="button"
               onClick={() => { setSelectedSlot('ALL'); setCurrentPage(1); }}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 selectedSlot === 'ALL'
-                  ? 'bg-[#003366] text-white shadow-xs'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -550,70 +567,73 @@ export default function LEDDashboard() {
             <button
               type="button"
               onClick={() => { setSelectedSlot('Morning'); setCurrentPage(1); }}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                 selectedSlot === 'Morning'
                   ? 'bg-amber-500 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Sun className="w-3 h-3 text-amber-500" /> Morning
+              <Sun className="w-3 h-3 text-amber-200" /> Morning
             </button>
             <button
               type="button"
               onClick={() => { setSelectedSlot('Evening'); setCurrentPage(1); }}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                 selectedSlot === 'Evening'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Moon className="w-3 h-3 text-indigo-400" /> Evening
+              <Moon className="w-3 h-3 text-indigo-200" /> Evening
             </button>
           </div>
 
           {/* Quick Stage Tabs */}
-          <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+          <div className="inline-flex flex-wrap items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 gap-1">
             {[
               { id: 'ALL', label: 'All' },
-              { id: 'Pending', label: `Pending (${filteredPending})` },
-              { id: 'Picking', label: `Picking (${filteredPicking})` },
-              { id: 'Ready', label: `Ready (${filteredReady})` },
-              { id: 'Dispatched', label: `Dispatched (${filteredDispatched})` }
+              { id: 'Pending', label: `Pending (${filteredPending})`, dot: 'bg-rose-500' },
+              { id: 'Picking', label: `Picking (${filteredPicking})`, dot: 'bg-amber-500' },
+              { id: 'Ready', label: `Ready (${filteredReady})`, dot: 'bg-emerald-500' },
+              { id: 'Dispatched', label: `Dispatched (${filteredDispatched})`, dot: 'bg-purple-500' }
             ].map(st => (
               <button
                 key={st.id}
                 type="button"
                 onClick={() => { setSelectedStage(st.id); setCurrentPage(1); }}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap inline-flex items-center gap-1.5 ${
                   selectedStage === st.id
                     ? 'bg-[#003366] text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
+                {st.dot && selectedStage !== st.id && (
+                  <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`}></span>
+                )}
                 {st.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Right Group: Search Box & Route Summary */}
-        <div className="flex flex-wrap items-center gap-2 ml-auto w-full sm:w-auto">
+        {/* Right: Search Box & Context Tag */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
           
           {/* Quick Search */}
-          <div className="relative flex-1 sm:w-56 md:w-64 min-w-[160px]">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+          <div className="relative flex-1 md:w-64 min-w-[180px]">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder="Ticket No, Party, PO..."
+              placeholder="Search Ticket, Party, PO..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-8 pr-6 py-1.5 text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#004c8f] focus:outline-none shadow-2xs"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-7 py-1.5 text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#004c8f] focus:ring-1 focus:ring-[#004c8f] focus:outline-none transition-all shadow-2xs"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2 top-2 text-slate-400 hover:text-slate-700 text-xs font-bold cursor-pointer"
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 text-xs font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -621,186 +641,230 @@ export default function LEDDashboard() {
           </div>
 
           {/* Active Context Chip */}
-          <div className="text-[11px] text-slate-500 font-semibold hidden md:flex items-center gap-1.5 shrink-0 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
-            <span>Viewing:</span>
+          <div className="text-[11px] text-slate-600 font-semibold hidden lg:inline-flex items-center gap-2 shrink-0 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+            <span className="text-slate-400 uppercase font-black text-[10px]">Active Route:</span>
             <span className="font-extrabold text-[#003366]">
               {selectedRouteObj ? selectedRouteObj.route_name : 'ALL ROUTES'}
             </span>
-            <span>•</span>
+            <span className="text-slate-300">|</span>
             <span className="font-bold text-slate-800">{filteredTotal} Tickets ({filteredCartons} Ctn)</span>
           </div>
         </div>
       </div>
 
-      {/* ── Next Dispatch Live Banner ─────────────────────────────── */}
+      {/* ── NEXT UPCOMING DISPATCH BANNER (Modern SaaS Hero Strip) ── */}
       {nextDispatch && (
-        <div className="bg-white border-l-4 border-l-[#003366] border border-slate-200 rounded-2xl px-4 py-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#004c8f] shrink-0">
-              <Flame className="w-4 h-4 text-amber-500" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-700">Next Upcoming Dispatch:</span>
-                <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#004c8f] font-black text-xs border border-blue-200">
-                  {nextDispatch.route_name} ({nextDispatch.slot})
-                </span>
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
-                  nextDispatch.is_delayed ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-800 border border-amber-200'
-                }`}>
-                  {nextDispatch.status}
-                </span>
+        <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-[#002855] to-slate-900 rounded-2xl p-4 text-white shadow-md border border-slate-800">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <Flame className="w-5 h-5 text-amber-400 animate-pulse" />
               </div>
-              <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 font-medium mt-0.5">
-                <span>Cutoff: <strong className="text-slate-800 font-bold">{nextDispatch.cutoff_time_formatted}</strong></span>
-                <span>•</span>
-                <span>Dispatch: <strong className="text-slate-800 font-bold">{nextDispatch.dispatch_time_formatted}</strong></span>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
+                    Next Upcoming Dispatch:
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-lg bg-white/10 text-cyan-300 font-black text-xs border border-white/15 backdrop-blur-xs">
+                    {nextDispatch.route_name} ({nextDispatch.slot})
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
+                    nextDispatch.is_delayed ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  }`}>
+                    {nextDispatch.status}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-300 flex flex-wrap items-center gap-3 font-medium mt-1">
+                  <span>Cutoff: <strong className="text-white font-bold">{nextDispatch.cutoff_time_formatted}</strong></span>
+                  <span className="text-slate-500">•</span>
+                  <span>Dispatch: <strong className="text-white font-bold">{nextDispatch.dispatch_time_formatted}</strong></span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-3 ml-auto">
-            <div className="text-right">
-              <div className="text-[10px] text-slate-400 font-black uppercase">Time Remaining</div>
-              <div className={`text-sm sm:text-base font-mono font-black ${nextDispatch.is_delayed ? 'text-red-600' : 'text-emerald-700'}`}>
-                {nextDispatch.time_remaining}
+            <div className="flex items-center gap-4 justify-between md:justify-end border-t md:border-t-0 border-white/10 pt-3 md:pt-0">
+              <div className="text-left md:text-right">
+                <div className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Time Remaining</div>
+                <div className={`text-base sm:text-lg font-mono font-black ${nextDispatch.is_delayed ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {nextDispatch.time_remaining || 'On Schedule'}
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => navigate('/dispatch-planning')}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs inline-flex items-center gap-1.5 cursor-pointer transition-all shadow-md active:scale-95"
+              >
+                <span>Plan Trip</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/dispatch-planning')}
-              className="px-3.5 py-1.5 rounded-xl bg-[#003366] hover:bg-[#002244] text-white font-extrabold text-xs flex items-center gap-1 cursor-pointer transition-all shadow-xs"
-            >
-              <span>Plan Trip</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
       )}
 
-      {/* ── Shift Readiness & Dispatch Cards (Accurate & Dynamic) ───── */}
-      <div className={`grid grid-cols-1 ${shiftCards.length > 1 ? 'md:grid-cols-2' : ''} gap-3`}>
-        {shiftCards.map((card) => (
-          <div key={card.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3 relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
-                  card.slot === 'Morning' ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-indigo-50 text-indigo-600 border border-indigo-200'
-                }`}>
-                  {card.slot === 'Morning' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      {/* ── SHIFT READINESS & DISPATCH CARDS (Premium Grid Layout) ── */}
+      <div className={`grid grid-cols-1 ${shiftCards.length > 1 ? 'lg:grid-cols-2' : ''} gap-4`}>
+        {shiftCards.map((card) => {
+          const isMorning = card.slot === 'Morning';
+          return (
+            <div
+              key={card.id}
+              className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all space-y-4 relative overflow-hidden"
+            >
+              {/* Card Header */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shadow-xs ${
+                    isMorning
+                      ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                      : 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+                  }`}>
+                    {isMorning ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
+                      {card.title}
+                      <span className="text-xs font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                        {card.subtitle}
+                      </span>
+                    </h3>
+                    <div className="text-[11px] text-slate-500 font-medium flex items-center gap-2 mt-0.5">
+                      <span>Cutoff: <strong className="text-slate-800">{card.cutoff}</strong></span>
+                      <span>•</span>
+                      <span>Dispatch: <strong className="text-slate-800">{card.dispatch}</strong></span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-1.5">
-                    {card.title}
-                    <span className="text-[11px] text-indigo-700 font-bold">({card.subtitle})</span>
-                  </h3>
-                  <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium">
-                    Cutoff: <strong className="text-slate-800">{card.cutoff}</strong> | Dispatch: <strong className="text-slate-800">{card.dispatch}</strong>
+
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border shadow-2xs ${card.statusColor}`}>
+                  {card.status}
+                </span>
+              </div>
+
+              {/* Progress Bar & Status percentage */}
+              <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-600">
+                  <span className="flex items-center gap-1">
+                    <Activity className="w-3.5 h-3.5 text-indigo-600" />
+                    Readiness Progress
+                  </span>
+                  <span className="text-indigo-800 font-mono font-black text-xs bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                    {card.progress}% Ready
                   </span>
                 </div>
+                <div className="w-full h-3 bg-slate-200/70 rounded-full overflow-hidden p-0.5">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      card.progress >= 90
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                        : card.progress >= 50
+                        ? 'bg-gradient-to-r from-amber-500 via-indigo-500 to-emerald-500'
+                        : 'bg-gradient-to-r from-rose-500 to-amber-500'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(4, card.progress))}%` }}
+                  ></div>
+                </div>
               </div>
 
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${card.statusColor}`}>
-                {card.status}
-              </span>
-            </div>
+              {/* Stage Breakdown Metric Quadrants */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
+                {/* Total */}
+                <div className="bg-slate-50 hover:bg-slate-100/80 transition-colors p-2.5 rounded-xl border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">Total</div>
+                  <div className="text-base sm:text-lg font-black text-slate-900 mt-0.5">{card.metrics.total}</div>
+                  <div className="text-[9px] text-slate-400 font-medium">Pick Tickets</div>
+                </div>
 
-            {/* Progress Bar */}
-            <div className="space-y-0.5">
-              <div className="flex justify-between text-[10px] font-bold text-slate-500">
-                <span>Readiness Progress</span>
-                <span className="text-indigo-700 font-mono font-black">{card.progress}%</span>
-              </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                <div
-                  className="h-full bg-gradient-to-r from-amber-500 via-indigo-600 to-emerald-500 transition-all duration-500"
-                  style={{ width: `${card.progress}%` }}
-                ></div>
-              </div>
-            </div>
+                {/* Pending */}
+                <div className="bg-rose-50/70 hover:bg-rose-50 transition-colors p-2.5 rounded-xl border border-rose-200/80">
+                  <div className="text-[10px] text-rose-700 font-extrabold uppercase tracking-wider">Pending</div>
+                  <div className="text-base sm:text-lg font-black text-rose-700 mt-0.5">{card.metrics.pending}</div>
+                  <div className="text-[9px] text-rose-500 font-medium">To Be Billed</div>
+                </div>
 
-            {/* Stage breakdown numbers */}
-            <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100 text-center">
-              <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                <div className="text-[9px] text-slate-500 font-black uppercase">Total</div>
-                <div className="text-sm sm:text-base font-black text-slate-900">{card.metrics.total}</div>
-              </div>
-              <div className="bg-red-50/60 p-2 rounded-xl border border-red-200">
-                <div className="text-[9px] text-red-600 font-black uppercase">Pending</div>
-                <div className="text-sm sm:text-base font-black text-red-700">{card.metrics.pending}</div>
-              </div>
-              <div className="bg-emerald-50/60 p-2 rounded-xl border border-emerald-200">
-                <div className="text-[9px] text-emerald-600 font-black uppercase">Ready</div>
-                <div className="text-sm sm:text-base font-black text-emerald-700">{card.metrics.ready}</div>
-              </div>
-              <div className="bg-purple-50/60 p-2 rounded-xl border border-purple-200">
-                <div className="text-[9px] text-purple-600 font-black uppercase">Dispatched</div>
-                <div className="text-sm sm:text-base font-black text-purple-700">{card.metrics.dispatched}</div>
+                {/* Ready */}
+                <div className="bg-emerald-50/70 hover:bg-emerald-50 transition-colors p-2.5 rounded-xl border border-emerald-200/80">
+                  <div className="text-[10px] text-emerald-700 font-extrabold uppercase tracking-wider">Ready</div>
+                  <div className="text-base sm:text-lg font-black text-emerald-700 mt-0.5">{card.metrics.ready}</div>
+                  <div className="text-[9px] text-emerald-500 font-medium">In Invoicing</div>
+                </div>
+
+                {/* Dispatched */}
+                <div className="bg-purple-50/70 hover:bg-purple-50 transition-colors p-2.5 rounded-xl border border-purple-200/80">
+                  <div className="text-[10px] text-purple-700 font-extrabold uppercase tracking-wider">Dispatched</div>
+                  <div className="text-base sm:text-lg font-black text-purple-700 mt-0.5">{card.metrics.dispatched}</div>
+                  <div className="text-[9px] text-purple-500 font-medium">Loaded &amp; Out</div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* ── Dense Live Ticket Matrix (Data Table) ──────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs space-y-0 w-full">
+      {/* ── LIVE PICK TICKETS QUEUE MATRIX (Enterprise Modern Table) ── */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm space-y-0 w-full">
         
-        {/* Table Action Header */}
-        <div className="bg-[#003366] border-b-4 border-[#ed1c24] px-4 py-3 flex flex-wrap items-center justify-between gap-2.5 text-white">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-black text-white flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-cyan-300" />
-              Live Pick Tickets Queue
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white ml-1">
-                {filteredTickets.length}
-              </span>
-            </h3>
+        {/* Table Header Bar */}
+        <div className="bg-gradient-to-r from-slate-900 via-[#002855] to-slate-900 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-white">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-cyan-300">
+              <Receipt className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                Live Pick Tickets Queue
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+                  {filteredTickets.length}
+                </span>
+              </h3>
+            </div>
             {selectedRouteObj && (
-              <span className="px-2.5 py-0.5 bg-blue-900/60 text-blue-200 border border-blue-400/30 rounded-lg text-xs font-bold">
+              <span className="px-2.5 py-0.5 bg-blue-500/20 text-blue-200 border border-blue-400/30 rounded-lg text-xs font-bold hidden sm:inline-block">
                 Route: {selectedRouteObj.route_name}
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-blue-100 font-semibold">
-              Showing {filteredPending} Pending • {filteredReady} Ready • {filteredCartons} Cartons
+            <span className="text-xs text-slate-300 font-medium hidden sm:inline">
+              Showing <strong className="text-white font-bold">{filteredPending}</strong> Pending • <strong className="text-emerald-400 font-bold">{filteredReady}</strong> Ready • <strong className="text-amber-300 font-bold">{filteredCartons}</strong> Cartons
             </span>
           </div>
         </div>
 
-        {/* Data Table with Smooth Horizontal Scrolling Container */}
+        {/* Data Table */}
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left text-xs min-w-[1000px]">
             <thead>
-              <tr className="bg-slate-50 text-slate-700 border-b border-slate-200 font-black uppercase tracking-wider text-[11px]">
-                <th className="px-3.5 py-2.5 whitespace-nowrap text-center w-12">#</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Ticket No</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Party Name &amp; Code</th>
-                <th className="px-2.5 py-2.5 text-center whitespace-nowrap">Qty / Cartons</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Route</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Shift</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Assigned Picker</th>
-                <th className="px-3.5 py-2.5 text-center whitespace-nowrap">Aging / Waiting Time</th>
-                <th className="px-3.5 py-2.5 text-center whitespace-nowrap">Status</th>
-                <th className="px-3.5 py-2.5 text-right whitespace-nowrap">Actions</th>
+              <tr className="bg-slate-50/90 text-slate-600 border-b border-slate-200 font-black uppercase tracking-wider text-[11px]">
+                <th className="px-3.5 py-3 whitespace-nowrap text-center w-12">#</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Ticket No</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Party Name &amp; Code</th>
+                <th className="px-2.5 py-3 text-center whitespace-nowrap">Cartons</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Route</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Shift</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Assigned Picker</th>
+                <th className="px-3.5 py-3 text-center whitespace-nowrap">Aging / Waiting</th>
+                <th className="px-3.5 py-3 text-center whitespace-nowrap">Status</th>
+                <th className="px-3.5 py-3 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="text-center py-16 text-slate-400 font-bold">
-                    <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-2 text-[#004c8f]" />
-                    Loading live pick tickets...
+                  <td colSpan={10} className="text-center py-20 text-slate-400 font-bold">
+                    <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-[#004c8f]" />
+                    <span className="text-sm text-slate-600">Loading live pick tickets queue...</span>
                   </td>
                 </tr>
               ) : filteredTickets.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="text-center py-16 text-slate-400">
-                    <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-500" />
-                    <div className="text-base font-bold text-slate-800">No Tickets Found in View</div>
+                    <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-500 opacity-80" />
+                    <div className="text-sm font-bold text-slate-800">No Pick Tickets Found</div>
                     <p className="text-xs text-slate-400 mt-1 font-medium">
-                      No pick tickets match the selected route or filter options.
+                      No pick tickets match the selected route or filter stage.
                     </p>
                   </td>
                 </tr>
@@ -810,20 +874,23 @@ export default function LEDDashboard() {
                   const isWarning = t.aging_minutes >= 30 && t.aging_minutes < 60;
 
                   return (
-                    <tr key={t.id} className="hover:bg-indigo-50/40 transition-colors">
+                    <tr
+                      key={t.id}
+                      className="hover:bg-slate-50/80 transition-colors group"
+                    >
                       {/* # Index */}
-                      <td className="px-3.5 py-2.5 text-slate-400 font-mono font-bold whitespace-nowrap text-center">
+                      <td className="px-3.5 py-3 text-slate-400 font-mono font-bold whitespace-nowrap text-center text-[11px]">
                         {startIndex + idx + 1}
                       </td>
 
                       {/* Ticket No */}
-                      <td className="px-3.5 py-2.5 whitespace-nowrap">
+                      <td className="px-3.5 py-3 whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => openTicketModal(t.id)}
-                          className="font-mono font-bold text-[#004c8f] hover:text-[#003366] hover:underline cursor-pointer bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-lg border border-blue-200 transition-colors"
+                          className="font-mono font-bold text-[#004c8f] group-hover:text-[#002244] hover:underline cursor-pointer bg-blue-50/80 hover:bg-blue-100 px-2 py-1 rounded-lg border border-blue-200 transition-colors inline-flex items-center gap-1"
                         >
-                          {t.pick_ticket_no}
+                          <span>{t.pick_ticket_no}</span>
                         </button>
                         {t.customer_order_no && (
                           <div className="text-[10px] text-slate-400 font-mono mt-0.5">PO: {t.customer_order_no}</div>
@@ -831,28 +898,32 @@ export default function LEDDashboard() {
                       </td>
 
                       {/* Party */}
-                      <td className="px-3.5 py-2.5">
+                      <td className="px-3.5 py-3">
                         <div className="font-extrabold text-slate-900 line-clamp-1 max-w-[220px]" title={t.party_name}>
                           {t.party_name}
                         </div>
-                        <span className="text-[10px] font-mono font-bold text-indigo-700">{t.party_code}</span>
+                        <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100/60">
+                          {t.party_code}
+                        </span>
                       </td>
 
-                      {/* Qty */}
-                      <td className="px-2.5 py-2.5 text-center whitespace-nowrap font-black text-slate-900 text-sm">
-                        {t.cartons}
+                      {/* Cartons Qty */}
+                      <td className="px-2.5 py-3 text-center whitespace-nowrap font-black text-slate-900 text-sm">
+                        <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200/70 font-mono">
+                          {t.cartons}
+                        </span>
                       </td>
 
                       {/* Route */}
-                      <td className="px-3.5 py-2.5 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200 text-xs">
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-bold border border-slate-200 text-xs">
                           {t.route_name}
                         </span>
                       </td>
 
-                      {/* Slot */}
-                      <td className="px-3.5 py-2.5 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      {/* Slot / Shift */}
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold inline-flex items-center gap-1 ${
                           t.dispatch_slot === 'Evening'
                             ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                             : 'bg-amber-50 text-amber-800 border border-amber-200'
@@ -863,15 +934,17 @@ export default function LEDDashboard() {
                       </td>
 
                       {/* Assigned Picker */}
-                      <td className="px-3.5 py-2.5 whitespace-nowrap font-semibold text-slate-700">
-                        {t.picker_name || t.assigned_to || '—'}
+                      <td className="px-3.5 py-3 whitespace-nowrap font-semibold text-slate-700">
+                        {t.picker_name || t.assigned_to || (
+                          <span className="text-slate-400 italic font-normal">Unassigned</span>
+                        )}
                       </td>
 
                       {/* Aging / Waiting Time */}
-                      <td className="px-3.5 py-2.5 text-center whitespace-nowrap">
-                        <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                      <td className="px-3.5 py-3 text-center whitespace-nowrap">
+                        <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
                           isCritical
-                            ? 'bg-red-50 text-red-700 border-red-200 animate-pulse'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
                             : isWarning
                             ? 'bg-amber-50 text-amber-800 border-amber-200'
                             : 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -882,44 +955,44 @@ export default function LEDDashboard() {
                       </td>
 
                       {/* Status */}
-                      <td className="px-3.5 py-2.5 text-center whitespace-nowrap">
+                      <td className="px-3.5 py-3 text-center whitespace-nowrap">
                         {t.current_stage === 'Cancelled' ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200 line-through">
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200 line-through">
                             Cancelled
                           </span>
                         ) : t.current_stage === 'Dispatched' ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1">
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1">
                             <Truck className="w-3 h-3" /> Dispatched
                           </span>
                         ) : t.is_billed ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Billed ({t.bill_no || 'Ready'})
                           </span>
                         ) : t.current_stage === 'Picking' ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
                             <PackageCheck className="w-3 h-3 text-amber-600" /> In Picking
                           </span>
                         ) : (
-                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-700 border border-red-200 inline-flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-red-600" /> Pending Billing
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-rose-600" /> Pending Billing
                           </span>
                         )}
                       </td>
 
                       {/* Actions */}
-                      <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
+                      <td className="px-3.5 py-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           {!t.is_billed ? (
                             <button
                               type="button"
                               onClick={() => navigate('/billing')}
-                              className="px-2.5 py-1 rounded-lg bg-[#003366] hover:bg-[#002244] text-white text-[11px] font-extrabold shadow-2xs transition-all cursor-pointer flex items-center gap-1"
+                              className="px-2.5 py-1 rounded-lg bg-[#003366] hover:bg-[#002244] text-white text-[11px] font-extrabold shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1 active:scale-95"
                               title="Go to Billing desk"
                             >
                               <Receipt className="w-3 h-3" /> Bill Now
                             </button>
                           ) : (
-                            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold border border-slate-200">
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold border border-slate-200 font-mono">
                               {t.bill_no || 'Billed'}
                             </span>
                           )}
@@ -927,7 +1000,7 @@ export default function LEDDashboard() {
                           <button
                             type="button"
                             onClick={() => openTicketModal(t.id)}
-                            className="p-1 rounded-lg bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 cursor-pointer transition-colors shadow-2xs"
+                            className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 cursor-pointer transition-colors shadow-2xs hover:text-[#004c8f]"
                             title="Inspect Lifecycle & Timeline"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -944,20 +1017,20 @@ export default function LEDDashboard() {
 
         {/* Pagination Footer */}
         {filteredTickets.length > 0 && (
-          <div className="px-6 py-2.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="px-4 sm:px-6 py-3 bg-slate-50/90 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
             <span className="text-slate-500 font-medium">
               Showing <strong className="text-slate-900 font-bold">{cappedTickets.length > 0 ? startIndex + 1 : 0}</strong> to <strong className="text-slate-900 font-bold">{endIndex}</strong> of <strong className="text-slate-900 font-bold">{cappedTickets.length}</strong> tickets
-              {filteredTickets.length > 100 && (
-                <span className="text-[11px] text-slate-400 font-normal ml-1.5">(capped at max 100 — filter by route/shift)</span>
+              {filteredTickets.length > 150 && (
+                <span className="text-[11px] text-slate-400 font-normal ml-1.5">(view capped at 150)</span>
               )}
             </span>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs transition-all"
               >
                 Previous
               </button>
@@ -968,7 +1041,7 @@ export default function LEDDashboard() {
                 type="button"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage >= totalPages}
-                className="px-3 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs transition-all"
               >
                 Next
               </button>
@@ -977,21 +1050,21 @@ export default function LEDDashboard() {
         )}
       </div>
 
-      {/* ── Single Pick Ticket Timeline Modal Drawer ────────────────── */}
+      {/* ── SINGLE PICK TICKET TIMELINE MODAL DRAWER ── */}
       {selectedTicketId && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto">
-          <div className="bg-white text-slate-900 rounded-3xl w-full max-w-2xl border border-slate-200 shadow-2xl overflow-hidden space-y-0 max-h-[92vh] flex flex-col">
+          <div className="bg-white text-slate-900 rounded-3xl w-full max-w-2xl border border-slate-200 shadow-2xl overflow-hidden space-y-0 max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="bg-[#003366] border-b-4 border-[#ed1c24] p-4 sm:p-5 flex items-center justify-between shrink-0 text-white">
+            <div className="bg-gradient-to-r from-slate-900 via-[#002855] to-slate-900 p-4 sm:p-5 flex items-center justify-between shrink-0 text-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-mono font-bold text-white border border-white/20">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-mono font-bold text-cyan-300 border border-white/15">
                   <Receipt className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-white font-mono">
                     Pick Ticket {ticketDetail?.pick_ticket_no || 'Details'}
                   </h3>
-                  <p className="text-xs text-blue-100 font-medium">Lifecycle tracking &amp; operational stage progression</p>
+                  <p className="text-xs text-blue-200 font-medium">Lifecycle tracking &amp; operational stage progression</p>
                 </div>
               </div>
               <button
@@ -1006,8 +1079,8 @@ export default function LEDDashboard() {
             {/* Modal Body */}
             <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs bg-slate-50/50">
               {ticketModalLoading ? (
-                <div className="text-center py-12 text-slate-400 font-bold">
-                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[#004c8f]" />
+                <div className="text-center py-16 text-slate-400 font-bold">
+                  <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-2 text-[#004c8f]" />
                   Loading ticket lifecycle details...
                 </div>
               ) : ticketDetail ? (
@@ -1016,7 +1089,7 @@ export default function LEDDashboard() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Party Name</span>
-                      <div className="font-bold text-slate-900 mt-0.5">{ticketDetail.party_name}</div>
+                      <div className="font-bold text-slate-900 mt-0.5 line-clamp-1">{ticketDetail.party_name}</div>
                       <span className="font-mono text-[#004c8f] font-bold">{ticketDetail.party_code}</span>
                     </div>
 
@@ -1043,17 +1116,21 @@ export default function LEDDashboard() {
 
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Aging / Pending</span>
-                      <div className="font-bold text-red-600 mt-0.5">{ticketDetail.aging_formatted || 'Normal'}</div>
+                      <div className="font-bold text-rose-600 mt-0.5">{ticketDetail.aging_formatted || 'Normal'}</div>
                     </div>
                   </div>
 
                   {/* Operational Progression Timeline */}
                   <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Progression Stages</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Progression Stages
+                    </h4>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
                       <div className="p-3 rounded-xl border bg-emerald-50 border-emerald-200">
-                        <div className="text-[10px] font-bold text-emerald-800 uppercase">1. Created</div>
+                        <div className="text-[10px] font-bold text-emerald-800 uppercase flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-600" /> 1. Created
+                        </div>
                         <div className="font-bold text-slate-800 mt-1">{ticketDetail.date || '—'}</div>
                         <div className="text-[10px] text-slate-500">{ticketDetail.time || '—'}</div>
                       </div>
@@ -1063,7 +1140,12 @@ export default function LEDDashboard() {
                           ? 'bg-emerald-50 border-emerald-200'
                           : 'bg-slate-50 border-slate-200 opacity-60'
                       }`}>
-                        <div className="text-[10px] font-bold text-slate-700 uppercase">2. Picking</div>
+                        <div className="text-[10px] font-bold text-slate-700 uppercase flex items-center gap-1">
+                          {['Picking', 'Billing', 'Ready', 'Dispatched'].includes(ticketDetail.current_stage) ? (
+                            <Check className="w-3 h-3 text-emerald-600" />
+                          ) : null}
+                          2. Picking
+                        </div>
                         <div className="font-bold text-slate-800 mt-1">{ticketDetail.picker?.name || 'In Progress'}</div>
                         <div className="text-[10px] text-slate-500">
                           {ticketDetail.current_stage === 'Picking' ? 'Active Picking' : 'Completed'}
@@ -1075,7 +1157,12 @@ export default function LEDDashboard() {
                           ? 'bg-emerald-50 border-emerald-200'
                           : 'bg-slate-50 border-slate-200 opacity-60'
                       }`}>
-                        <div className="text-[10px] font-bold text-slate-700 uppercase">3. Billing</div>
+                        <div className="text-[10px] font-bold text-slate-700 uppercase flex items-center gap-1">
+                          {ticketDetail.is_billed || ['Ready', 'Dispatched'].includes(ticketDetail.current_stage) ? (
+                            <Check className="w-3 h-3 text-emerald-600" />
+                          ) : null}
+                          3. Billing
+                        </div>
                         <div className="font-bold text-slate-800 mt-1">
                           {ticketDetail.billing?.bill_no || (ticketDetail.is_billed ? 'Billed' : 'Pending')}
                         </div>
@@ -1089,7 +1176,12 @@ export default function LEDDashboard() {
                           ? 'bg-purple-50 border-purple-200'
                           : 'bg-slate-50 border-slate-200 opacity-60'
                       }`}>
-                        <div className="text-[10px] font-bold text-slate-700 uppercase">4. Dispatch</div>
+                        <div className="text-[10px] font-bold text-slate-700 uppercase flex items-center gap-1">
+                          {ticketDetail.current_stage === 'Dispatched' ? (
+                            <Check className="w-3 h-3 text-purple-600" />
+                          ) : null}
+                          4. Dispatch
+                        </div>
                         <div className="font-bold text-slate-800 mt-1">
                           {ticketDetail.current_stage === 'Dispatched' ? 'Dispatched' : 'Awaiting Trip'}
                         </div>
