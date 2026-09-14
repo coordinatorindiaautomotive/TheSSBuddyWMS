@@ -356,6 +356,14 @@ export default function ReturnEntry() {
     }
   };
 
+  const handleInvoiceChange = (val) => {
+    setRefInvoiceNo(val);
+    const matched = invoicesList.find((inv) => String(inv.bill_no).toLowerCase() === String(val).trim().toLowerCase());
+    if (matched && matched.billing_date) {
+      setRefInvoiceDate(matched.billing_date);
+    }
+  };
+
   const handlePartySelect = (selected) => {
     if (selected) {
       setPartyCode(selected.party_code);
@@ -364,7 +372,6 @@ export default function ReturnEntry() {
       setPartyCode('');
       setPartyName('');
     }
-    setRefInvoiceNo('');
   };
 
   const handleRemarkChange = (val) => {
@@ -589,7 +596,7 @@ export default function ReturnEntry() {
                   required
                   placeholder="e.g. RS/2026/012 or Bill No..."
                   value={refInvoiceNo}
-                  onChange={(e) => setRefInvoiceNo(e.target.value)}
+                  onChange={(e) => handleInvoiceChange(e.target.value)}
                   className="w-full h-11 pl-10 pr-3.5 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-[#003366] focus:border-[#004c8f] focus:ring-2 focus:ring-[#003366]/20 focus:outline-hidden transition-all shadow-xs"
                 />
                 <datalist id="party-invoices-list">
