@@ -1,8 +1,92 @@
 const { dbAsync } = require('../config/db');
 
+async function ensureArrangesTable() {
+  try {
+    await dbAsync.exec(`
+      CREATE TABLE IF NOT EXISTS arranges (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        arrange_no VARCHAR(100) UNIQUE NOT NULL,
+        arrange_date VARCHAR(50) NOT NULL,
+        sti_no VARCHAR(100) NOT NULL,
+        str_no VARCHAR(100) NOT NULL,
+        arrange_by_team_id INT NULL,
+        arrange_by_team_name VARCHAR(255) NULL,
+        arrange_for VARCHAR(50) NOT NULL DEFAULT 'Party',
+        destination_code VARCHAR(100) NULL,
+        destination_name VARCHAR(255) NULL,
+        status VARCHAR(50) DEFAULT 'Created',
+        pick_ticket_id INT NULL,
+        pick_ticket_no VARCHAR(100) NULL,
+        billing_id INT NULL,
+        billing_no VARCHAR(100) NULL,
+        total_qty INT DEFAULT 0,
+        remarks TEXT,
+        warehouse_id INT NOT NULL,
+        created_by VARCHAR(100) DEFAULT 'System',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    await dbAsync.exec(`
+      CREATE TABLE IF NOT EXISTS arrange_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        arrange_id INT NOT NULL,
+        part_no VARCHAR(100) NOT NULL,
+        part_name VARCHAR(255) NOT NULL,
+        required_qty INT NOT NULL DEFAULT 1,
+        available_qty INT DEFAULT 0,
+        remarks TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX (arrange_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+  } catch (e) {
+    try {
+      await dbAsync.exec(`
+        CREATE TABLE IF NOT EXISTS arranges (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          arrange_no TEXT UNIQUE NOT NULL,
+          arrange_date TEXT NOT NULL,
+          sti_no TEXT NOT NULL,
+          str_no TEXT NOT NULL,
+          arrange_by_team_id INTEGER,
+          arrange_by_team_name TEXT,
+          arrange_for TEXT NOT NULL DEFAULT 'Party',
+          destination_code TEXT,
+          destination_name TEXT,
+          status TEXT DEFAULT 'Created',
+          pick_ticket_id INTEGER,
+          pick_ticket_no TEXT,
+          billing_id INTEGER,
+          billing_no TEXT,
+          total_qty INTEGER DEFAULT 0,
+          remarks TEXT,
+          warehouse_id INTEGER NOT NULL,
+          created_by TEXT DEFAULT 'System',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME
+        );
+      `);
+      await dbAsync.exec(`
+        CREATE TABLE IF NOT EXISTS arrange_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          arrange_id INTEGER NOT NULL,
+          part_no TEXT NOT NULL,
+          part_name TEXT NOT NULL,
+          required_qty INTEGER NOT NULL DEFAULT 1,
+          available_qty INTEGER DEFAULT 0,
+          remarks TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (e2) {}
+  }
+}
+
 // Suggest next Arrange Number (e.g. ARR-20260914-0001)
 async function suggestNextNo(req, res) {
   try {
+    await ensureArrangesTable();
     const whId = req.activeWarehouseId || 1;
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');

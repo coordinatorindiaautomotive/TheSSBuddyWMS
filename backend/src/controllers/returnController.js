@@ -1,8 +1,92 @@
 const { dbAsync } = require('../config/db');
 
+async function ensureReturnsTable() {
+  try {
+    await dbAsync.exec(`
+      CREATE TABLE IF NOT EXISTS returns (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        return_no VARCHAR(100) UNIQUE NOT NULL,
+        ref_invoice_no VARCHAR(100) NULL,
+        ref_invoice_date VARCHAR(50) NULL,
+        return_date VARCHAR(50) NOT NULL,
+        party_code VARCHAR(100) NOT NULL,
+        party_name VARCHAR(255) NOT NULL,
+        remark_id INT NULL,
+        remark_name VARCHAR(255) NULL,
+        is_dms_received TINYINT DEFAULT 0,
+        str_no VARCHAR(100) NULL,
+        status VARCHAR(50) DEFAULT 'Pending DMS',
+        total_qty INT DEFAULT 0,
+        total_value DECIMAL(12,2) DEFAULT 0.00,
+        internal_remarks TEXT,
+        attachment_url TEXT,
+        warehouse_id INT NOT NULL,
+        created_by VARCHAR(100) DEFAULT 'System',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    await dbAsync.exec(`
+      CREATE TABLE IF NOT EXISTS return_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        return_id INT NOT NULL,
+        part_no VARCHAR(100) NOT NULL,
+        part_name VARCHAR(255) NOT NULL,
+        reference_invoice_no VARCHAR(100) NULL,
+        qty INT NOT NULL DEFAULT 1,
+        rate DECIMAL(10,2) DEFAULT 0.00,
+        value DECIMAL(12,2) DEFAULT 0.00,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX (return_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+  } catch (e) {
+    try {
+      await dbAsync.exec(`
+        CREATE TABLE IF NOT EXISTS returns (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          return_no TEXT UNIQUE NOT NULL,
+          ref_invoice_no TEXT,
+          ref_invoice_date TEXT,
+          return_date TEXT NOT NULL,
+          party_code TEXT NOT NULL,
+          party_name TEXT NOT NULL,
+          remark_id INTEGER,
+          remark_name TEXT,
+          is_dms_received INTEGER DEFAULT 0,
+          str_no TEXT,
+          status TEXT DEFAULT 'Pending DMS',
+          total_qty INTEGER DEFAULT 0,
+          total_value REAL DEFAULT 0,
+          internal_remarks TEXT,
+          attachment_url TEXT,
+          warehouse_id INTEGER NOT NULL,
+          created_by TEXT DEFAULT 'System',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME
+        );
+      `);
+      await dbAsync.exec(`
+        CREATE TABLE IF NOT EXISTS return_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          return_id INTEGER NOT NULL,
+          part_no TEXT NOT NULL,
+          part_name TEXT NOT NULL,
+          reference_invoice_no TEXT,
+          qty INTEGER NOT NULL DEFAULT 1,
+          rate REAL DEFAULT 0,
+          value REAL DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (e2) {}
+  }
+}
+
 // Suggest next Return Number (e.g. RET-20260914-0001)
 async function suggestNextNo(req, res) {
   try {
+    await ensureReturnsTable();
     const whId = req.activeWarehouseId || 1;
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');

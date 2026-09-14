@@ -833,9 +833,37 @@ async function deleteUser(req, res) {
 }
 
 // 8. Return Remarks Master CRUD
+async function ensureReturnRemarksTable() {
+  try {
+    await dbAsync.exec(`
+      CREATE TABLE IF NOT EXISTS return_remarks_master (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(100) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        is_active TINYINT DEFAULT 1,
+        warehouse_id INT NULL DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+  } catch (err) {
+    try {
+      await dbAsync.exec(`
+        CREATE TABLE IF NOT EXISTS return_remarks_master (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT NOT NULL,
+          name TEXT NOT NULL,
+          is_active INTEGER DEFAULT 1,
+          warehouse_id INTEGER DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (e2) {}
+  }
+}
+
 async function getReturnRemarks(req, res) {
   try {
-    const whId = req.activeWarehouseId || 1;
+    await ensureReturnRemarksTable();
     const remarks = await dbAsync.all(`
       SELECT * FROM return_remarks_master 
       ORDER BY id ASC
@@ -849,6 +877,7 @@ async function getReturnRemarks(req, res) {
 
 async function createReturnRemark(req, res) {
   try {
+    await ensureReturnRemarksTable();
     const whId = req.activeWarehouseId || 1;
     let { code, name, remark_name, description, is_active } = req.body;
     const finalName = (name || remark_name || description || '').trim();
@@ -882,6 +911,7 @@ async function createReturnRemark(req, res) {
 
 async function updateReturnRemark(req, res) {
   try {
+    await ensureReturnRemarksTable();
     const { id } = req.params;
     let { code, name, remark_name, description, is_active } = req.body;
     const finalName = (name || remark_name || description || '').trim();
@@ -904,6 +934,7 @@ async function updateReturnRemark(req, res) {
 
 async function deleteReturnRemark(req, res) {
   try {
+    await ensureReturnRemarksTable();
     const { id } = req.params;
     await dbAsync.run('DELETE FROM return_remarks_master WHERE id = ?', [id]);
     return res.json({ message: 'Return remark deleted successfully!' });
@@ -914,9 +945,37 @@ async function deleteReturnRemark(req, res) {
 }
 
 // 9. Arrange Teams Master CRUD (Shared with Floor Working)
+async function ensureArrangeTeamsTable() {
+  try {
+    await dbAsync.exec(`
+      CREATE TABLE IF NOT EXISTS arrange_teams_master (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        team_code VARCHAR(100) NOT NULL,
+        team_name VARCHAR(255) NOT NULL,
+        is_active TINYINT DEFAULT 1,
+        warehouse_id INT NULL DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+  } catch (err) {
+    try {
+      await dbAsync.exec(`
+        CREATE TABLE IF NOT EXISTS arrange_teams_master (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          team_code TEXT NOT NULL,
+          team_name TEXT NOT NULL,
+          is_active INTEGER DEFAULT 1,
+          warehouse_id INTEGER DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (e2) {}
+  }
+}
+
 async function getArrangeTeams(req, res) {
   try {
-    const whId = req.activeWarehouseId || 1;
+    await ensureArrangeTeamsTable();
     const teams = await dbAsync.all(`
       SELECT * FROM arrange_teams_master 
       ORDER BY id ASC
@@ -930,6 +989,7 @@ async function getArrangeTeams(req, res) {
 
 async function createArrangeTeam(req, res) {
   try {
+    await ensureArrangeTeamsTable();
     const whId = req.activeWarehouseId || 1;
     let { team_code, code, team_name, name, is_active } = req.body;
     const finalName = (team_name || name || '').trim();
@@ -963,6 +1023,7 @@ async function createArrangeTeam(req, res) {
 
 async function updateArrangeTeam(req, res) {
   try {
+    await ensureArrangeTeamsTable();
     const { id } = req.params;
     let { team_code, code, team_name, name, is_active } = req.body;
     const finalName = (team_name || name || '').trim();
@@ -985,6 +1046,7 @@ async function updateArrangeTeam(req, res) {
 
 async function deleteArrangeTeam(req, res) {
   try {
+    await ensureArrangeTeamsTable();
     const { id } = req.params;
     await dbAsync.run('DELETE FROM arrange_teams_master WHERE id = ?', [id]);
     return res.json({ message: 'Arrange team deleted successfully!' });
