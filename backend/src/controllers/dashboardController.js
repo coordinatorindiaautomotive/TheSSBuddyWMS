@@ -253,6 +253,8 @@ async function getStats(req, res) {
     console.error('Dashboard stats error:', err);
     return res.status(500).json({ message: 'Error fetching dashboard stats.' });
   }
+}
+
 module.exports = {
   getStats
 };
