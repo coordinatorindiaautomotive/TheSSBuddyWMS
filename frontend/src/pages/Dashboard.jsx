@@ -14,19 +14,12 @@ import {
   Route,
   Building2,
   RefreshCw,
-  Radio,
-  ArrowRight,
   Undo2,
   Boxes,
   AlertCircle,
   Sparkles,
-  Zap,
-  Calendar,
-  Layers,
-  ArrowUpRight,
-  CheckCircle,
-  ShieldCheck,
-  Plus
+  FileText,
+  Box
 } from 'lucide-react';
 import {
   AreaChart,
@@ -42,7 +35,6 @@ export default function Dashboard() {
   const { activeWarehouse } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('today'); // 'today' | 'all'
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -65,15 +57,15 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="space-y-5 animate-pulse">
-        <div className="h-14 bg-slate-200 rounded-2xl"></div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="card-enterprise p-4 h-28 bg-slate-100"></div>
+            <div key={i} className="card-enterprise p-4 h-24 bg-slate-100"></div>
           ))}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 card-enterprise h-72 bg-slate-100"></div>
-          <div className="card-enterprise h-72 bg-slate-100"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-5 card-enterprise h-80 bg-slate-100"></div>
+          <div className="lg:col-span-3 card-enterprise h-80 bg-slate-100"></div>
+          <div className="lg:col-span-4 card-enterprise h-80 bg-slate-100"></div>
         </div>
       </div>
     );
@@ -87,70 +79,56 @@ export default function Dashboard() {
     year: 'numeric'
   });
 
-  // All-time stat cards
-  const allTimeCards = [
+  const statCards = [
     {
       title: 'Total Pick Tickets',
       value: kpis?.totalPickTickets || 0,
-      subtext: 'Created across all time',
+      subtext: 'Created in system',
       icon: ClipboardList,
-      link: '/pick-tickets',
-      color: 'text-[#004C8F]',
-      bg: 'bg-blue-50'
+      link: '/pick-tickets'
     },
     {
       title: 'Pending Picking',
       value: kpis?.pendingPicking || 0,
       subtext: 'Awaiting floor pick',
       icon: Clock,
-      link: '/pick-tickets',
-      color: 'text-amber-600',
-      bg: 'bg-amber-50'
+      link: '/pick-tickets'
     },
     {
       title: 'Pending Billing',
       value: kpis?.pendingBilling || 0,
       subtext: 'Picked & awaiting invoice',
       icon: Receipt,
-      link: '/billing',
-      color: 'text-purple-600',
-      bg: 'bg-purple-50'
+      link: '/billing'
     },
     {
       title: 'Dispatched Orders',
       value: kpis?.dispatchedOrders || 0,
       subtext: 'Manifested & departed',
       icon: Truck,
-      link: '/dispatch',
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50'
+      link: '/dispatch'
     },
     {
       title: 'Total Billed Value',
       value: `₹${(kpis?.totalBilledAmount || 0).toLocaleString('en-IN')}`,
-      subtext: 'Cumulative invoice turnover',
+      subtext: 'Invoice revenue',
       icon: TrendingUp,
-      link: '/billing',
-      color: 'text-indigo-600',
-      bg: 'bg-indigo-50'
+      link: '/billing'
     },
     {
       title: 'Fleet & Logistics',
       value: `${kpis?.activeDrivers || 0} / ${kpis?.totalVehicles || 0}`,
-      subtext: 'Active Drivers & Vehicles',
+      subtext: 'Drivers & Vehicles',
       icon: Building2,
-      link: '/masters',
-      color: 'text-cyan-600',
-      bg: 'bg-cyan-50'
+      link: '/masters'
     }
   ];
 
-  // Inventory & Floor Operations KPIs
   const inventoryKpis = [
     {
       title: 'Return Today',
       value: todaySnapshot?.returns?.count ?? (kpis?.returnsToday || 0),
-      subtext: `${todaySnapshot?.returns?.qty || 0} units returned`,
+      subtext: 'Materials returned today',
       icon: Undo2,
       badgeBg: 'bg-rose-50 text-rose-600',
       link: '/return/register'
@@ -158,7 +136,7 @@ export default function Dashboard() {
     {
       title: 'Pending DMS',
       value: todaySnapshot?.returns?.dmsPending ?? (kpis?.pendingDmsReturns || 0),
-      subtext: 'Awaiting STR verification',
+      subtext: 'Awaiting STR allocation',
       icon: AlertCircle,
       badgeBg: 'bg-amber-50 text-amber-600',
       link: '/return/dms-pending'
@@ -166,7 +144,7 @@ export default function Dashboard() {
     {
       title: 'Arrange Today',
       value: todaySnapshot?.arranges?.count ?? (kpis?.arrangesToday || 0),
-      subtext: `${todaySnapshot?.arranges?.qty || 0} floor units`,
+      subtext: 'Floor STI requisitions',
       icon: Boxes,
       badgeBg: 'bg-blue-50 text-[#004C8F]',
       link: '/arrange/register'
@@ -189,319 +167,70 @@ export default function Dashboard() {
     }
   ];
 
-  // Today's 6 Core Snapshot Cards
-  const todayCards = [
+  // Today's Snapshot Sub-Items exactly as in the user's reference mockup
+  const snapshotItems = [
     {
-      title: 'Pick Tickets Today',
-      value: todaySnapshot?.pickTickets?.count || 0,
-      subtext: `${todaySnapshot?.pickTickets?.qty || 0} Units • ${todaySnapshot?.pickTickets?.picked || 0} Picked`,
-      highlight: `${todaySnapshot?.pickTickets?.pending || 0} Pending`,
-      highlightColor: 'text-amber-600 bg-amber-50 border-amber-200',
-      icon: ClipboardList,
-      link: '/pick-tickets',
-      borderAccent: 'border-l-4 border-l-[#004C8F]'
+      label: 'New Tickets',
+      value: todaySnapshot?.pickTickets?.count ?? (kpis?.totalPickTickets || 0),
+      icon: FileText,
+      iconColor: 'text-blue-600',
+      iconBg: 'bg-blue-50 border-blue-100',
+      link: '/pick-tickets'
     },
     {
-      title: "Today's Invoices & Revenue",
-      value: `₹${(todaySnapshot?.billings?.amount || 0).toLocaleString('en-IN')}`,
-      subtext: `${todaySnapshot?.billings?.count || 0} Invoices • ${todaySnapshot?.billings?.qty || 0} Billed Qty`,
-      highlight: 'Turnover',
-      highlightColor: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-      icon: Receipt,
-      link: '/billing',
-      borderAccent: 'border-l-4 border-l-emerald-600'
+      label: 'In Picking',
+      value: todaySnapshot?.pickTickets?.pending ?? (kpis?.pendingPicking || 0),
+      icon: Box,
+      iconColor: 'text-amber-600',
+      iconBg: 'bg-amber-50 border-amber-100',
+      link: '/pick-tickets'
     },
     {
-      title: 'Dispatches Today',
-      value: `${todaySnapshot?.dispatches?.count || 0} Trips`,
-      subtext: `${todaySnapshot?.dispatches?.cartons || 0} Cartons Loaded`,
-      highlight: `${todaySnapshot?.dispatches?.inTransit || 0} In Transit`,
-      highlightColor: 'text-cyan-700 bg-cyan-50 border-cyan-200',
+      label: 'Dispatched',
+      value: todaySnapshot?.pickTickets?.dispatched ?? (kpis?.dispatchedOrders || 0),
       icon: Truck,
-      link: '/dispatch',
-      borderAccent: 'border-l-4 border-l-cyan-600'
+      iconColor: 'text-emerald-600',
+      iconBg: 'bg-emerald-50 border-emerald-100',
+      link: '/dispatch'
     },
     {
-      title: 'Returns Today',
-      value: `${todaySnapshot?.returns?.count || 0} Returns`,
-      subtext: `${todaySnapshot?.returns?.qty || 0} Units • ₹${(todaySnapshot?.returns?.val || 0).toLocaleString('en-IN')}`,
-      highlight: `${todaySnapshot?.returns?.dmsDone || 0} DMS Recd`,
-      highlightColor: 'text-rose-700 bg-rose-50 border-rose-200',
-      icon: Undo2,
-      link: '/return/register',
-      borderAccent: 'border-l-4 border-l-rose-600'
-    },
-    {
-      title: 'Floor Arranges (STI)',
-      value: `${todaySnapshot?.arranges?.count || 0} Arranges`,
-      subtext: `${todaySnapshot?.arranges?.qty || 0} Requested Units`,
-      highlight: `${todaySnapshot?.arranges?.converted || 0} Converted`,
-      highlightColor: 'text-blue-700 bg-blue-50 border-blue-200',
-      icon: Boxes,
-      link: '/arrange/register',
-      borderAccent: 'border-l-4 border-l-indigo-600'
-    },
-    {
-      title: 'Active Fleet Today',
-      value: `${kpis?.activeDrivers || 0} Drivers`,
-      subtext: `${kpis?.totalVehicles || 0} Registered Vehicles`,
-      highlight: 'Logistics Ready',
-      highlightColor: 'text-purple-700 bg-purple-50 border-purple-200',
-      icon: Building2,
-      link: '/masters',
-      borderAccent: 'border-l-4 border-l-purple-600'
+      label: 'Pending Billing',
+      value: kpis?.pendingBilling || 0,
+      icon: Receipt,
+      iconColor: 'text-purple-600',
+      iconBg: 'bg-purple-50 border-purple-100',
+      link: '/billing'
     }
   ];
 
   return (
     <div className="space-y-5">
-      {/* ── TOP EXECUTIVE CONTROL & SNAPSHOT SELECTOR ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3.5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#003366] flex items-center justify-center text-white shadow-xs">
-            <Zap className="w-5 h-5 text-amber-400 fill-amber-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-black text-[#003366] tracking-tight">
-                Operations Executive Dashboard
-              </h2>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                LIVE
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
-              <span>Domain:</span>
-              <strong className="text-slate-800">{activeWarehouse?.name || 'Central Logistics Hub'}</strong>
-              <span className="text-slate-300">•</span>
-              <Calendar className="w-3.5 h-3.5 text-slate-400 inline" />
-              <span className="font-semibold text-slate-600">{todayDateStr}</span>
-            </p>
-          </div>
-        </div>
-
-        {/* View Mode Toggle & Sync Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80">
-            <button
-              type="button"
-              onClick={() => setViewMode('today')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'today'
-                  ? 'bg-[#003366] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+      {/* 6 Executive KPI Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {statCards.map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <Link
+              to={card.link}
+              key={idx}
+              className="card-enterprise p-3.5 space-y-2 hover:border-[#003366] hover:shadow-md transition-all cursor-pointer block group"
             >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>Today's Snapshot</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('all')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'all'
-                  ? 'bg-[#003366] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>All-Time Operations</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={fetchStats}
-            disabled={refreshing}
-            className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 shadow-2xs"
-            title="Refresh Live Metrics"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-[#004C8F]' : 'text-slate-600'}`} />
-          </button>
-        </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-[#003366]">
+                  {card.title}
+                </span>
+                <div className="p-1.5 rounded-lg bg-slate-100 text-[#004C8F] group-hover:bg-[#003366] group-hover:text-white transition-colors">
+                  <Icon className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">{card.value}</h3>
+                <p className="text-[11px] text-slate-400 font-medium">{card.subtext}</p>
+              </div>
+            </Link>
+          );
+        })}
       </div>
-
-      {/* ── VIEW MODE: TODAY'S SNAPSHOT HERO SECTION ── */}
-      {viewMode === 'today' && (
-        <div className="space-y-4">
-          {/* Hero Banner with Date & Quick Action Badges */}
-          <div className="bg-gradient-to-r from-[#002244] via-[#003366] to-[#004c8f] rounded-2xl border-b-4 border-[#ed1c24] p-4 sm:p-5 text-white shadow-md relative overflow-hidden">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded uppercase tracking-wider">
-                    Today's Snapshot
-                  </span>
-                  <span className="text-slate-300 text-xs font-mono">{todayDateStr}</span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-                  Daily Execution &amp; Dispatch Pulse
-                </h3>
-                <p className="text-xs text-slate-200/90 max-w-xl">
-                  Real-time visibility into today's pick tickets, billing generation, route dispatches, returns, and arrangement requests.
-                </p>
-              </div>
-
-              {/* Quick Jump Shortcuts */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Link
-                  to="/pick-tickets"
-                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Pick Ticket</span>
-                </Link>
-                <Link
-                  to="/billing"
-                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Billing</span>
-                </Link>
-                <Link
-                  to="/dispatch-planning"
-                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition-colors"
-                >
-                  <Route className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Dispatch Console</span>
-                </Link>
-                <Link
-                  to="/return/register"
-                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition-colors"
-                >
-                  <Undo2 className="w-3.5 h-3.5 text-rose-400" />
-                  <span>Return</span>
-                </Link>
-                <Link
-                  to="/arrange/register"
-                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition-colors"
-                >
-                  <Boxes className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Arrange</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* 6 Today's Snapshot Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-            {todayCards.map((card, idx) => {
-              const Icon = card.icon;
-              return (
-                <Link
-                  to={card.link}
-                  key={idx}
-                  className={`bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5 hover:border-[#003366] hover:shadow-md transition-all block group cursor-pointer ${card.borderAccent}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider group-hover:text-[#003366]">
-                      {card.title}
-                    </span>
-                    <div className="p-1.5 rounded-lg bg-slate-100 text-[#003366] group-hover:bg-[#003366] group-hover:text-white transition-colors">
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-xl font-black text-slate-900 group-hover:text-[#003366] transition-colors">
-                      {card.value}
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                      {card.subtext}
-                    </p>
-                  </div>
-
-                  <div className="pt-1 flex items-center justify-between border-t border-slate-100 text-[10px]">
-                    <span className={`px-2 py-0.5 rounded-md font-bold border ${card.highlightColor}`}>
-                      {card.highlight}
-                    </span>
-                    <span className="text-slate-400 group-hover:text-[#004C8F] font-bold flex items-center gap-0.5">
-                      View <ArrowRight className="w-3 h-3 inline" />
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Today's Route Dispatch Progress Grid */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <div className="flex items-center gap-2">
-                <Route className="w-4 h-4 text-[#004C8F]" />
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#003366]">
-                  Today's Route Dispatch Trajectory ({todaySnapshot?.routes?.length || 0} Active Routes)
-                </h4>
-              </div>
-              <span className="text-[11px] text-slate-400 font-medium">Real-time fulfillment %</span>
-            </div>
-
-            {(!todaySnapshot?.routes || todaySnapshot.routes.length === 0) ? (
-              <div className="py-8 text-center text-xs text-slate-400 font-medium bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                No tickets issued yet today. Create a new pick ticket to begin today's dispatch cycle.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {todaySnapshot.routes.map((r, i) => {
-                  const pct = r.total_tickets > 0 ? Math.round((r.dispatched_tickets / r.total_tickets) * 100) : 0;
-                  return (
-                    <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-slate-900 truncate max-w-[170px]">
-                          {r.route || 'Direct Route'}
-                        </span>
-                        <span className="font-mono text-xs font-black text-[#004C8F]">
-                          {r.dispatched_tickets} / {r.total_tickets} Dispatched
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                        <div
-                          className="bg-emerald-500 h-full rounded-full transition-all"
-                          style={{ width: `${pct}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
-                        <span>{pct}% Completed</span>
-                        <span>{r.total_qty} units</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── VIEW MODE: ALL-TIME OPERATIONS & KPI CARDS ── */}
-      {viewMode === 'all' && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {allTimeCards.map((card, idx) => {
-            const Icon = card.icon;
-            return (
-              <Link
-                to={card.link}
-                key={idx}
-                className="card-enterprise p-3.5 space-y-2 hover:border-[#003366] hover:shadow-md transition-all cursor-pointer block group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-[#003366]">
-                    {card.title}
-                  </span>
-                  <div className={`p-1.5 rounded-lg ${card.bg} ${card.color} group-hover:bg-[#003366] group-hover:text-white transition-colors`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">{card.value}</h3>
-                  <p className="text-[11px] text-slate-400 font-medium">{card.subtext}</p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
 
       {/* Inventory & Floor Operations KPI Ribbon */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 space-y-3">
@@ -544,10 +273,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Analytics Chart & Route Summary Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Fulfillment Pipeline Trends Chart */}
-        <div className="lg:col-span-2 card-enterprise p-5 space-y-4">
+      {/* ── 3-COLUMN CENTER GRID: CHART | TODAY'S SNAPSHOT | ROUTE SUMMARY ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        
+        {/* 1. Daily Order Fulfillment & Dispatch Trend Chart */}
+        <div className="lg:col-span-12 xl:col-span-5 card-enterprise p-5 space-y-4 flex flex-col justify-between">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
               <h3 className="text-sm font-bold text-[#003366] flex items-center gap-2">
@@ -555,12 +285,20 @@ export default function Dashboard() {
                 Daily Order Fulfillment &amp; Dispatch Trend
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Tickets created vs billed invoices vs dispatched shipments
+                Tickets created vs dispatched shipments
               </p>
             </div>
+            <button
+              onClick={fetchStats}
+              disabled={refreshing}
+              className="p-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs transition-colors"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-[#004C8F]' : ''}`} />
+            </button>
           </div>
 
-          <div className="h-64 w-full">
+          <div className="h-60 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
@@ -593,8 +331,47 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Route-Wise Volume Summary Card */}
-        <div className="card-enterprise flex flex-col overflow-hidden">
+        {/* 2. TODAY'S SNAPSHOT CARD (Exact Design as Mockup) */}
+        <div className="lg:col-span-6 xl:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-xs p-4 flex flex-col justify-between space-y-3">
+          {/* Header */}
+          <div className="border-b border-slate-100 pb-2">
+            <h3 className="text-sm font-black text-[#003366] tracking-tight">
+              Today's Snapshot
+            </h3>
+            <p className="text-xs text-slate-400 font-semibold mt-0.5">
+              {todayDateStr}
+            </p>
+          </div>
+
+          {/* 4 Pastel Sub-Cards */}
+          <div className="space-y-2.5 flex-1 flex flex-col justify-between">
+            {snapshotItems.map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  to={item.link}
+                  key={idx}
+                  className="p-3 rounded-xl border border-slate-200/80 bg-white hover:border-[#003366] hover:shadow-xs transition-all flex items-center gap-3.5 group cursor-pointer"
+                >
+                  <div className={`w-10 h-10 rounded-xl ${item.iconBg} border flex items-center justify-center ${item.iconColor} shrink-0`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-500 group-hover:text-[#003366] transition-colors">
+                      {item.label}
+                    </div>
+                    <div className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                      {item.value}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3. Route-Wise Dispatch Volume Card */}
+        <div className="lg:col-span-6 xl:col-span-4 card-enterprise flex flex-col overflow-hidden">
           <div className="card-header-enterprise">
             <div className="flex items-center gap-2">
               <Route className="w-4 h-4 text-slate-200" />
@@ -718,4 +495,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
