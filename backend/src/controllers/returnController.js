@@ -143,6 +143,7 @@ async function createReturn(req, res) {
     let {
       return_no,
       ref_invoice_no,
+      ref_invoice_date,
       return_date,
       party_code,
       party_name,
@@ -201,7 +202,7 @@ async function createReturn(req, res) {
       totalValue += val;
       return {
         part_no: (it.part_no || '').trim(),
-        part_name: (it.part_name || '').trim(),
+        part_name: (it.part_name || it.part_no || 'Return Part').trim(),
         reference_invoice_no: (it.reference_invoice_no || ref_invoice_no || '').trim(),
         qty: q,
         rate: r,
@@ -213,14 +214,15 @@ async function createReturn(req, res) {
 
     const result = await dbAsync.run(`
       INSERT INTO returns (
-        return_no, ref_invoice_no, return_date, party_code, party_name,
+        return_no, ref_invoice_no, ref_invoice_date, return_date, party_code, party_name,
         remark_id, remark_name, is_dms_received, str_no,
         status, total_qty, total_value, internal_remarks,
         attachment_url, warehouse_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       return_no.trim(),
       ref_invoice_no ? ref_invoice_no.trim() : null,
+      ref_invoice_date ? ref_invoice_date.trim() : null,
       retDate,
       party_code.trim(),
       party_name.trim(),
@@ -285,6 +287,7 @@ async function updateReturn(req, res) {
     let {
       return_no,
       ref_invoice_no,
+      ref_invoice_date,
       return_date,
       party_code,
       party_name,
@@ -327,7 +330,7 @@ async function updateReturn(req, res) {
         `, [
           id,
           (it.part_no || '').trim(),
-          (it.part_name || '').trim(),
+          (it.part_name || it.part_no || 'Return Part').trim(),
           (it.reference_invoice_no || ref_invoice_no || '').trim(),
           q,
           r,
@@ -343,6 +346,7 @@ async function updateReturn(req, res) {
       SET 
         return_no = ?,
         ref_invoice_no = ?,
+        ref_invoice_date = ?,
         return_date = ?,
         party_code = ?,
         party_name = ?,
@@ -360,6 +364,7 @@ async function updateReturn(req, res) {
     `, [
       return_no || existing.return_no,
       ref_invoice_no !== undefined ? ref_invoice_no : existing.ref_invoice_no,
+      ref_invoice_date !== undefined ? ref_invoice_date : existing.ref_invoice_date,
       return_date || existing.return_date,
       party_code || existing.party_code,
       party_name || existing.party_name,

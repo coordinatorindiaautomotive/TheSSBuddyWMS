@@ -671,6 +671,7 @@ async function initMySQLSchema() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       return_no VARCHAR(100) UNIQUE NOT NULL,
       ref_invoice_no VARCHAR(100) NULL,
+      ref_invoice_date VARCHAR(50) NULL,
       return_date VARCHAR(50) NOT NULL,
       party_code VARCHAR(100) NOT NULL,
       party_name VARCHAR(255) NOT NULL,
@@ -696,6 +697,9 @@ async function initMySQLSchema() {
 
   try {
     await dbAsync.exec('ALTER TABLE returns ADD COLUMN ref_invoice_no VARCHAR(100) NULL;');
+  } catch (e) {}
+  try {
+    await dbAsync.exec('ALTER TABLE returns ADD COLUMN ref_invoice_date VARCHAR(50) NULL;');
   } catch (e) {}
 
   // 22. Return Items
@@ -1144,6 +1148,7 @@ async function initSQLiteSchema() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       return_no TEXT UNIQUE NOT NULL,
       ref_invoice_no TEXT,
+      ref_invoice_date TEXT,
       return_date TEXT NOT NULL,
       party_code TEXT NOT NULL,
       party_name TEXT NOT NULL,
@@ -1165,6 +1170,9 @@ async function initSQLiteSchema() {
 
   try {
     await dbAsync.exec('ALTER TABLE returns ADD COLUMN ref_invoice_no TEXT;');
+  } catch (e) {}
+  try {
+    await dbAsync.exec('ALTER TABLE returns ADD COLUMN ref_invoice_date TEXT;');
   } catch (e) {}
 
   // 22. Return Items
