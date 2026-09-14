@@ -54,13 +54,6 @@ export default function DispatchList() {
             <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
             <span>Refresh</span>
           </button>
-          <Link
-            to="/dispatch/plan"
-            className="btn-primary text-xs h-9 gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Dispatch Trip</span>
-          </Link>
         </div>
       </div>
 

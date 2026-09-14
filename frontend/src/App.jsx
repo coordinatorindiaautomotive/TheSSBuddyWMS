@@ -17,7 +17,6 @@ import MasterRegistries from './pages/MasterRegistries';
 import Import from './pages/Import';
 import Leaderboard from './pages/Leaderboard';
 import Reports from './pages/Reports';
-import DispatchPlanning from './pages/DispatchPlanning';
 import DispatchList from './pages/DispatchList';
 import DispatchDetail from './pages/DispatchDetail';
 import Tracking from './pages/Tracking';
@@ -67,9 +66,9 @@ export default function App() {
                             <Route path="/pick-tickets" element={<PickTickets />} />
                             <Route path="/billing" element={<Billing />} />
                             <Route path="/route-bill-status" element={<RouteBillStatus />} />
-                            <Route path="/dispatch-planning" element={<DispatchPlanning />} />
+                            <Route path="/dispatch-planning" element={<Navigate to="/led" replace />} />
                             <Route path="/dispatch" element={<DispatchList />} />
-                            <Route path="/dispatch/plan" element={<DispatchPlanning />} />
+                            <Route path="/dispatch/plan" element={<Navigate to="/led" replace />} />
                             <Route path="/dispatch/:id" element={<DispatchDetail />} />
                             <Route path="/tracking/:id" element={<Tracking />} />
                             <Route path="/delivery" element={<DeliveryBoard />} />

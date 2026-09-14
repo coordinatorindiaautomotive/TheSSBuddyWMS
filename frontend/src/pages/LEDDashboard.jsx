@@ -652,14 +652,6 @@ export default function LEDDashboard() {
                   {nextDispatch.time_remaining || 'On Schedule'}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => navigate('/dispatch-planning')}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs inline-flex items-center gap-1.5 cursor-pointer transition-all shadow-md active:scale-95"
-              >
-                <span>Plan Trip</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
         </div>
