@@ -2,16 +2,15 @@ const { dbAsync } = require('../config/db');
 
 async function getParties(req, res) {
   try {
-    const whId = req.activeWarehouseId || 1;
     const parties = await dbAsync.all(`
       SELECT p.*, COALESCE(rm.route_name, p.route_name, p.address) as route_name
       FROM parties p
       LEFT JOIN route_masters rm ON p.route_id = rm.id
-      WHERE (p.warehouse_id = ? OR p.warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM parties WHERE warehouse_id = ?))
       ORDER BY p.party_name ASC
-    `, [whId, whId, whId]);
-    return res.json(parties);
+    `);
+    return res.json(parties || []);
   } catch (err) {
+    console.error('getParties error:', err);
     return res.status(500).json({ message: 'Error fetching parties.' });
   }
 }

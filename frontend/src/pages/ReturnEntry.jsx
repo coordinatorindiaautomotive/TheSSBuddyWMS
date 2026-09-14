@@ -18,25 +18,27 @@ import {
   Receipt,
   Sparkles,
   Search,
-  ChevronDown
+  ChevronDown,
+  RefreshCw
 } from 'lucide-react';
 
 // Dedicated Party Selector directly connected to Party Master
-function SearchablePartySelect({ parties = [], selectedCode, onSelect }) {
+function SearchablePartySelect({ parties = [], selectedCode, onSelect, onReloadParties, loadingParties = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef(null);
 
   const safeParties = Array.isArray(parties) ? parties : [];
-  const selectedParty = safeParties.find((p) => p?.party_code === selectedCode);
+  const selectedParty = safeParties.find((p) => String(p?.party_code) === String(selectedCode));
 
   const filteredParties = safeParties.filter((p) => {
     const s = search.toLowerCase().trim();
     if (!s) return true;
     return (
-      (p?.party_name && p.party_name.toLowerCase().includes(s)) ||
-      (p?.party_code && p.party_code.toLowerCase().includes(s)) ||
-      (p?.route_name && p.route_name.toLowerCase().includes(s))
+      (p?.party_name && String(p.party_name).toLowerCase().includes(s)) ||
+      (p?.party_code && String(p.party_code).toLowerCase().includes(s)) ||
+      (p?.route_name && String(p.route_name).toLowerCase().includes(s)) ||
+      (p?.city && String(p.city).toLowerCase().includes(s))
     );
   });
 
@@ -50,11 +52,18 @@ function SearchablePartySelect({ parties = [], selectedCode, onSelect }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleOpenDropdown = () => {
+    setIsOpen(!isOpen);
+    if (!isOpen && safeParties.length === 0 && onReloadParties) {
+      onReloadParties();
+    }
+  };
+
   return (
     <div className="relative w-full" ref={dropdownRef}>
       <div
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-10 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold flex items-center justify-between cursor-pointer hover:border-[#004c8f] transition-all shadow-xs"
+        onClick={handleOpenDropdown}
+        className="w-full h-10 bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-semibold flex items-center justify-between cursor-pointer hover:border-[#004c8f] transition-all shadow-xs"
       >
         {selectedParty ? (
           <div className="flex items-center gap-2 truncate">
@@ -74,9 +83,12 @@ function SearchablePartySelect({ parties = [], selectedCode, onSelect }) {
             <span>Search & Select Customer Party...</span>
           </div>
         )}
-        <ChevronDown
-          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-        />
+        <div className="flex items-center gap-1">
+          {loadingParties && <RefreshCw className="w-3.5 h-3.5 text-[#004c8f] animate-spin shrink-0" />}
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </div>
       </div>
 
       {isOpen && (
@@ -88,9 +100,22 @@ function SearchablePartySelect({ parties = [], selectedCode, onSelect }) {
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search party by name or code..."
+              placeholder="Search party by name or code (e.g. 1140, ALFA)..."
               className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#004c8f] focus:outline-none"
             />
+            {onReloadParties && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReloadParties();
+                }}
+                className="p-1.5 text-slate-500 hover:text-[#004c8f] hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                title="Reload Party Master"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingParties ? 'animate-spin' : ''}`} />
+              </button>
+            )}
             {search && (
               <button
                 type="button"
@@ -103,9 +128,23 @@ function SearchablePartySelect({ parties = [], selectedCode, onSelect }) {
           </div>
 
           <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
-            {filteredParties.length === 0 ? (
-              <div className="p-4 text-center text-slate-400 font-medium">
-                No matching parties found in Master Registries.
+            {loadingParties && safeParties.length === 0 ? (
+              <div className="p-6 text-center text-slate-400 font-semibold flex items-center justify-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin text-[#004c8f]" />
+                Loading Party Master from registries...
+              </div>
+            ) : filteredParties.length === 0 ? (
+              <div className="p-4 text-center text-slate-400 font-medium space-y-1">
+                <div>No matching parties found in Master Registries.</div>
+                {onReloadParties && (
+                  <button
+                    type="button"
+                    onClick={onReloadParties}
+                    className="text-[11px] font-bold text-[#004c8f] hover:underline cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Fetch Party Master
+                  </button>
+                )}
               </div>
             ) : (
               filteredParties.map((p) => (
@@ -117,7 +156,7 @@ function SearchablePartySelect({ parties = [], selectedCode, onSelect }) {
                     setSearch('');
                   }}
                   className={`p-2.5 hover:bg-blue-50/80 cursor-pointer flex items-center justify-between transition-colors ${
-                    selectedCode === p.party_code ? 'bg-blue-50 font-bold' : ''
+                    String(selectedCode) === String(p.party_code) ? 'bg-blue-50 font-bold' : ''
                   }`}
                 >
                   <div className="space-y-0.5 truncate">
@@ -150,6 +189,7 @@ export default function ReturnEntry() {
   const isEdit = Boolean(id);
 
   const [loading, setLoading] = useState(false);
+  const [loadingParties, setLoadingParties] = useState(false);
   const [parties, setParties] = useState([]);
   const [remarksList, setRemarksList] = useState([]);
   const [invoicesList, setInvoicesList] = useState([]);
@@ -210,15 +250,38 @@ export default function ReturnEntry() {
   }, [partyCode]);
 
   const fetchMasters = async () => {
+    setLoadingParties(true);
     try {
-      const [pRes, rRes] = await Promise.all([
+      const [pRes, rRes] = await Promise.allSettled([
         axios.get('/api/parties'),
         axios.get('/api/masters/return-remarks')
       ]);
-      setParties(pRes.data || []);
-      setRemarksList(rRes.data || []);
+
+      if (pRes.status === 'fulfilled' && pRes.value?.data) {
+        setParties(Array.isArray(pRes.value.data) ? pRes.value.data : []);
+      }
+      if (rRes.status === 'fulfilled' && rRes.value?.data) {
+        setRemarksList(Array.isArray(rRes.value.data) ? rRes.value.data : []);
+      }
     } catch (err) {
       console.error('Error fetching masters:', err);
+    } finally {
+      setLoadingParties(false);
+    }
+  };
+
+  const reloadPartiesOnly = async () => {
+    setLoadingParties(true);
+    try {
+      const res = await axios.get('/api/parties');
+      if (res.data) {
+        setParties(Array.isArray(res.data) ? res.data : []);
+        toast.show('Party Master list refreshed successfully.', 'info');
+      }
+    } catch (err) {
+      console.error('Reload parties error:', err);
+    } finally {
+      setLoadingParties(false);
     }
   };
 
@@ -558,13 +621,25 @@ export default function ReturnEntry() {
 
             {/* 4. Select Customer Party * (from Party Master) */}
             <div className="sm:col-span-1">
-              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                4. Select Customer Party <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase">
+                  4. Select Customer Party <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={reloadPartiesOnly}
+                  className="text-[10px] text-[#004c8f] hover:underline flex items-center gap-0.5 font-bold cursor-pointer"
+                  title="Reload parties from Party Master"
+                >
+                  <RefreshCw className={`w-2.5 h-2.5 ${loadingParties ? 'animate-spin' : ''}`} /> Sync
+                </button>
+              </div>
               <SearchablePartySelect
                 parties={parties}
                 selectedCode={partyCode}
                 onSelect={handlePartySelect}
+                onReloadParties={reloadPartiesOnly}
+                loadingParties={loadingParties}
               />
             </div>
 
