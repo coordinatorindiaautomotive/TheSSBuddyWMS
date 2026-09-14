@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useToast } from '../context/ToastContext';
@@ -10,23 +10,138 @@ import {
   RotateCcw,
   Plus,
   Trash2,
-  Printer,
   FileCheck,
-  Building2,
   Calendar,
   Layers,
-  FileText,
-  AlertCircle,
-  HelpCircle,
   Hash,
-  Coins,
-  ArrowRight,
-  Upload,
   CheckCircle2,
+  AlertCircle,
   Receipt,
   Sparkles,
-  Search
+  Search,
+  ChevronDown,
+  X
 } from 'lucide-react';
+
+// Dedicated Party Selector from Party Master
+function SearchablePartySelect({ parties = [], selectedCode, onSelect }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const dropdownRef = useRef(null);
+
+  const safeParties = Array.isArray(parties) ? parties : [];
+  const selectedParty = safeParties.find((p) => p?.party_code === selectedCode);
+
+  const filteredParties = safeParties.filter((p) => {
+    const s = search.toLowerCase().trim();
+    if (!s) return true;
+    return (
+      (p?.party_name && p.party_name.toLowerCase().includes(s)) ||
+      (p?.party_code && p.party_code.toLowerCase().includes(s)) ||
+      (p?.route_name && p.route_name.toLowerCase().includes(s))
+    );
+  });
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full min-h-[42px] bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-semibold flex items-center justify-between cursor-pointer hover:border-[#004c8f] transition-all shadow-xs"
+      >
+        {selectedParty ? (
+          <div className="flex items-center gap-2 truncate">
+            <span className="font-mono font-black text-[#004c8f] bg-blue-100 px-2 py-0.5 rounded text-xs shrink-0 border border-blue-200">
+              {selectedParty.party_code}
+            </span>
+            <span className="font-extrabold text-slate-900 truncate text-xs">{selectedParty.party_name}</span>
+            {selectedParty.route_name && (
+              <span className="text-[10px] text-slate-400 font-normal truncate">
+                • {selectedParty.route_name}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-slate-400">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+            <span>Search & Select Customer Party from Master...</span>
+          </div>
+        )}
+        <ChevronDown
+          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden text-xs">
+          <div className="p-2.5 bg-slate-50 border-b border-slate-200 sticky top-0 z-10 flex items-center gap-2">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+            <input
+              type="text"
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by party name or code (e.g. 1140, ALFA)..."
+              className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#004c8f] focus:outline-none"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="text-slate-400 hover:text-slate-700 text-[10px] font-bold px-1.5 py-0.5 bg-slate-200 rounded cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
+            {filteredParties.length === 0 ? (
+              <div className="p-4 text-center text-slate-400 font-medium">
+                No matching parties found in Master Registries.
+              </div>
+            ) : (
+              filteredParties.map((p) => (
+                <div
+                  key={p.id || p.party_code}
+                  onClick={() => {
+                    onSelect(p);
+                    setIsOpen(false);
+                    setSearch('');
+                  }}
+                  className={`p-3 hover:bg-blue-50/80 cursor-pointer flex items-center justify-between transition-colors ${
+                    selectedCode === p.party_code ? 'bg-blue-50 font-bold' : ''
+                  }`}
+                >
+                  <div className="space-y-0.5 truncate">
+                    <div className="font-extrabold text-slate-900 truncate">{p.party_name}</div>
+                    <div className="text-[10px] text-slate-500 flex items-center gap-2">
+                      <span className="font-mono text-[#004c8f] font-bold">Code: {p.party_code}</span>
+                      {p.route_name && <span>• Route: {p.route_name}</span>}
+                      {p.city && <span>• City: {p.city}</span>}
+                    </div>
+                  </div>
+                  <span className="font-mono text-[11px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded shrink-0">
+                    {p.party_code}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ReturnEntry() {
   const { id } = useParams();
@@ -44,7 +159,6 @@ export default function ReturnEntry() {
   // Form State
   const [returnNo, setReturnNo] = useState('');
   const [refInvoiceNo, setRefInvoiceNo] = useState('');
-  const [selectedInvoiceMeta, setSelectedInvoiceMeta] = useState(null);
   const [returnDate, setReturnDate] = useState(new Date().toISOString().slice(0, 10));
   const [partyCode, setPartyCode] = useState('');
   const [partyName, setPartyName] = useState('');
@@ -55,9 +169,9 @@ export default function ReturnEntry() {
   const [internalRemarks, setInternalRemarks] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
 
-  // Multi-part table rows
+  // Multi-part table rows (No Reference Invoice column here)
   const [items, setItems] = useState([
-    { id: 1, part_no: '', part_name: '', reference_invoice_no: '', qty: 1, rate: 0, value: 0 }
+    { id: 1, part_no: '', part_name: '', qty: 1, rate: 0, value: 0 }
   ]);
 
   // Summary calculation
@@ -68,8 +182,6 @@ export default function ReturnEntry() {
     fetchMasters();
     if (isEdit) {
       fetchReturnData(id);
-    } else {
-      fetchNextReturnNo();
     }
   }, [id, activeWarehouse]);
 
@@ -100,10 +212,7 @@ export default function ReturnEntry() {
       if (res.data?.suggestedNo) {
         const nextNo = res.data.suggestedNo;
         setReturnNo(nextNo);
-        // Automatically set DMS Received to YES when Return No is populated
-        if (nextNo && nextNo.trim().length > 0) {
-          setIsDmsReceived(1);
-        }
+        setIsDmsReceived(1);
       }
     } catch (err) {
       console.error('Error getting return no:', err);
@@ -142,7 +251,6 @@ export default function ReturnEntry() {
             id: idx + 1,
             part_no: it.part_no || '',
             part_name: it.part_name || '',
-            reference_invoice_no: it.reference_invoice_no || ret.ref_invoice_no || '',
             qty: it.qty || 1,
             rate: it.rate || 0,
             value: it.value || (it.qty * it.rate)
@@ -156,7 +264,7 @@ export default function ReturnEntry() {
     }
   };
 
-  // Reactive Return No change: typing/entering Return No sets DMS Received to YES
+  // Reactive Return No change: typing Return No makes DMS Received = YES
   const handleReturnNoChange = (val) => {
     setReturnNo(val);
     if (val && val.trim().length > 0) {
@@ -166,36 +274,19 @@ export default function ReturnEntry() {
     }
   };
 
-  const handlePartyChange = (val) => {
-    setPartyCode(val);
-    const selected = parties.find((p) => p.party_code === val);
+  const handlePartySelect = (selected) => {
     if (selected) {
+      setPartyCode(selected.party_code);
       setPartyName(selected.party_name);
     } else {
+      setPartyCode('');
       setPartyName('');
     }
-    // Clear previously selected ref invoice when party changes
     setRefInvoiceNo('');
-    setSelectedInvoiceMeta(null);
   };
 
-  const handleRefInvoiceSelect = (val) => {
-    setRefInvoiceNo(val);
-    const invMeta = invoicesList.find((i) => i.bill_no === val);
-    setSelectedInvoiceMeta(invMeta || null);
-
-    // Auto default ref invoice in part item rows where empty
-    if (val) {
-      setItems((prev) =>
-        prev.map((it) => ({
-          ...it,
-          reference_invoice_no: it.reference_invoice_no || val
-        }))
-      );
-    }
-  };
-
-  const handleRemarkChange = (val) => {
+  const handleRemarkChange = (e) => {
+    const val = e?.target?.value !== undefined ? e.target.value : e;
     setRemarkId(val);
     const selected = remarksList.find((r) => String(r.id) === String(val));
     if (selected) {
@@ -220,7 +311,7 @@ export default function ReturnEntry() {
   const addItemRow = () => {
     setItems([
       ...items,
-      { id: Date.now(), part_no: '', part_name: '', reference_invoice_no: refInvoiceNo || '', qty: 1, rate: 0, value: 0 }
+      { id: Date.now(), part_no: '', part_name: '', qty: 1, rate: 0, value: 0 }
     ]);
   };
 
@@ -235,9 +326,8 @@ export default function ReturnEntry() {
 
   const handleReset = () => {
     if (!isEdit) {
-      fetchNextReturnNo();
+      setReturnNo('');
       setRefInvoiceNo('');
-      setSelectedInvoiceMeta(null);
       setPartyCode('');
       setPartyName('');
       setRemarkId('');
@@ -246,7 +336,7 @@ export default function ReturnEntry() {
       setStrNo('');
       setInternalRemarks('');
       setAttachmentUrl('');
-      setItems([{ id: 1, part_no: '', part_name: '', reference_invoice_no: '', qty: 1, rate: 0, value: 0 }]);
+      setItems([{ id: 1, part_no: '', part_name: '', qty: 1, rate: 0, value: 0 }]);
     } else {
       fetchReturnData(id);
     }
@@ -257,12 +347,12 @@ export default function ReturnEntry() {
     e.preventDefault();
 
     if (!partyCode) {
-      toast.show('Please select a valid Customer Party from Party Master.', 'warning');
+      toast.show('Please select a Customer Party from Party Master.', 'warning');
       return;
     }
 
     if (!refInvoiceNo || !refInvoiceNo.trim()) {
-      toast.show('Ref Invoice / Invoice Bill No * is required (against which return is processed).', 'warning');
+      toast.show('Invoice Bill No * is required (against which return is processed).', 'warning');
       return;
     }
 
@@ -299,7 +389,6 @@ export default function ReturnEntry() {
       items: items.map((it) => ({
         part_no: it.part_no.trim(),
         part_name: it.part_name.trim(),
-        reference_invoice_no: it.reference_invoice_no ? it.reference_invoice_no.trim() : refInvoiceNo.trim(),
         qty: parseInt(it.qty, 10) || 1,
         rate: parseFloat(it.rate) || 0,
         value: parseFloat(it.value) || 0
@@ -337,7 +426,7 @@ export default function ReturnEntry() {
               {isEdit ? 'Edit Material Return Entry' : 'New Material Return Entry'}
             </h2>
             <p className="text-xs text-slate-500 font-semibold">
-              Process customer return goods, reference invoice matching &amp; DMS STR allocation
+              Process customer return goods &amp; DMS STR allocation
             </p>
           </div>
         </div>
@@ -365,7 +454,7 @@ export default function ReturnEntry() {
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-[#004C8F]" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#003366]">
-                1. Return Header &amp; Customer Details
+                1. Return Header Details
               </h3>
             </div>
             {isDmsReceived === 1 ? (
@@ -380,7 +469,7 @@ export default function ReturnEntry() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Return No (Editable & triggers DMS Received = YES on entry) */}
+            {/* Return No (Enter Return No -> sets DMS Received = YES) */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-[11px] font-bold text-slate-700 uppercase">
@@ -390,7 +479,7 @@ export default function ReturnEntry() {
                   type="button"
                   onClick={fetchNextReturnNo}
                   className="text-[10px] font-bold text-[#004C8F] hover:underline flex items-center gap-0.5 cursor-pointer"
-                  title="Auto generate next sequence number"
+                  title="Generate next sequence number"
                 >
                   <Sparkles className="w-3 h-3" /> Auto
                 </button>
@@ -400,14 +489,14 @@ export default function ReturnEntry() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. RET-20260914-0001 or DMS-RET-101"
+                  placeholder="Enter Return No..."
                   value={returnNo}
                   onChange={(e) => handleReturnNoChange(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-[#003366] focus:ring-2 focus:ring-[#003366] focus:border-[#003366] focus:outline-hidden"
                 />
               </div>
               <p className="text-[10px] text-slate-400 mt-1">
-                Entering Return No automatically activates <strong className="text-emerald-700">DMS Received: YES</strong>
+                Entering Return No activates <strong className="text-emerald-700">DMS Received: YES</strong>
               </p>
             </div>
 
@@ -428,95 +517,47 @@ export default function ReturnEntry() {
               </div>
             </div>
 
-            {/* Customer Party Selection (From Party Master under Master Registries) */}
+            {/* Customer Party from Party Master */}
             <div className="sm:col-span-2">
               <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                 Select Customer Party <span className="text-red-500">*</span> <span className="text-[10px] font-normal text-slate-500">(from Party Master)</span>
               </label>
-              <SearchableSelect
-                value={partyCode}
-                onChange={handlePartyChange}
-                placeholder="Search party by name or code..."
-                searchPlaceholder="Type customer party name or code..."
-                options={parties.map((p) => ({
-                  value: p.party_code,
-                  label: `${p.party_name} (${p.party_code})`,
-                  sublabel: `Route: ${p.route_name || 'Direct'} • City: ${p.city || '—'}`,
-                  badge: p.party_code
-                }))}
+              <SearchablePartySelect
+                parties={parties}
+                selectedCode={partyCode}
+                onSelect={handlePartySelect}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
-            {/* Ref Invoice - (Jiske Against return honi hai) like in billing module as Invoice Bill No * */}
-            <div className="sm:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+            {/* Invoice Bill No * */}
+            <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                Ref Invoice (Invoice Bill No) <span className="text-red-500">*</span>{' '}
-                <span className="text-[10px] font-normal text-slate-500">
-                  (Against which return is processed)
-                </span>
+                Invoice Bill No <span className="text-red-500">*</span> <span className="text-[10px] font-normal text-slate-500">(Against which return is made)</span>
               </label>
               <div className="relative">
-                <div className="flex gap-2">
-                  <div className="flex-1 relative">
-                    <Receipt className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 z-10" />
-                    <input
-                      type="text"
-                      list="party-invoices-master-list"
-                      required
-                      placeholder={
-                        partyCode
-                          ? invoicesList.length > 0
-                            ? 'Select or type Invoice / Bill No (e.g. RS/2026/012)...'
-                            : 'Enter Ref Invoice Bill No...'
-                          : 'Select Customer Party first...'
-                      }
-                      value={refInvoiceNo}
-                      onChange={(e) => handleRefInvoiceSelect(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-[#003366] focus:ring-2 focus:ring-[#003366] focus:outline-hidden"
-                    />
-                    <datalist id="party-invoices-master-list">
-                      {invoicesList.map((inv, i) => (
-                        <option key={i} value={inv.bill_no}>
-                          {`${inv.bill_no} — ₹${Number(inv.invoice_amount || 0).toLocaleString('en-IN')} (${inv.billing_date || 'Date N/A'})`}
-                        </option>
-                      ))}
-                    </datalist>
-                  </div>
-                </div>
-              </div>
-
-              {/* Invoice helper hint / badge */}
-              {selectedInvoiceMeta ? (
-                <div className="mt-1.5 flex items-center gap-2 text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>
-                    Matched Invoice: <strong>{selectedInvoiceMeta.bill_no}</strong> • Value: ₹{Number(selectedInvoiceMeta.invoice_amount || 0).toLocaleString('en-IN')} • Date: {selectedInvoiceMeta.billing_date}
-                  </span>
-                </div>
-              ) : invoicesList.length > 0 ? (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
-                  <span className="font-semibold text-slate-600">Recent Invoices for Party:</span>
-                  {invoicesList.slice(0, 3).map((inv, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleRefInvoiceSelect(inv.bill_no)}
-                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono font-bold transition-colors cursor-pointer"
-                    >
-                      {inv.bill_no} (₹{inv.invoice_amount})
-                    </button>
+                <Receipt className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 z-10" />
+                <input
+                  type="text"
+                  list="party-invoices-list"
+                  required
+                  placeholder="e.g. RS/2026/012 or Bill No..."
+                  value={refInvoiceNo}
+                  onChange={(e) => setRefInvoiceNo(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-[#003366] focus:ring-2 focus:ring-[#003366] focus:outline-hidden"
+                />
+                <datalist id="party-invoices-list">
+                  {invoicesList.map((inv, i) => (
+                    <option key={i} value={inv.bill_no}>
+                      {`${inv.bill_no} — ₹${inv.invoice_amount} (${inv.billing_date})`}
+                    </option>
                   ))}
-                </div>
-              ) : partyCode ? (
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Type the original Invoice / Bill Number if not listed in recent dispatches.
-                </p>
-              ) : null}
+                </datalist>
+              </div>
             </div>
 
-            {/* Return Reason Master Dropdown */}
+            {/* Return Reason Master */}
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                 Return Reason / Remark <span className="text-red-500">*</span>
@@ -558,10 +599,10 @@ export default function ReturnEntry() {
             </div>
           </div>
 
-          {/* DMS Allocation Status Toggle Segment */}
+          {/* DMS Allocation Status Toggle */}
           <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-600">DMS Allocation Mode:</span>
+              <span className="text-xs font-bold text-slate-600">DMS Status:</span>
               <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200">
                 <button
                   type="button"
@@ -589,21 +630,21 @@ export default function ReturnEntry() {
             </div>
 
             <div className="text-[11px] text-slate-500">
-              Current Flow:{' '}
+              Flow:{' '}
               <strong className={isDmsReceived === 1 ? 'text-emerald-700' : 'text-amber-700'}>
-                {isDmsReceived === 1 ? 'Direct DMS Received Record' : 'Pending DMS Reconciliation Queue'}
+                {isDmsReceived === 1 ? 'Direct DMS Received Record' : 'Pending DMS Queue'}
               </strong>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Multi-Part Return Items Table */}
+        {/* Section 2: Multi-Part Return Items Table (NO Reference Invoice Column) */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-emerald-600" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#003366]">
-                2. Return Part Items &amp; Rate Calculation
+                2. Return Part Items &amp; Calculation
               </h3>
             </div>
             <button
@@ -621,9 +662,8 @@ export default function ReturnEntry() {
               <thead className="bg-[#003366] text-white font-extrabold uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="p-3 w-12 text-center">#</th>
-                  <th className="p-3 min-w-[150px]">Part Number / Code *</th>
-                  <th className="p-3 min-w-[200px]">Part Description / Name *</th>
-                  <th className="p-3 min-w-[160px]">Reference Invoice No</th>
+                  <th className="p-3 min-w-[170px]">Part Number / Code *</th>
+                  <th className="p-3 min-w-[240px]">Part Description / Name *</th>
                   <th className="p-3 w-28 text-right">Return Qty *</th>
                   <th className="p-3 w-32 text-right">Rate (₹)</th>
                   <th className="p-3 w-36 text-right">Value (₹)</th>
@@ -652,16 +692,6 @@ export default function ReturnEntry() {
                         value={row.part_name}
                         onChange={(e) => handleItemChange(idx, 'part_name', e.target.value)}
                         className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-[#003366] focus:outline-hidden"
-                      />
-                    </td>
-                    <td className="p-2.5">
-                      <input
-                        type="text"
-                        list="party-invoices-master-list"
-                        placeholder="e.g. INV-2026-0881"
-                        value={row.reference_invoice_no}
-                        onChange={(e) => handleItemChange(idx, 'reference_invoice_no', e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-mono text-slate-700 focus:border-[#003366] focus:outline-hidden"
                       />
                     </td>
                     <td className="p-2.5 text-right">
@@ -702,7 +732,7 @@ export default function ReturnEntry() {
               </tbody>
               <tfoot className="bg-slate-50 border-t border-slate-200 font-bold text-xs text-slate-800">
                 <tr>
-                  <td colSpan={4} className="p-3 text-right uppercase tracking-wider text-[11px] text-slate-600">
+                  <td colSpan={3} className="p-3 text-right uppercase tracking-wider text-[11px] text-slate-600">
                     Total Return Summary ({items.length} Parts):
                   </td>
                   <td className="p-3 text-right font-black text-sm text-[#003366]">{totalQty} Units</td>
@@ -737,16 +767,13 @@ export default function ReturnEntry() {
               <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
                 Document / Photo Attachment URL
               </label>
-              <div className="relative">
-                <Upload className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  placeholder="https://... or Document Reference ID"
-                  value={attachmentUrl}
-                  onChange={(e) => setAttachmentUrl(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-[#003366] focus:outline-hidden"
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="https://... or Document Reference ID"
+                value={attachmentUrl}
+                onChange={(e) => setAttachmentUrl(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-[#003366] focus:outline-hidden"
+              />
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
