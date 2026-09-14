@@ -24,10 +24,6 @@ import {
   ArrowRight,
   Flame,
   Filter,
-  Building2,
-  Calendar,
-  AlertTriangle,
-  FileText,
   Check,
   Sparkles,
   Package,
@@ -67,14 +63,6 @@ export default function LEDDashboard() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
-
-  // Real-time Clock (IST)
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Fetch Master Routes on Warehouse change
   useEffect(() => {
@@ -255,24 +243,22 @@ export default function LEDDashboard() {
     ? routesList.find(r => checkRoutesMatch(r.route_name, selectedRoute, r.route_code, selectedRoute))
     : null;
 
-  // SearchableSelect route options with inline pending badges
+  // Clean SearchableSelect route options without overcrowded text
   const totalSystemPending = rawTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;
   const routeSelectOptions = useMemo(() => {
     return [
       {
         value: 'ALL',
         label: 'All Delivery Routes',
-        sublabel: `${routesList.length} Active Routes`,
-        badge: `${totalSystemPending} Pending`
+        sublabel: `${routesList.length} Routes`
       },
       ...routesList.map(r => ({
         value: r.route_name,
         label: r.route_name,
-        sublabel: r.route_code ? `${r.route_code} • ${r.total_count} Total` : `${r.total_count} Total`,
-        badge: r.unbilled_count > 0 ? `${r.unbilled_count} Pending` : '0'
+        sublabel: r.unbilled_count > 0 ? `${r.unbilled_count} Pending` : `${r.total_count} Tickets`
       }))
     ];
-  }, [routesList, totalSystemPending]);
+  }, [routesList]);
 
   // Filter tickets based on selection
   const filteredTickets = useMemo(() => {
@@ -459,42 +445,38 @@ export default function LEDDashboard() {
   const paginatedTickets = cappedTickets.slice(startIndex, startIndex + pageSize);
 
   return (
-    <div ref={containerRef} className="space-y-4 w-full max-w-full overflow-x-hidden font-sans pb-6">
+    <div ref={containerRef} className="space-y-3.5 w-full max-w-full overflow-x-hidden font-sans pb-6">
       
-      {/* ── TOP CONTROL HEADER (Glassmorphism & Crisp Accents) ── */}
-      <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5">
+      {/* ── TOP CONTROL HEADER (Clean, Uncluttered, High-End SaaS) ── */}
+      <div className="relative z-30 bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           
-          {/* Left: Brand / Title & Status Pill */}
+          {/* Left: Brand / Title */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#002855] to-[#004c8f] flex items-center justify-center text-white shadow-md shadow-blue-900/10 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#002855] to-[#004c8f] flex items-center justify-center text-white shadow-sm shadow-blue-900/10 shrink-0">
               <RouteIcon className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                   Dispatch Control Panel
                 </h1>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                  LIVE SYNC
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                  <Timer className="w-3 h-3 text-amber-600" />
-                  {totalSystemPending} Total Pending
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  LIVE
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium hidden sm:block mt-0.5">
-                Real-time route readiness, shift dispatch schedules &amp; fulfillment queue
+              <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
+                Route readiness, shift dispatch schedules &amp; live fulfillment queue
               </p>
             </div>
           </div>
 
-          {/* Right: Route Dropdown, Warehouse, Clock & Fast Actions */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          {/* Right: Route Selector & Action Controls */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             
             {/* Route Selector Dropdown */}
-            <div className="w-full sm:w-64 min-w-[200px]">
+            <div className="flex-1 sm:w-64 md:w-72 min-w-[200px]">
               <SearchableSelect
                 value={selectedRoute}
                 onChange={(e) => {
@@ -502,61 +484,55 @@ export default function LEDDashboard() {
                   setCurrentPage(1);
                 }}
                 options={routeSelectOptions}
-                placeholder="-- Select Delivery Route --"
+                placeholder="Select Delivery Route..."
                 searchPlaceholder="Search Route..."
-                className="bg-slate-50/80 border-slate-300 font-bold text-xs text-slate-900 rounded-xl shadow-2xs hover:border-[#004c8f] transition-all"
+                renderSelected={(opt) => (
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="text-slate-400 font-bold text-[11px] shrink-0">Route:</span>
+                    <span className="font-extrabold text-slate-900 truncate text-xs">{opt.label}</span>
+                  </div>
+                )}
+                className="bg-slate-50 hover:bg-slate-100/70 border-slate-300 font-bold text-xs text-slate-900 rounded-xl shadow-2xs transition-all h-[38px] py-1"
                 minSearchItems={5}
               />
-            </div>
-
-            {/* Warehouse Badge */}
-            <div className="px-3 py-1.5 rounded-xl bg-slate-100/80 border border-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 shrink-0 shadow-2xs">
-              <Building2 className="w-3.5 h-3.5 text-[#004c8f]" />
-              <span>{activeWarehouse ? (activeWarehouse.warehouse_code || activeWarehouse.warehouse_name) : 'WH-MAIN'}</span>
-            </div>
-
-            {/* Real-time IST Digital Clock */}
-            <div className="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-mono font-bold text-xs flex items-center gap-1.5 shrink-0 shadow-sm border border-slate-800">
-              <Clock className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
             </div>
 
             {/* Refresh Button with Countdown */}
             <button
               type="button"
               onClick={() => fetchDashboard()}
-              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#003366] to-[#004c8f] hover:from-[#002244] hover:to-[#003366] active:scale-95 text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0"
+              className="h-[38px] px-3 rounded-xl bg-[#003366] hover:bg-[#002244] active:scale-95 text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer shrink-0"
               title="Refresh Live Data"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">({refreshCountdown}s)</span>
+              <span className="text-[11px]">({refreshCountdown}s)</span>
             </button>
 
-            {/* Fullscreen TV Mode Toggle */}
+            {/* Fullscreen Focus Mode Toggle */}
             <button
               type="button"
               onClick={toggleFullScreen}
-              className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 cursor-pointer transition-all shadow-2xs shrink-0 active:scale-95"
+              className="h-[38px] w-[38px] rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center cursor-pointer transition-all shadow-2xs shrink-0 active:scale-95"
               title={isFullScreen ? 'Exit Full Screen' : 'Full Screen View'}
             >
-              {isFullScreen ? <Minimize2 className="w-3.5 h-3.5 text-indigo-600" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              {isFullScreen ? <Minimize2 className="w-4 h-4 text-indigo-600" /> : <Maximize2 className="w-4 h-4" />}
             </button>
           </div>
         </div>
       </div>
 
       {/* ── FILTER & SEARCH TOOLBAR (Clean Segmented Tabs & Responsive Search) ── */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-3 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-2.5 sm:p-3 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-2.5">
         
         {/* Left: Shift & Stage Filter Groups */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           
           {/* Shift Slot Selector */}
-          <div className="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0">
+          <div className="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200/70 shrink-0">
             <button
               type="button"
               onClick={() => { setSelectedSlot('ALL'); setCurrentPage(1); }}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 selectedSlot === 'ALL'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -567,7 +543,7 @@ export default function LEDDashboard() {
             <button
               type="button"
               onClick={() => { setSelectedSlot('Morning'); setCurrentPage(1); }}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
                 selectedSlot === 'Morning'
                   ? 'bg-amber-500 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -578,7 +554,7 @@ export default function LEDDashboard() {
             <button
               type="button"
               onClick={() => { setSelectedSlot('Evening'); setCurrentPage(1); }}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
                 selectedSlot === 'Evening'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -589,7 +565,7 @@ export default function LEDDashboard() {
           </div>
 
           {/* Quick Stage Tabs */}
-          <div className="inline-flex flex-wrap items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 gap-1">
+          <div className="inline-flex flex-wrap items-center bg-slate-100 p-1 rounded-xl border border-slate-200/70 gap-1">
             {[
               { id: 'ALL', label: 'All' },
               { id: 'Pending', label: `Pending (${filteredPending})`, dot: 'bg-rose-500' },
@@ -616,39 +592,25 @@ export default function LEDDashboard() {
           </div>
         </div>
 
-        {/* Right: Search Box & Context Tag */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          
-          {/* Quick Search */}
-          <div className="relative flex-1 md:w-64 min-w-[180px]">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Search Ticket, Party, PO..."
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-7 py-1.5 text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#004c8f] focus:ring-1 focus:ring-[#004c8f] focus:outline-none transition-all shadow-2xs"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 text-xs font-bold cursor-pointer"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Active Context Chip */}
-          <div className="text-[11px] text-slate-600 font-semibold hidden lg:inline-flex items-center gap-2 shrink-0 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
-            <span className="text-slate-400 uppercase font-black text-[10px]">Active Route:</span>
-            <span className="font-extrabold text-[#003366]">
-              {selectedRouteObj ? selectedRouteObj.route_name : 'ALL ROUTES'}
-            </span>
-            <span className="text-slate-300">|</span>
-            <span className="font-bold text-slate-800">{filteredTotal} Tickets ({filteredCartons} Ctn)</span>
-          </div>
+        {/* Right: Search Input */}
+        <div className="relative w-full md:w-72">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+          <input
+            type="text"
+            placeholder="Search Ticket, Party, PO, Picker..."
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-7 py-1.5 text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#004c8f] focus:ring-1 focus:ring-[#004c8f] focus:outline-none transition-all shadow-2xs"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 text-xs font-bold cursor-pointer"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 
