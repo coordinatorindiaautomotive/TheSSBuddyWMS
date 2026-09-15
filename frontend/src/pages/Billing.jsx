@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import SearchableSelect from '../components/SearchableSelect';
 import {
@@ -21,6 +22,7 @@ import {
 
 export default function Billing() {
   const toast = useToast();
+  const { activeWarehouse } = useAuth();
   const [billings, setBillings] = useState([]);
   const [pendingTickets, setPendingTickets] = useState([]);
   const [checkers, setCheckers] = useState([]);
@@ -58,7 +60,7 @@ export default function Billing() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeWarehouse]);
 
   const fetchData = async () => {
     setLoading(true);

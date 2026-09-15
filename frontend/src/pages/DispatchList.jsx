@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { Truck, Eye, Plus, Search, RotateCcw } from 'lucide-react';
 
 export default function DispatchList() {
+  const { activeWarehouse } = useAuth();
   const [dispatches, setDispatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetchDispatches();
-  }, []);
+  }, [activeWarehouse]);
 
   const fetchDispatches = async () => {
     setLoading(true);

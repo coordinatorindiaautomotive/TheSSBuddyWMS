@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { Users, Plus, Building } from 'lucide-react';
 
 export default function Parties() {
+  const { activeWarehouse } = useAuth();
   const [parties, setParties] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
@@ -14,7 +16,7 @@ export default function Parties() {
 
   useEffect(() => {
     fetchParties();
-  }, []);
+  }, [activeWarehouse]);
 
   const fetchParties = async () => {
     try {

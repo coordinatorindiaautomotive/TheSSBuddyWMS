@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { Truck, Plus } from 'lucide-react';
 
 export default function Vehicles() {
+  const { activeWarehouse } = useAuth();
   const [vehicles, setVehicles] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [vehicleNo, setVehicleNo] = useState('');
@@ -11,7 +13,7 @@ export default function Vehicles() {
 
   useEffect(() => {
     fetchVehicles();
-  }, []);
+  }, [activeWarehouse]);
 
   const fetchVehicles = async () => {
     try {

@@ -44,7 +44,7 @@ const TD = ({ children, className = '' }) => (
 
 export default function MasterRegistries() {
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, activeWarehouse } = useAuth();
   const isSuperAdmin = Boolean(
     user && (
       ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user.role) ||
@@ -132,7 +132,7 @@ export default function MasterRegistries() {
     if (isSuperAdmin) {
       fetchSysConfig();
     }
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, activeWarehouse]);
 
   const fetchSysConfig = async () => {
     try {

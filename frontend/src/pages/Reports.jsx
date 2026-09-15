@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import SearchableSelect from '../components/SearchableSelect';
 import {
   BarChart3,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export default function Reports() {
+  const { activeWarehouse } = useAuth();
   const [reportType, setReportType] = useState('detailed-lifecycle');
   const [reportData, setReportData] = useState([]);
   const [routesList, setRoutesList] = useState([]);
@@ -33,11 +35,11 @@ export default function Reports() {
 
   useEffect(() => {
     fetchRoutes();
-  }, []);
+  }, [activeWarehouse]);
 
   useEffect(() => {
     fetchReport();
-  }, [reportType]);
+  }, [reportType, activeWarehouse]);
 
   const fetchRoutes = async () => {
     try {

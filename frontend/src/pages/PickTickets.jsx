@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import SearchableSelect from '../components/SearchableSelect';
 import {
@@ -143,6 +144,7 @@ function SearchablePartySelect({ parties = [], selectedCode, onSelect }) {
 
 export default function PickTickets() {
   const toast = useToast();
+  const { activeWarehouse } = useAuth();
   const [tickets, setTickets] = useState([]);
   const [pickers, setPickers] = useState([]);
   const [parties, setParties] = useState([]);
@@ -184,7 +186,7 @@ export default function PickTickets() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeWarehouse]);
 
   const fetchData = async () => {
     try {

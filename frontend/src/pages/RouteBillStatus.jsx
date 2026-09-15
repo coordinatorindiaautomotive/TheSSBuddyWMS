@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import SearchableSelect from '../components/SearchableSelect';
 import {
@@ -22,6 +23,7 @@ import {
 
 export default function RouteBillStatus() {
   const toast = useToast();
+  const { activeWarehouse } = useAuth();
   const [routes, setRoutes] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState('');
   const [fromDate, setFromDate] = useState('');
@@ -39,7 +41,7 @@ export default function RouteBillStatus() {
   useEffect(() => {
     setDefaultDates();
     fetchRoutes();
-  }, []);
+  }, [activeWarehouse]);
 
   const setDefaultDates = () => {
     const today = new Date();

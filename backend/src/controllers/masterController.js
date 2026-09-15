@@ -874,10 +874,12 @@ async function ensureReturnRemarksTable() {
 async function getReturnRemarks(req, res) {
   try {
     await ensureReturnRemarksTable();
+    const whId = req.activeWarehouseId ? parseInt(req.activeWarehouseId, 10) : 1;
     const remarks = await dbAsync.all(`
       SELECT * FROM return_remarks_master 
+      WHERE warehouse_id = ?
       ORDER BY id ASC
-    `);
+    `, [whId]);
     return res.json(remarks || []);
   } catch (err) {
     console.error('getReturnRemarks error:', err);
@@ -1006,10 +1008,12 @@ async function ensureArrangeTeamsTable() {
 async function getArrangeTeams(req, res) {
   try {
     await ensureArrangeTeamsTable();
+    const whId = req.activeWarehouseId ? parseInt(req.activeWarehouseId, 10) : 1;
     const teams = await dbAsync.all(`
       SELECT * FROM arrange_teams_master 
+      WHERE warehouse_id = ?
       ORDER BY id ASC
-    `);
+    `, [whId]);
     return res.json(teams || []);
   } catch (err) {
     console.error('getArrangeTeams error:', err);

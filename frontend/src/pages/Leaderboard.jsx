@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import {
   Trophy,
   Award,
@@ -40,6 +41,7 @@ const roleColors = {
 };
 
 export default function Leaderboard() {
+  const { activeWarehouse } = useAuth();
   const [period, setPeriod] = useState('weekly');
   const [refreshSpeed, setRefreshSpeed] = useState('900000'); // 15 mins default
   const [search, setSearch] = useState('');
@@ -48,15 +50,11 @@ export default function Leaderboard() {
     checkers: [],
     helpers: [],
     summary: {
-      totalUnitsPicked: 0,
-      totalQtyChecked: 0,
-      totalQtyAssisted: 0,
-      totalActiveStaff: 0,
-      topPicker: null,
-      topChecker: null,
-      topHelper: null
-    },
-    generatedAt: '--'
+      totalPicked: 0,
+      totalChecked: 0,
+      totalAssisted: 0,
+      totalInvoiceVal: 0
+    }
   });
   const [loading, setLoading] = useState(true);
   const [selectedStaff, setSelectedStaff] = useState(null);
@@ -69,7 +67,7 @@ export default function Leaderboard() {
       const timer = setInterval(() => fetchLeaderboard(period), ms);
       return () => clearInterval(timer);
     }
-  }, [period, refreshSpeed]);
+  }, [period, refreshSpeed, activeWarehouse]);
 
   const fetchLeaderboard = async (selectedPeriod) => {
     setLoading(true);

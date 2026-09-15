@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { UserCheck, Plus } from 'lucide-react';
 
 export default function Drivers() {
+  const { activeWarehouse } = useAuth();
   const [drivers, setDrivers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
@@ -12,7 +14,7 @@ export default function Drivers() {
 
   useEffect(() => {
     fetchDrivers();
-  }, []);
+  }, [activeWarehouse]);
 
   const fetchDrivers = async () => {
     try {

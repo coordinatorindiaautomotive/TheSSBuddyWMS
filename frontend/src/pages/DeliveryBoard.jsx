@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import SearchableSelect from '../components/SearchableSelect';
 import { MapPin, CheckCircle, XCircle, Clock, FileCheck, RotateCcw } from 'lucide-react';
 
 export default function DeliveryBoard() {
   const toast = useToast();
+  const { activeWarehouse } = useAuth();
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
@@ -14,7 +16,7 @@ export default function DeliveryBoard() {
 
   useEffect(() => {
     fetchDeliveries();
-  }, []);
+  }, [activeWarehouse]);
 
   const fetchDeliveries = async () => {
     setLoading(true);
