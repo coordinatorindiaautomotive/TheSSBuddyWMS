@@ -5,7 +5,7 @@ async function getAuditLogs(req, res) {
     const whId = req.activeWarehouseId || 1;
     const { action_type, module: moduleParam, search, fromDate, toDate } = req.query;
 
-    let query = 'SELECT * FROM audit_logs WHERE (warehouse_id = ? OR warehouse_id IS NULL)';
+    let query = 'SELECT * FROM audit_logs WHERE warehouse_id = ?';
     const params = [whId];
 
     if (action_type) {

@@ -134,8 +134,8 @@ async function getArranges(req, res) {
     const parsedLimit = Math.min(200, Math.max(1, parseInt(limit, 10) || 50));
     const offset = (parsedPage - 1) * parsedLimit;
 
-    let whereClause = 'WHERE (a.warehouse_id = ? OR a.warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM arranges WHERE warehouse_id = ?))';
-    const params = [whId, whId, whId];
+    let whereClause = 'WHERE a.warehouse_id = ?';
+    const params = [whId];
 
     if (search && search.trim()) {
       const s = `%${search.trim()}%`;
@@ -583,8 +583,8 @@ async function deleteArrange(req, res) {
 async function getArrangeReports(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    const whCondition = 'WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM arranges WHERE warehouse_id = ?))';
-    const whParams = [whId, whId, whId];
+    const whCondition = 'WHERE warehouse_id = ?';
+    const whParams = [whId];
 
     // Summary KPIs
     const totalArranges = await dbAsync.get(`SELECT COUNT(*) as count, COALESCE(SUM(total_qty), 0) as total_qty FROM arranges ${whCondition}`, whParams);

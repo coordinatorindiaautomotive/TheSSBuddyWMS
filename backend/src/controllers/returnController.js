@@ -134,8 +134,8 @@ async function getReturns(req, res) {
     const parsedLimit = Math.min(200, Math.max(1, parseInt(limit, 10) || 50));
     const offset = (parsedPage - 1) * parsedLimit;
 
-    let whereClause = 'WHERE (r.warehouse_id = ? OR r.warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM returns WHERE warehouse_id = ?))';
-    const params = [whId, whId, whId];
+    let whereClause = 'WHERE r.warehouse_id = ?';
+    const params = [whId];
 
     if (search && search.trim()) {
       const s = `%${search.trim()}%`;
@@ -528,8 +528,8 @@ async function deleteReturn(req, res) {
 async function getReturnReports(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    const whCondition = 'WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM returns WHERE warehouse_id = ?))';
-    const whParams = [whId, whId, whId];
+    const whCondition = 'WHERE warehouse_id = ?';
+    const whParams = [whId];
 
     // KPIs
     const totalCountRow = await dbAsync.get(`SELECT COUNT(*) as count, COALESCE(SUM(total_value), 0) as total_value, COALESCE(SUM(total_qty), 0) as total_qty FROM returns ${whCondition}`, whParams);
@@ -628,9 +628,9 @@ async function searchInvoices(req, res) {
         b.invoice_amount 
       FROM billings b
       JOIN pick_tickets pt ON b.pick_ticket_id = pt.id
-      WHERE (b.warehouse_id = ? OR b.warehouse_id IS NULL OR ? = 1)
+      WHERE b.warehouse_id = ?
     `;
-    const params = [whId, whId];
+    const params = [whId];
 
     if (party_code) {
       sql += ' AND pt.party_code = ?';

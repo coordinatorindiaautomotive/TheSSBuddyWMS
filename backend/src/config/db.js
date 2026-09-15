@@ -1255,7 +1255,18 @@ async function ensureDefaultSeed() {
       console.log('✅ Default SuperAdmin created: (Username: admin / Password: admin123)');
     }
 
-    // Seed default Return Remarks if empty
+    // Safety Migration: Backfill any legacy NULL warehouse_id to default warehouse (id: 1)
+    const tablesWithWh = [
+      'pick_tickets', 'billings', 'dispatches', 'dispatch_parties',
+      'parties', 'route_masters', 'route_schedules', 'picker_checker_helpers',
+      'drivers', 'vehicles', 'returns', 'return_items', 'arranges', 'material_arranges',
+      'return_remarks_master', 'arrange_teams_master', 'salesman_masters', 'salesmen'
+    ];
+    for (const tbl of tablesWithWh) {
+      try {
+        await dbAsync.run(`UPDATE ${tbl} SET warehouse_id = 1 WHERE warehouse_id IS NULL`);
+      } catch (e) {}
+    }
     const existingReturnRemarks = await dbAsync.get('SELECT id FROM return_remarks_master LIMIT 1');
     if (!existingReturnRemarks) {
       const defaultRemarks = [

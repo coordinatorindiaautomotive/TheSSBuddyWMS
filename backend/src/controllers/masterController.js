@@ -53,8 +53,8 @@ async function deleteWarehouse(req, res) {
 async function getRoutes(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    let routes = await dbAsync.all('SELECT * FROM route_masters WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM route_masters WHERE warehouse_id = ?)) ORDER BY route_name ASC', [whId, whId, whId]);
-    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM route_schedules WHERE warehouse_id = ?)) ORDER BY priority_order ASC, dispatch_time ASC', [whId, whId, whId]);
+    let routes = await dbAsync.all('SELECT * FROM route_masters WHERE warehouse_id = ? ORDER BY route_name ASC', [whId]);
+    const schedules = await dbAsync.all('SELECT * FROM route_schedules WHERE warehouse_id = ? ORDER BY priority_order ASC, dispatch_time ASC', [whId]);
 
     if (!routes) routes = [];
 
@@ -62,11 +62,11 @@ async function getRoutes(req, res) {
     try {
       const distinctTicketRoutes = await dbAsync.all(`
         SELECT DISTINCT route FROM pick_tickets 
-        WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1 OR NOT EXISTS (SELECT 1 FROM pick_tickets WHERE warehouse_id = ?)) 
+        WHERE warehouse_id = ? 
           AND route IS NOT NULL 
           AND TRIM(route) != ''
         ORDER BY route ASC
-      `, [whId, whId, whId]);
+      `, [whId]);
 
       const existingNames = new Set(routes.map(r => String(r.route_name || '').toLowerCase().trim()));
       let tempId = 9000;
@@ -304,9 +304,9 @@ async function getRouteSchedules(req, res) {
     const whId = req.activeWarehouseId;
     const schedules = await dbAsync.all(`
       SELECT * FROM route_schedules 
-      WHERE route_id = ? ${whId ? 'AND (warehouse_id = ? OR warehouse_id IS NULL)' : ''} 
+      WHERE route_id = ? AND warehouse_id = ?
       ORDER BY priority_order ASC, dispatch_time ASC
-    `, whId ? [routeId, whId] : [routeId]);
+    `, [routeId, whId || 1]);
     return res.json(schedules);
   } catch (err) {
     console.error('Error fetching route schedules:', err);
@@ -429,7 +429,7 @@ async function deleteRouteSchedule(req, res) {
 async function getWorkers(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    const workers = await dbAsync.all('SELECT * FROM picker_checker_helpers WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY name ASC', [whId, whId]);
+    const workers = await dbAsync.all('SELECT * FROM picker_checker_helpers WHERE warehouse_id = ? ORDER BY name ASC', [whId]);
     return res.json(workers);
   } catch (err) {
     return res.status(500).json({ message: 'Error fetching workers.' });
@@ -443,7 +443,7 @@ async function createWorker(req, res) {
 
     let empCode = employee_code;
     if (!empCode) {
-      const allWorkers = await dbAsync.all('SELECT employee_code, id FROM picker_checker_helpers');
+      const allWorkers = await dbAsync.all('SELECT employee_code, id FROM picker_checker_helpers WHERE warehouse_id = ?', [whId]);
       let maxNum = 0;
       allWorkers.forEach(w => {
         const c = w.employee_code || `EMP-${w.id}`;
@@ -500,7 +500,7 @@ async function getSalesmen(req, res) {
       salesmen = await dbAsync.all(`
         SELECT id, salesman_code, salesman_name as name, salesman_name, phone, mobile, territory, warehouse_id
         FROM salesman_masters 
-        WHERE warehouse_id = ? OR warehouse_id IS NULL
+        WHERE warehouse_id = ?
         ORDER BY salesman_name ASC
       `, [whId]);
     } catch (e) {}
@@ -510,11 +510,11 @@ async function getSalesmen(req, res) {
         salesmen = await dbAsync.all(`
           SELECT id, salesman_code, name, name as salesman_name, phone, territory, warehouse_id
           FROM salesmen 
-          WHERE warehouse_id = ? OR warehouse_id IS NULL
+          WHERE warehouse_id = ?
           ORDER BY name ASC
         `, [whId]);
       } catch (e) {
-        salesmen = await dbAsync.all('SELECT id, salesman_code, name, name as salesman_name, phone, territory FROM salesmen ORDER BY name ASC');
+        salesmen = [];
       }
     }
 
@@ -623,7 +623,7 @@ async function deleteSalesman(req, res) {
 async function getDrivers(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
-    const drivers = await dbAsync.all('SELECT * FROM drivers WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY name ASC', [whId, whId]);
+    const drivers = await dbAsync.all('SELECT * FROM drivers WHERE warehouse_id = ? ORDER BY name ASC', [whId]);
     return res.json(drivers);
   } catch (err) {
     return res.status(500).json({ message: 'Error fetching drivers.' });
@@ -688,9 +688,9 @@ async function getVehicles(req, res) {
       SELECT v.*, d.name as driver_name
       FROM vehicles v
       LEFT JOIN drivers d ON v.driver_id = d.id
-      WHERE (v.warehouse_id = ? OR v.warehouse_id IS NULL OR ? = 1)
+      WHERE v.warehouse_id = ?
       ORDER BY v.vehicle_number ASC
-    `, [whId, whId]);
+    `, [whId]);
     return res.json(vehicles);
   } catch (err) {
     return res.status(500).json({ message: 'Error fetching vehicles.' });

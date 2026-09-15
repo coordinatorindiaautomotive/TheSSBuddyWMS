@@ -180,14 +180,12 @@ async function getOperationsConsoleData(warehouseId) {
   const dayName = WEEKDAY_NAMES[now.getDay()];
 
   const whId = warehouseId || 1;
-  const whWhere = '(warehouse_id = ? OR warehouse_id IS NULL OR ? = 1)';
-  const whParams = [whId, whId];
 
   let routes = await dbAsync.all(`
     SELECT * FROM route_masters 
-    WHERE ${whWhere}
+    WHERE warehouse_id = ?
     ORDER BY route_name ASC
-  `, whParams);
+  `, [whId]);
 
   if (!routes) routes = [];
 
@@ -195,11 +193,11 @@ async function getOperationsConsoleData(warehouseId) {
   try {
     const distinctTicketRoutes = await dbAsync.all(`
       SELECT DISTINCT route FROM pick_tickets 
-      WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) 
+      WHERE warehouse_id = ? 
         AND route IS NOT NULL 
         AND TRIM(route) != ''
       ORDER BY route ASC
-    `, whParams);
+    `, [whId]);
 
     const existingNames = new Set(routes.map(r => String(r.route_name || '').toLowerCase().trim()));
     let tempId = 9000;
@@ -222,26 +220,26 @@ async function getOperationsConsoleData(warehouseId) {
     SELECT rs.*, rm.route_name, rm.route_code 
     FROM route_schedules rs
     JOIN route_masters rm ON rs.route_id = rm.id
-    WHERE (rs.warehouse_id = ? OR rs.warehouse_id IS NULL OR ? = 1) AND rs.is_active = 1
+    WHERE rs.warehouse_id = ? AND rs.is_active = 1
     ORDER BY rs.dispatch_time ASC, rs.priority_order ASC
-  `, whParams);
+  `, [whId]);
 
   const pickTickets = await dbAsync.all(`
     SELECT pt.*, b.id as billing_id, b.bill_no, b.billed_qty, b.invoice_amount, b.created_at as billed_at
     FROM pick_tickets pt
     LEFT JOIN billings b ON b.pick_ticket_id = pt.id
-    WHERE (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
+    WHERE pt.warehouse_id = ?
       AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))
     ORDER BY pt.created_at ASC
-  `, whParams);
+  `, [whId]);
 
   const todayDispatches = await dbAsync.all(`
     SELECT d.*, dp.billing_id, dp.party_code
     FROM dispatches d
     LEFT JOIN dispatch_parties dp ON dp.dispatch_id = d.id
-    WHERE (d.warehouse_id = ? OR d.warehouse_id IS NULL OR ? = 1)
+    WHERE d.warehouse_id = ?
       AND (d.dispatch_date = ? OR DATE(d.created_at) = ?)
-  `, [whId, whId, todayStr, todayStr]);
+  `, [whId, todayStr, todayStr]);
 
   const dispatchedBillingIds = new Set((todayDispatches || []).map(d => d.billing_id).filter(Boolean));
 

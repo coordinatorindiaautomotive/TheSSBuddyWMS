@@ -2,12 +2,14 @@ const { dbAsync } = require('../config/db');
 
 async function getParties(req, res) {
   try {
+    const whId = req.activeWarehouseId || 1;
     const parties = await dbAsync.all(`
       SELECT p.*, COALESCE(rm.route_name, p.route_name, p.address) as route_name
       FROM parties p
       LEFT JOIN route_masters rm ON p.route_id = rm.id
+      WHERE p.warehouse_id = ?
       ORDER BY p.party_name ASC
-    `);
+    `, [whId]);
     return res.json(parties || []);
   } catch (err) {
     console.error('getParties error:', err);
@@ -17,10 +19,12 @@ async function getParties(req, res) {
 
 async function getPartyByCode(req, res) {
   try {
+    const { code } = req.params;
+    const whId = req.activeWarehouseId || 1;
     const cleanCode = String(code || '').trim().toUpperCase();
     const party = await dbAsync.get(
-      'SELECT * FROM parties WHERE UPPER(TRIM(party_code)) = ? AND (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1)',
-      [cleanCode, whId, whId]
+      'SELECT * FROM parties WHERE UPPER(TRIM(party_code)) = ? AND warehouse_id = ?',
+      [cleanCode, whId]
     );
     if (!party) {
       return res.status(404).json({ message: 'Party Code not found in Master for active warehouse.' });

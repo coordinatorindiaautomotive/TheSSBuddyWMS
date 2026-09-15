@@ -40,11 +40,11 @@ async function getLeaderboard(req, res) {
         COALESCE(SUM(CASE WHEN pt.status IN ('Picked', 'Billed', 'Dispatched') THEN 1 ELSE 0 END), 0) as completed_tickets,
         COALESCE(SUM(CASE WHEN pt.status = 'Assigned' THEN 1 ELSE 0 END), 0) as pending_tickets
       FROM picker_checker_helpers pkh
-      LEFT JOIN pick_tickets pt ON (pkh.id = pt.picker_id OR pkh.employee_code = pt.picker_id OR pkh.name = pt.picker_id) ${ptDateClause}
-      WHERE (pkh.warehouse_id = ? OR ? = 0) AND pkh.role = 'Picker' AND pkh.is_active = 1
+      LEFT JOIN pick_tickets pt ON (pkh.id = pt.picker_id OR pkh.employee_code = pt.picker_id OR pkh.name = pt.picker_id) AND pt.warehouse_id = pkh.warehouse_id ${ptDateClause}
+      WHERE pkh.warehouse_id = ? AND pkh.role = 'Picker' AND pkh.is_active = 1
       GROUP BY pkh.id, pkh.name, pkh.employee_code, pkh.phone
       ORDER BY score DESC, count DESC
-    `, [whId, whId]);
+    `, [whId]);
 
     const maxPickerScore = rawPickers.length > 0 && rawPickers[0].score > 0 ? rawPickers[0].score : 1;
     const pickers = rawPickers.map((p, idx) => ({
@@ -67,11 +67,11 @@ async function getLeaderboard(req, res) {
         COALESCE(SUM(b.billed_qty), 0) as score,
         COALESCE(SUM(b.invoice_amount), 0) as total_invoice_val
       FROM picker_checker_helpers pkh
-      LEFT JOIN billings b ON (pkh.id = b.checker_id OR pkh.employee_code = b.checker_id OR pkh.name = b.checker_id) ${bDateClause}
-      WHERE (pkh.warehouse_id = ? OR ? = 0) AND pkh.role = 'Checker' AND pkh.is_active = 1
+      LEFT JOIN billings b ON (pkh.id = b.checker_id OR pkh.employee_code = b.checker_id OR pkh.name = b.checker_id) AND b.warehouse_id = pkh.warehouse_id ${bDateClause}
+      WHERE pkh.warehouse_id = ? AND pkh.role = 'Checker' AND pkh.is_active = 1
       GROUP BY pkh.id, pkh.name, pkh.employee_code, pkh.phone
       ORDER BY score DESC, count DESC
-    `, [whId, whId]);
+    `, [whId]);
 
     const maxCheckerScore = rawCheckers.length > 0 && rawCheckers[0].score > 0 ? rawCheckers[0].score : 1;
     const checkers = rawCheckers.map((c, idx) => ({
@@ -93,11 +93,11 @@ async function getLeaderboard(req, res) {
         COUNT(b.id) as count, 
         COALESCE(SUM(b.billed_qty), 0) as score
       FROM picker_checker_helpers pkh
-      LEFT JOIN billings b ON (pkh.id = b.helper_id OR pkh.employee_code = b.helper_id OR pkh.name = b.helper_id) ${bDateClause}
-      WHERE (pkh.warehouse_id = ? OR ? = 0) AND pkh.role = 'Helper' AND pkh.is_active = 1
+      LEFT JOIN billings b ON (pkh.id = b.helper_id OR pkh.employee_code = b.helper_id OR pkh.name = b.helper_id) AND b.warehouse_id = pkh.warehouse_id ${bDateClause}
+      WHERE pkh.warehouse_id = ? AND pkh.role = 'Helper' AND pkh.is_active = 1
       GROUP BY pkh.id, pkh.name, pkh.employee_code, pkh.phone
       ORDER BY score DESC, count DESC
-    `, [whId, whId]);
+    `, [whId]);
 
     const maxHelperScore = rawHelpers.length > 0 && rawHelpers[0].score > 0 ? rawHelpers[0].score : 1;
     const helpers = rawHelpers.map((h, idx) => ({

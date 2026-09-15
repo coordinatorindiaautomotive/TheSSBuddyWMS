@@ -27,10 +27,10 @@ async function createOnDemandDispatch(req, res) {
       SELECT b.id, b.bill_no, b.invoice_amount, pt.qty_in_pick_ticket as total_cartons, pt.party_code
       FROM billings b
       JOIN pick_tickets pt ON b.pick_ticket_id = pt.id
-      WHERE (b.warehouse_id = ? OR b.warehouse_id IS NULL OR ? = 1) 
+      WHERE b.warehouse_id = ? 
         AND LOWER(TRIM(pt.route)) = LOWER(TRIM(?))
         AND b.id NOT IN (SELECT billing_id FROM dispatch_parties WHERE status != 'Failed')
-    `, [whId, whId, rName]);
+    `, [whId, rName]);
 
     return res.json({
       message: 'On-Demand dispatch review generated.',
@@ -50,19 +50,19 @@ async function getPlanningData(req, res) {
   try {
     const whId = req.activeWarehouseId || 1;
 
-    let routes = await dbAsync.all('SELECT * FROM route_masters WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) ORDER BY route_name ASC', [whId, whId]);
-    const drivers = await dbAsync.all("SELECT * FROM drivers WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) AND status = 'Available'", [whId, whId]);
-    const vehicles = await dbAsync.all("SELECT * FROM vehicles WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) AND status = 'Available'", [whId, whId]);
+    let routes = await dbAsync.all('SELECT * FROM route_masters WHERE warehouse_id = ? ORDER BY route_name ASC', [whId]);
+    const drivers = await dbAsync.all("SELECT * FROM drivers WHERE warehouse_id = ? AND status = 'Available'", [whId]);
+    const vehicles = await dbAsync.all("SELECT * FROM vehicles WHERE warehouse_id = ? AND status = 'Available'", [whId]);
 
     // Discover any additional routes from pick_tickets / parties if not yet in route_masters
     try {
       const distinctTicketRoutes = await dbAsync.all(`
         SELECT DISTINCT route FROM pick_tickets 
-        WHERE (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1) 
+        WHERE warehouse_id = ? 
           AND route IS NOT NULL 
           AND TRIM(route) != ''
         ORDER BY route ASC
-      `, [whId, whId]);
+      `, [whId]);
 
       const existingNames = new Set((routes || []).map(r => String(r.route_name || '').toLowerCase().trim()));
       let tempId = 9000;
@@ -91,12 +91,12 @@ async function getPlanningData(req, res) {
              pt.route as ticket_route
       FROM billings b
       LEFT JOIN pick_tickets pt ON b.pick_ticket_id = pt.id
-      LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(b.party_code)) = TRIM(LOWER(p.party_code))) AND (p.warehouse_id = b.warehouse_id OR p.warehouse_id IS NULL OR ? = 1)
+      LEFT JOIN parties p ON (TRIM(LOWER(pt.party_code)) = TRIM(LOWER(p.party_code)) OR TRIM(LOWER(b.party_code)) = TRIM(LOWER(p.party_code))) AND p.warehouse_id = b.warehouse_id
       LEFT JOIN route_masters rm ON (p.route_id = rm.id OR LOWER(TRIM(rm.route_name)) = LOWER(TRIM(pt.route)))
-      WHERE (b.warehouse_id = ? OR b.warehouse_id IS NULL OR ? = 1)
+      WHERE b.warehouse_id = ?
         AND b.id NOT IN (SELECT billing_id FROM dispatch_parties WHERE status != 'Failed')
       ORDER BY b.created_at DESC
-    `, [whId, whId, whId]);
+    `, [whId]);
 
     return res.json({
       routes: routes || [],
@@ -220,17 +220,17 @@ async function getPartyBillStatus(req, res) {
       targetRoute = await dbAsync.get(`
         SELECT * FROM route_masters 
         WHERE (id = ? OR route_name = ? OR route_code = ?) 
-          AND (warehouse_id = ? OR warehouse_id IS NULL OR ? = 1)
-      `, [routeId, routeId, routeId, whId, whId]);
+          AND warehouse_id = ?
+      `, [routeId, routeId, routeId, whId]);
     }
 
     let partySql = `
       SELECT p.*, rm.route_name as master_route_name, rm.route_code as master_route_code
       FROM parties p
       LEFT JOIN route_masters rm ON p.route_id = rm.id
-      WHERE (p.warehouse_id = ? OR p.warehouse_id IS NULL OR ? = 1)
+      WHERE p.warehouse_id = ?
     `;
-    let partyParams = [whId, whId];
+    let partyParams = [whId];
 
     if (targetRoute) {
       partySql += ` AND (
@@ -251,10 +251,10 @@ async function getPartyBillStatus(req, res) {
       SELECT pt.*, b.id as billing_id, b.bill_no, b.billed_qty, b.created_at as billing_date
       FROM pick_tickets pt
       LEFT JOIN billings b ON pt.id = b.pick_ticket_id
-      WHERE (pt.warehouse_id = ? OR pt.warehouse_id IS NULL OR ? = 1)
+      WHERE pt.warehouse_id = ?
         AND (pt.status IS NULL OR LOWER(pt.status) NOT IN ('cancelled', 'canceled'))
     `;
-    let ptParams = [whId, whId];
+    let ptParams = [whId];
     const allTicketsRaw = await dbAsync.all(ptSql, ptParams);
 
     const normFrom = fromDate ? normalizeDateStr(fromDate) : null;
