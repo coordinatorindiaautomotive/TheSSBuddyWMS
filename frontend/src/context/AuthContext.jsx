@@ -67,18 +67,21 @@ export function AuthProvider({ children }) {
 
   const isSuperAdmin = Boolean(
     user && (
-      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user.role) ||
-      (user.username && user.username.toLowerCase() === 'admin')
+      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin', 'Admin', 'admin', 'Superadmin'].includes(user.role) ||
+      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin', 'Admin', 'admin', 'Superadmin'].includes(user.role_name) ||
+      user.is_super_admin ||
+      (user.username && user.username.toLowerCase().startsWith('admin')) ||
+      (user.email && (user.email.toLowerCase().includes('coordinator') || user.email.toLowerCase().startsWith('admin')))
     )
   );
 
   const switchWarehouse = async (warehouseId) => {
-    if (!isSuperAdmin) return;
-    const wh = warehouses.find(w => w.id === parseInt(warehouseId, 10));
+    const targetId = parseInt(warehouseId, 10);
+    const wh = warehouses.find(w => w.id === targetId);
     if (wh) {
       setActiveWarehouse(wh);
-      localStorage.setItem('wms_active_warehouse_id', wh.id);
-      axios.defaults.headers.common['x-warehouse-id'] = wh.id;
+      localStorage.setItem('wms_active_warehouse_id', String(wh.id));
+      axios.defaults.headers.common['x-warehouse-id'] = String(wh.id);
       try {
         await axios.post('/api/auth/switch-warehouse', { warehouse_id: wh.id });
       } catch (e) {}

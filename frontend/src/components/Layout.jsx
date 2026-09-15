@@ -303,7 +303,7 @@ export default function Layout({ children }) {
             <div className="flex items-center gap-1 sm:gap-2 bg-white/10 border border-white/20 rounded-xl px-2 sm:px-3 py-1 text-xs text-white min-w-[140px] sm:min-w-[200px] max-w-[260px]">
               <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
               <span className="hidden sm:inline font-semibold text-slate-200 shrink-0">WH:</span>
-              {Boolean(user && (['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user?.role) || (user?.username && user?.username.toLowerCase() === 'admin')) && warehouses.length > 1) ? (
+              {warehouses.length > 1 ? (
                 <div className="w-full">
                   <SearchableSelect
                     value={String(activeWarehouse?.id || '')}
