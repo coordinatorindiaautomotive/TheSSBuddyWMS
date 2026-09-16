@@ -2,7 +2,5 @@
 deployment:
   tasks:
     - export DEPLOYPATH=$(pwd)
-    - cd $DEPLOYPATH/frontend && npm install --include=dev && npm run build
-    - /bin/cp -R $DEPLOYPATH/frontend/dist/* $DEPLOYPATH/
     - /bin/mkdir -p $DEPLOYPATH/tmp
     - /usr/bin/touch $DEPLOYPATH/tmp/restart.txt
