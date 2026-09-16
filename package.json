@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
-    "start": "node backend/app.js",
+    "start": "node --no-experimental-fetch --max-old-space-size=256 backend/app.js",
     "build": "cd frontend && npm install --include=dev && npm run build"
   },
   "dependencies": {
