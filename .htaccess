@@ -1,3 +1,6 @@
+# Set default index document
+DirectoryIndex index.html
+
 # Prevent Directory Browsing
 Options -Indexes
 
