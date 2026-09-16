@@ -264,24 +264,27 @@ io.on('connection', (socket) => {
 
 // Serve Production Built Frontend Static Files
 const possibleDistPaths = [
+  process.cwd(),
   path.join(__dirname, '../../frontend/dist'),
+  path.join(__dirname, '../frontend/dist'),
   path.join(__dirname, '../public'),
   path.join(__dirname, '../../public'),
   path.join(process.cwd(), 'frontend/dist'),
-  path.join(process.cwd(), 'public'),
-  process.cwd()
+  path.join(process.cwd(), 'public')
 ];
 
 let activeDistPath = null;
 for (const p of possibleDistPaths) {
-  if (fs.existsSync(path.join(p, 'index.html')) && p !== path.join(__dirname, '..')) {
+  if (fs.existsSync(path.join(p, 'index.html'))) {
     activeDistPath = p;
     break;
   }
 }
+if (!activeDistPath) {
+  activeDistPath = process.cwd();
+}
 
-if (activeDistPath) {
-  console.log(`📦 Serving Frontend Static Assets from: ${activeDistPath}`);
+console.log(`📦 Serving Frontend Static Assets from: ${activeDistPath}`);
   
   // Explicitly handle all assets requests directly
   const assetsDir = path.join(activeDistPath, 'assets');
@@ -315,7 +318,6 @@ if (activeDistPath) {
     res.setHeader('Expires', '0');
     res.sendFile(path.join(activeDistPath, 'index.html'));
   });
-}
 
 const PORT = process.env.PORT || 5000;
 
