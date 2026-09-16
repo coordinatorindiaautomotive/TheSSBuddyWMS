@@ -1,10 +1,8 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=${CPANEL_DOC_ROOT:-$HOME/wms.thesssystems.in}
-    - /bin/cp -R * $DEPLOYPATH/
+    - export DEPLOYPATH=$(pwd)
     - cd $DEPLOYPATH/frontend && npm install --include=dev && npm run build
     - /bin/cp -R $DEPLOYPATH/frontend/dist/* $DEPLOYPATH/
-    - cd $DEPLOYPATH && npm install
     - /bin/mkdir -p $DEPLOYPATH/tmp
     - /usr/bin/touch $DEPLOYPATH/tmp/restart.txt
