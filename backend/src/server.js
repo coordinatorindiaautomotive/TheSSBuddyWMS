@@ -321,14 +321,22 @@ console.log(`📦 Serving Frontend Static Assets from: ${activeDistPath}`);
 
 const PORT = process.env.PORT || 5000;
 
+function startServer() {
+  if (typeof PhusionPassenger !== 'undefined') {
+    server.listen('passenger', () => {
+      console.log('🚀 App running under Phusion Passenger on cPanel');
+    });
+  } else {
+    server.listen(PORT, () => {
+      console.log(`🚀 TheSSBuddy Enterprise Backend running on port ${PORT}`);
+    });
+  }
+}
+
 initDatabase().then(() => {
   startDispatchMonitor(io);
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 TheSSBuddy Enterprise Backend running on ALL LAN IPs -> http://0.0.0.0:${PORT}`);
-  });
+  startServer();
 }).catch(err => {
   console.error('Database Initialization Error:', err);
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Backend running on http://0.0.0.0:${PORT} (Degraded mode)`);
-  });
+  startServer();
 });
