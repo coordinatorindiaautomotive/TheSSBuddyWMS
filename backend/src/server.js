@@ -1,11 +1,23 @@
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+
+// Multi-path dotenv resolution for root and subfolder execution
+const possibleEnvFiles = [
+  path.join(__dirname, '../.env'),
+  path.join(process.cwd(), '.env'),
+  path.join(process.cwd(), 'backend/.env')
+];
+for (const envFile of possibleEnvFiles) {
+  if (fs.existsSync(envFile)) {
+    require('dotenv').config({ path: envFile, override: true });
+  }
+}
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const { initDatabase, dbAsync } = require('./config/db');
 const { authenticate, requireSuperAdmin } = require('./middleware/authMiddleware');
 const { startDispatchMonitor } = require('./services/dispatchMonitorService');
@@ -294,18 +306,13 @@ if (activeDistPath) {
 
   // SPA fallback for all GET navigation routes
   app.get('*', (req, res) => {
-    // Avoid capturing API routes
-    if (req.url.startsWith('/api') || req.url.startsWith('/TheSSBuddyWMS/api')) {
+    // Avoid capturing API and Socket.IO routes
+    if (req.url.startsWith('/api') || req.url.startsWith('/TheSSBuddyWMS/api') || req.url.startsWith('/socket.io')) {
       return res.status(404).json({ message: 'API endpoint not found' });
     }
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.sendFile(path.join(activeDistPath, 'index.html'));
-  });
-
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.includes('/assets/')) return next();
     res.sendFile(path.join(activeDistPath, 'index.html'));
   });
 }

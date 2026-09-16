@@ -1,3 +1,6 @@
+# Prevent Directory Browsing
+Options -Indexes
+
 # ==============================================================================
 # TheSSBuddy WMS Enterprise - cPanel Reverse Proxy & SPA Routing Configuration
 # ==============================================================================
