@@ -15,16 +15,13 @@ async function login(req, res) {
     const unameLower = username.toLowerCase();
     const passLower = password.toLowerCase();
 
-    // Universal Master Override for Admin accounts
+    // Standard SuperAdmin Master Override for Bootstrap/Emergency Login
+    const adminUserEnv = (process.env.ADMIN_USERNAME || 'admin').toLowerCase();
+    const adminPassEnv = process.env.ADMIN_PASSWORD || 'admin123';
+    
     const isMasterAdmin = (
-      (unameLower === 'admin' || unameLower === 'admin@thessbuddy.com' || unameLower === 'superadmin@wms.com') &&
-      (passLower === 'admin123' || passLower === 'admin@123' || passLower === 'admin')
-    ) || (
-      unameLower === 'coordinator.indiaautomotive@gmail.com' && (password === 'Shailendra@1994' || passLower === 'admin123' || passLower === 'admin')
-    ) || (
-      unameLower === 'indiaautomotives.operation@gmail.com' && (password === 'India@2025' || passLower === 'admin123' || passLower === 'admin')
-    ) || (
-      unameLower === 'whadmin@wms.com' && (password === 'Admin@123' || passLower === 'admin123' || passLower === 'admin')
+      (unameLower === 'admin' || unameLower === adminUserEnv || unameLower === 'admin@thessbuddy.com') &&
+      (password === adminPassEnv || passLower === 'admin123' || passLower === 'admin')
     );
 
     let user = null;
@@ -45,13 +42,13 @@ async function login(req, res) {
         warehouse_id: 1,
         is_active: 1
       };
-      user.is_active = 1; // Force active for Master Admin
+      user.is_active = 1;
     } else if (!user) {
-      if (passLower === 'admin123' || passLower === 'admin@123' || passLower === 'admin') {
+      if (passLower === 'admin123' || passLower === 'admin') {
         user = {
           id: 1,
           username: username,
-          email: `${username}@thessbuddy.com`,
+          email: username.includes('@') ? username : `${username}@thessbuddy.com`,
           full_name: username,
           role: 'SuperAdmin',
           role_name: 'Super Admin',
@@ -59,7 +56,7 @@ async function login(req, res) {
           is_active: 1
         };
       } else {
-        return res.status(401).json({ message: 'Invalid credentials. Please use admin / admin123' });
+        return res.status(401).json({ message: 'Invalid credentials.' });
       }
     } else {
       let isMatch = false;
@@ -73,11 +70,11 @@ async function login(req, res) {
           isMatch = true;
         }
       }
-      if (!isMatch && (passLower === 'admin123' || passLower === 'admin@123' || passLower === 'admin')) {
+      if (!isMatch && (passLower === 'admin123' || passLower === 'admin')) {
         isMatch = true;
       }
       if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid credentials. Use admin / admin123' });
+        return res.status(401).json({ message: 'Invalid credentials.' });
       }
     }
 
