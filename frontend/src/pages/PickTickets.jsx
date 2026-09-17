@@ -910,9 +910,8 @@ export default function PickTickets() {
                       const isBusy = !!activeTicketNo && !isCurrentlyEditingThisTicket;
                       return {
                         value: String(p.id),
-                        label: isBusy ? `${p.name} (⚠️ BUSY - ${activeTicketNo})` : p.name,
-                        sublabel: isBusy ? `Currently picking ${activeTicketNo} — Complete active picking first` : (p.employee_code || `EMP-${p.id}`),
-                        disabled: isBusy
+                        label: isBusy ? `${p.name} (Busy - ${activeTicketNo})` : p.name,
+                        sublabel: isBusy ? `Currently on ticket ${activeTicketNo}` : (p.employee_code || `EMP-${p.id}`)
                       };
                     })}
                     className="h-11"

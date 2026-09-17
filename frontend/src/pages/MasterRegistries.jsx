@@ -379,8 +379,12 @@ export default function MasterRegistries() {
   };
 
   const handleToggleStatus = async (item) => {
+    if (item.is_active) {
+      toast.warning('Suspending active master records (Party, Worker, Vehicle, etc.) is disabled by system policy.');
+      return;
+    }
     try {
-      const newStatus = !item.is_active;
+      const newStatus = true;
       if (activeTab === 'party')          await axios.put(`/api/parties/${item.id}`, { ...item, is_active: newStatus });
       else if (activeTab === 'worker')    await axios.put(`/api/masters/workers/${item.id}`, { ...item, is_active: newStatus });
       else if (activeTab === 'driver')    await axios.put(`/api/masters/drivers/${item.id}`, { ...item, is_active: newStatus });
@@ -389,9 +393,9 @@ export default function MasterRegistries() {
       else if (activeTab === 'arrange_teams')  await axios.put(`/api/masters/arrange-teams/${item.id}`, { ...item, is_active: newStatus });
       else if (activeTab === 'warehouse') await axios.put(`/api/masters/warehouses/${item.id}`, { ...item, is_active: newStatus });
       else if (activeTab === 'user')      await axios.put(`/api/masters/users/${item.id}`, { ...item, is_active: newStatus });
-      toast.success('Record status updated!');
+      toast.success('Record activated successfully!');
       fetchAll();
-    } catch { toast.error('Error toggling status.'); }
+    } catch { toast.error('Error activating record.'); }
   };
 
   const handleDelete = async () => {
@@ -420,7 +424,7 @@ export default function MasterRegistries() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      let payload = { ...form };
+      let payload = { ...form, is_active: true };
       if (activeTab === 'worker' && (!payload.employee_code || payload.employee_code.trim() === '')) {
         payload.employee_code = getNextWorkerCode();
       }
@@ -727,15 +731,11 @@ export default function MasterRegistries() {
         className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer">
         <Edit2 className="w-3.5 h-3.5" /> Edit
       </button>
-      {hasToggle && (
+      {hasToggle && !item.is_active && (
         <button onClick={() => handleToggleStatus(item)}
-          className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-1 transition-colors cursor-pointer ${
-            item.is_active
-              ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
-              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
-          }`}>
-          {item.is_active ? <ToggleLeft className="w-3.5 h-3.5" /> : <ToggleRight className="w-3.5 h-3.5" />}
-          {item.is_active ? 'Suspend' : 'Activate'}
+          className="px-2.5 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-1 transition-colors cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200">
+          <ToggleRight className="w-3.5 h-3.5" />
+          Activate
         </button>
       )}
       <button onClick={() => setDeleteItem(item)}
