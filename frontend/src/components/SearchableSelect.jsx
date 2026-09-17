@@ -310,18 +310,25 @@ export default function SearchableSelect({
               filteredOptions.map((opt, idx) => {
                 const isSelected = String(opt.value) === String(value);
                 const isHighlighted = idx === highlightIndex;
+                const isOptionDisabled = !!opt.disabled;
 
                 return (
                   <div
                     key={opt.value + '_' + idx}
-                    onClick={() => handleSelect(opt)}
-                    onMouseEnter={() => setHighlightIndex(idx)}
-                    className={`p-2.5 cursor-pointer flex items-center justify-between transition-colors ${
-                      isSelected
-                        ? activeItemClass
+                    onClick={() => {
+                      if (!isOptionDisabled) handleSelect(opt);
+                    }}
+                    onMouseEnter={() => {
+                      if (!isOptionDisabled) setHighlightIndex(idx);
+                    }}
+                    className={`p-2.5 flex items-center justify-between transition-colors ${
+                      isOptionDisabled
+                        ? 'opacity-60 bg-slate-100 cursor-not-allowed text-slate-400'
+                        : isSelected
+                        ? activeItemClass + ' cursor-pointer'
                         : isHighlighted
-                        ? itemHoverClass
-                        : ''
+                        ? itemHoverClass + ' cursor-pointer'
+                        : 'cursor-pointer'
                     }`}
                   >
                     {renderOption ? (

@@ -29,7 +29,7 @@ async function getPendingTickets(req, res) {
       SELECT pt.*, pkh.name as picker_name
       FROM pick_tickets pt
       LEFT JOIN picker_checker_helpers pkh ON pt.picker_id = pkh.id OR pt.picker_id = pkh.employee_code
-      WHERE pt.warehouse_id = ? AND pt.status IN ('Created', 'Assigned', 'Picking In Progress', 'Picked')
+      WHERE pt.warehouse_id = ? AND pt.status IN ('Picked', 'Picking Completed')
       ORDER BY pt.created_at DESC
     `, [whId]);
 

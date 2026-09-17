@@ -169,6 +169,28 @@ async function createPickTicket(req, res) {
       return res.status(400).json({ message: `Pick Ticket Number '${ticketNo}' already exists in this warehouse.` });
     }
 
+    // Check if assigned picker already has an active picking task in progress
+    if (picker_id && String(picker_id).trim() !== '') {
+      const activeTicket = await dbAsync.get(`
+        SELECT ticket_no FROM pick_tickets
+        WHERE (picker_id = ? OR picker_id = (SELECT employee_code FROM picker_checker_helpers WHERE id = ?))
+          AND warehouse_id = ?
+          AND status IN ('Assigned', 'Picking In Progress')
+        LIMIT 1
+      `, [String(picker_id), String(picker_id), whId]);
+
+      if (activeTicket) {
+        const pickerObj = await dbAsync.get(
+          'SELECT name FROM picker_checker_helpers WHERE id = ? OR employee_code = ?',
+          [String(picker_id), String(picker_id)]
+        );
+        const pickerName = pickerObj ? pickerObj.name : 'Selected Picker';
+        return res.status(400).json({
+          message: `Picker '${pickerName}' is currently picking ticket '${activeTicket.ticket_no}'. Please mark their active picking complete first!`
+        });
+      }
+    }
+
     const todayDate = date || new Date().toISOString().split('T')[0];
     const nowTime = time || new Date().toTimeString().split(' ')[0].substring(0, 5);
 
@@ -216,6 +238,7 @@ async function createPickTicket(req, res) {
 async function updatePickTicket(req, res) {
   try {
     const { id } = req.params;
+    const whId = req.activeWarehouseId;
     const {
       date,
       time,
@@ -238,6 +261,30 @@ async function updatePickTicket(req, res) {
     }
 
     const finalStatus = status || ticket.status;
+    const newPickerId = picker_id !== undefined ? (picker_id ? String(picker_id) : null) : ticket.picker_id;
+
+    // Check if target picker has another active ticket in progress if status is Assigned or In Progress
+    if (newPickerId && ['Assigned', 'Picking In Progress'].includes(finalStatus)) {
+      const activeTicket = await dbAsync.get(`
+        SELECT ticket_no FROM pick_tickets
+        WHERE (picker_id = ? OR picker_id = (SELECT employee_code FROM picker_checker_helpers WHERE id = ?))
+          AND warehouse_id = ?
+          AND status IN ('Assigned', 'Picking In Progress')
+          AND id != ?
+        LIMIT 1
+      `, [newPickerId, newPickerId, whId || ticket.warehouse_id, id]);
+
+      if (activeTicket) {
+        const pickerObj = await dbAsync.get(
+          'SELECT name FROM picker_checker_helpers WHERE id = ? OR employee_code = ?',
+          [newPickerId, newPickerId]
+        );
+        const pickerName = pickerObj ? pickerObj.name : 'Selected Picker';
+        return res.status(400).json({
+          message: `Picker '${pickerName}' is currently picking ticket '${activeTicket.ticket_no}'. Please mark their active picking complete first!`
+        });
+      }
+    }
 
     await dbAsync.run(`
       UPDATE pick_tickets

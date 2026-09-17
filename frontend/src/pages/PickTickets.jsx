@@ -309,6 +309,28 @@ export default function PickTickets() {
     setShowModal(true);
   };
 
+  const handleMarkPickingComplete = async (ticket) => {
+    try {
+      await axios.put(`/api/pick-tickets/${ticket.id}`, {
+        status: 'Picked'
+      });
+      toast.success(`Pick Ticket ${ticket.ticket_no} marked as Picked! Available for billing now.`);
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error marking picking complete.');
+    }
+  };
+
+  const activePickerMap = (tickets || []).reduce((acc, t) => {
+    if (['Assigned', 'Picking In Progress'].includes(t.status) && t.picker_id) {
+      acc[String(t.picker_id)] = t.ticket_no;
+      if (t.picker_employee_code) {
+        acc[String(t.picker_employee_code)] = t.ticket_no;
+      }
+    }
+    return acc;
+  }, {});
+
   const handleConfirmDelete = async () => {
     if (!deleteTicket) return;
     setDeleting(true);
@@ -512,25 +534,35 @@ export default function PickTickets() {
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                    {['Created', 'Assigned', 'Picked'].includes(t.status) ? (
-                      <div className="flex items-center justify-end gap-1">
+                    {['Created', 'Assigned', 'Picking In Progress', 'Picked'].includes(t.status) ? (
+                      <div className="flex items-center justify-end gap-1.5">
+                        {['Assigned', 'Picking In Progress'].includes(t.status) && (
+                          <button
+                            onClick={() => handleMarkPickingComplete(t)}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] flex items-center gap-1 shadow-xs cursor-pointer transition-all hover:scale-105"
+                            title="Mark Picking Complete for this ticket"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-100" />
+                            <span>Mark Picked</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEditClick(t)}
-                          className="p-1 rounded bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#004c8f] border border-blue-200 transition-colors cursor-pointer"
                           title="Edit Pick Ticket"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => { setCancelTicket(t); setCancelRemark(''); }}
-                          className="p-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 transition-colors cursor-pointer"
                           title="Cancel Pick Ticket"
                         >
                           <Ban className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setDeleteTicket(t)}
-                          className="p-1 rounded bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors cursor-pointer"
                           title="Delete Pick Ticket"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -851,11 +883,20 @@ export default function PickTickets() {
                     onChange={(e) => setFormData({ ...formData, picker_id: e.target.value })}
                     placeholder="-- Choose Picker --"
                     searchPlaceholder="Search Picker Name or Code..."
-                    options={pickers.map(p => ({
-                      value: String(p.id),
-                      label: p.name,
-                      sublabel: p.employee_code || `EMP-${p.id}`
-                    }))}
+                    options={pickers.map(p => {
+                      const activeTicketNo = activePickerMap[String(p.id)] || activePickerMap[String(p.employee_code)];
+                      const isCurrentlyEditingThisTicket = editingId && (
+                        tickets.find(t => String(t.id) === String(editingId))?.picker_id === String(p.id) ||
+                        tickets.find(t => String(t.id) === String(editingId))?.picker_id === String(p.employee_code)
+                      );
+                      const isBusy = !!activeTicketNo && !isCurrentlyEditingThisTicket;
+                      return {
+                        value: String(p.id),
+                        label: isBusy ? `${p.name} (⚠️ BUSY - ${activeTicketNo})` : p.name,
+                        sublabel: isBusy ? `Currently picking ${activeTicketNo} — Complete active picking first` : (p.employee_code || `EMP-${p.id}`),
+                        disabled: isBusy
+                      };
+                    })}
                     className="h-11"
                   />
                 </div>
