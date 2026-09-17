@@ -178,7 +178,7 @@ export default function LEDDashboard() {
     const routesMap = new Map();
 
     // From Master Routes
-    masterRoutes.forEach(mr => {
+    (Array.isArray(masterRoutes) ? masterRoutes : []).forEach(mr => {
       const name = String(mr.route_name || mr.name || '').trim();
       const k = normalizeRouteKey(name);
       if (k && k !== 'unassigned' && !routesMap.has(k)) {
@@ -210,7 +210,7 @@ export default function LEDDashboard() {
     });
 
     // From Raw Tickets
-    rawTickets.forEach(t => {
+    (Array.isArray(rawTickets) ? rawTickets : []).forEach(t => {
       const name = String(t.route_name || t.party_route || t.ticket_route || '').trim();
       const k = normalizeRouteKey(name);
       if (k && k !== 'unassigned' && k !== 'directroute' && !routesMap.has(k)) {

@@ -52,13 +52,15 @@ export default function SearchableSelect({
         };
       });
     } else if (children) {
-      React.Children.forEach(children, (child) => {
-        if (child && child.props) {
-          const val = child.props.value !== undefined ? String(child.props.value) : '';
-          const lbl = child.props.children ? String(child.props.children) : val;
-          list.push({ value: val, label: lbl });
-        }
-      });
+      try {
+        React.Children.forEach(children, (child) => {
+          if (child && child.props) {
+            const val = child.props.value !== undefined ? String(child.props.value) : '';
+            const lbl = child.props.children ? String(child.props.children) : val;
+            list.push({ value: val, label: lbl });
+          }
+        });
+      } catch (e) {}
     }
     return list;
   }, [options, children, valueKey, labelKey, sublabelKey, badgeKey]);
