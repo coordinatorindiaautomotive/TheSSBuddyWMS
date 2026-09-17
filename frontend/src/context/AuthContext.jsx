@@ -51,16 +51,22 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password) => {
     const res = await axios.post('/api/auth/login', { username, password });
-    const { token: newToken, user: userData } = res.data;
-    localStorage.setItem('wms_token', newToken);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-    setToken(newToken);
+    const newToken = res.data?.token;
+    const userData = res.data?.user || res.data || {};
+    
+    if (newToken) {
+      localStorage.setItem('wms_token', newToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      setToken(newToken);
+    }
+    
     setUser(userData);
-    const wh = userData.warehouse;
+    const wh = userData?.warehouse || res.data?.activeWarehouse || { id: 1, warehouse_name: 'Central Warehouse (Default)', warehouse_code: 'WH-MAIN' };
     setActiveWarehouse(wh);
+    
     if (wh?.id) {
-      axios.defaults.headers.common['x-warehouse-id'] = wh.id;
-      localStorage.setItem('wms_active_warehouse_id', wh.id);
+      axios.defaults.headers.common['x-warehouse-id'] = String(wh.id);
+      localStorage.setItem('wms_active_warehouse_id', String(wh.id));
     }
     return userData;
   };
