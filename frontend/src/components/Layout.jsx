@@ -303,7 +303,7 @@ export default function Layout({ children }) {
             <div className="flex items-center gap-1 sm:gap-2 bg-white/10 border border-white/20 rounded-xl px-2 sm:px-3 py-1 text-xs text-white min-w-[140px] sm:min-w-[200px] max-w-[260px]">
               <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
               <span className="hidden sm:inline font-semibold text-slate-200 shrink-0">WH:</span>
-              {warehouses.length > 1 ? (
+              {(Array.isArray(warehouses) && warehouses.length > 1) ? (
                 <div className="w-full">
                   <SearchableSelect
                     value={String(activeWarehouse?.id || '')}
@@ -333,7 +333,7 @@ export default function Layout({ children }) {
                 title="Notifications"
               >
                 <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-                {notifications.length > 0 && (
+                {(Array.isArray(notifications) && notifications.length > 0) && (
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                 )}
               </button>

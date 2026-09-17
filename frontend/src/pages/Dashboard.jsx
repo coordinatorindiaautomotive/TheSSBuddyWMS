@@ -300,7 +300,7 @@ export default function Dashboard() {
 
           <div className="h-60 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart data={Array.isArray(chartData) ? chartData : []}>
                 <defs>
                   <linearGradient id="colorTickets" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#004C8F" stopOpacity={0.4}/>
@@ -385,7 +385,7 @@ export default function Dashboard() {
           </div>
 
           <div className="p-4 flex-1 overflow-y-auto max-h-72 divide-y divide-slate-100">
-            {(!routeBreakdown || routeBreakdown.length === 0) ? (
+            {(!Array.isArray(routeBreakdown) || routeBreakdown.length === 0) ? (
               <div className="py-12 text-center text-xs text-slate-400 font-medium">No route data available</div>
             ) : (
               routeBreakdown.map((r, idx) => (
@@ -437,7 +437,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {(!recentActivity || recentActivity.length === 0) ? (
+              {(!Array.isArray(recentActivity) || recentActivity.length === 0) ? (
                 <tr>
                   <td colSpan={8} className="text-center py-12 text-slate-400 font-medium">
                     No active operations logged.
