@@ -438,10 +438,10 @@ async function getWorkers(req, res) {
 
 async function createWorker(req, res) {
   try {
-    const whId = req.activeWarehouseId;
-    const { name, role, phone, employee_code } = req.body;
+    const whId = req.activeWarehouseId || 1;
+    const { name, role, phone, mobile, employee_code } = req.body;
 
-    let empCode = employee_code;
+    let empCode = (employee_code || '').trim();
     if (!empCode) {
       const allWorkers = await dbAsync.all('SELECT employee_code, id FROM picker_checker_helpers WHERE warehouse_id = ?', [whId]);
       let maxNum = 0;
@@ -453,31 +453,55 @@ async function createWorker(req, res) {
           if (num > maxNum) maxNum = num;
         }
       });
-      empCode = `EMP-${maxNum + 1}`;
+      empCode = `EMP-${String(maxNum + 1).padStart(3, '0')}`;
+    } else {
+      const existing = await dbAsync.get(
+        'SELECT id FROM picker_checker_helpers WHERE employee_code = ? AND warehouse_id = ?',
+        [empCode, whId]
+      );
+      if (existing) {
+        return res.status(400).json({ message: `Employee Code '${empCode}' already exists in this warehouse.` });
+      }
     }
 
+    const contactPhone = phone || mobile || '';
+
     const result = await dbAsync.run(`
-      INSERT INTO picker_checker_helpers (employee_code, name, role, phone, warehouse_id, is_active)
-      VALUES (?, ?, ?, ?, ?, 1)
-    `, [empCode, name, role, phone || '', whId]);
+      INSERT INTO picker_checker_helpers (employee_code, name, role, phone, mobile, warehouse_id, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, 1)
+    `, [empCode, name, role, contactPhone, contactPhone, whId]);
     return res.json({ message: 'Worker added successfully!', id: result.id, employee_code: empCode });
   } catch (err) {
-    return res.status(500).json({ message: 'Error creating worker.' });
+    console.error('Error creating worker:', err);
+    return res.status(500).json({ message: err.message || 'Error creating worker.' });
   }
 }
 
 async function updateWorker(req, res) {
   try {
     const { id } = req.params;
-    const { name, role, phone, employee_code } = req.body;
+    const whId = req.activeWarehouseId || 1;
+    const { name, role, phone, mobile, employee_code } = req.body;
+    const contactPhone = phone || mobile || '';
+
+    if (employee_code) {
+      const existing = await dbAsync.get(
+        'SELECT id FROM picker_checker_helpers WHERE employee_code = ? AND warehouse_id = ? AND id != ?',
+        [employee_code.trim(), whId, id]
+      );
+      if (existing) {
+        return res.status(400).json({ message: `Employee Code '${employee_code}' is already used by another worker in this warehouse.` });
+      }
+    }
+
     await dbAsync.run(`
       UPDATE picker_checker_helpers
-      SET employee_code = ?, name = ?, role = ?, phone = ?
-      WHERE id = ?
-    `, [employee_code, name, role, phone || '', id]);
+      SET employee_code = ?, name = ?, role = ?, phone = ?, mobile = ?
+      WHERE id = ? AND warehouse_id = ?
+    `, [employee_code, name, role, contactPhone, contactPhone, id, whId]);
     return res.json({ message: 'Worker updated successfully!' });
   } catch (err) {
-    return res.status(500).json({ message: 'Error updating worker.' });
+    return res.status(500).json({ message: err.message || 'Error updating worker.' });
   }
 }
 

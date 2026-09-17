@@ -246,7 +246,7 @@ async function initMySQLSchema() {
   await dbAsync.exec(`
     CREATE TABLE IF NOT EXISTS picker_checker_helpers (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      employee_code VARCHAR(100) UNIQUE NOT NULL,
+      employee_code VARCHAR(100) NOT NULL,
       name VARCHAR(255) NOT NULL,
       mobile VARCHAR(100),
       phone VARCHAR(100),
@@ -254,9 +254,30 @@ async function initMySQLSchema() {
       role_type VARCHAR(100) NOT NULL DEFAULT 'Picker',
       warehouse_id INT NOT NULL,
       is_active TINYINT DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_emp_warehouse (employee_code, warehouse_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  // Migrate existing MySQL picker_checker_helpers table unique key if needed
+  try {
+    const pkhIndexes = await dbAsync.all(`
+      SELECT INDEX_NAME FROM information_schema.STATISTICS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'picker_checker_helpers' AND INDEX_NAME = 'employee_code'
+    `);
+    if (pkhIndexes && pkhIndexes.length > 0) {
+      await dbAsync.exec('ALTER TABLE picker_checker_helpers DROP INDEX employee_code;');
+    }
+    const uqPkhExists = await dbAsync.all(`
+      SELECT INDEX_NAME FROM information_schema.STATISTICS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'picker_checker_helpers' AND INDEX_NAME = 'uq_emp_warehouse'
+    `);
+    if (!uqPkhExists || uqPkhExists.length === 0) {
+      await dbAsync.exec('ALTER TABLE picker_checker_helpers ADD UNIQUE KEY uq_emp_warehouse (employee_code, warehouse_id);');
+    }
+  } catch (e) {
+    console.warn('[MySQL Migration Notice] picker_checker_helpers index update:', e.message);
+  }
 
   // 6. Drivers
   await dbAsync.exec(`
@@ -287,7 +308,7 @@ async function initMySQLSchema() {
   await dbAsync.exec(`
     CREATE TABLE IF NOT EXISTS vehicles (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      vehicle_number VARCHAR(100) UNIQUE NOT NULL,
+      vehicle_number VARCHAR(100) NOT NULL,
       vehicle_type VARCHAR(100),
       capacity VARCHAR(100),
       capacity_tons DECIMAL(10,2) NULL,
@@ -296,24 +317,66 @@ async function initMySQLSchema() {
       status VARCHAR(100) DEFAULT 'Available',
       is_active TINYINT DEFAULT 1,
       warehouse_id INT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_vehicle_warehouse (vehicle_number, warehouse_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  // Migrate existing MySQL vehicles table unique key if needed
+  try {
+    const vehIndexes = await dbAsync.all(`
+      SELECT INDEX_NAME FROM information_schema.STATISTICS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'vehicles' AND INDEX_NAME = 'vehicle_number'
+    `);
+    if (vehIndexes && vehIndexes.length > 0) {
+      await dbAsync.exec('ALTER TABLE vehicles DROP INDEX vehicle_number;');
+    }
+    const uqVehExists = await dbAsync.all(`
+      SELECT INDEX_NAME FROM information_schema.STATISTICS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'vehicles' AND INDEX_NAME = 'uq_vehicle_warehouse'
+    `);
+    if (!uqVehExists || uqVehExists.length === 0) {
+      await dbAsync.exec('ALTER TABLE vehicles ADD UNIQUE KEY uq_vehicle_warehouse (vehicle_number, warehouse_id);');
+    }
+  } catch (e) {
+    console.warn('[MySQL Migration Notice] vehicles index update:', e.message);
+  }
 
   // 8. Salesman Masters
   await dbAsync.exec(`
     CREATE TABLE IF NOT EXISTS salesman_masters (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      salesman_code VARCHAR(100) UNIQUE NOT NULL,
+      salesman_code VARCHAR(100) NOT NULL,
       salesman_name VARCHAR(255) NOT NULL,
       mobile VARCHAR(100),
       phone VARCHAR(100),
       email VARCHAR(255),
       territory VARCHAR(255),
       warehouse_id INT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_salesman_warehouse (salesman_code, warehouse_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  // Migrate existing MySQL salesman_masters table unique key if needed
+  try {
+    const smIndexes = await dbAsync.all(`
+      SELECT INDEX_NAME FROM information_schema.STATISTICS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'salesman_masters' AND INDEX_NAME = 'salesman_code'
+    `);
+    if (smIndexes && smIndexes.length > 0) {
+      await dbAsync.exec('ALTER TABLE salesman_masters DROP INDEX salesman_code;');
+    }
+    const uqSmExists = await dbAsync.all(`
+      SELECT INDEX_NAME FROM information_schema.STATISTICS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'salesman_masters' AND INDEX_NAME = 'uq_salesman_warehouse'
+    `);
+    if (!uqSmExists || uqSmExists.length === 0) {
+      await dbAsync.exec('ALTER TABLE salesman_masters ADD UNIQUE KEY uq_salesman_warehouse (salesman_code, warehouse_id);');
+    }
+  } catch (e) {
+    console.warn('[MySQL Migration Notice] salesman_masters index update:', e.message);
+  }
 
   // 9. Salesmen legacy table
   await dbAsync.exec(`
