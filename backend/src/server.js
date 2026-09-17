@@ -79,6 +79,25 @@ const apiRouter = express.Router();
 
 // Public Routes
 apiRouter.get('/health', (req, res) => res.json({ status: 'ok', serverTime: new Date().toISOString() }));
+apiRouter.get('/db-status', async (req, res) => {
+  try {
+    const { testConnection, getConfig } = require('./config/dbConfigManager');
+    const cfg = getConfig();
+    const testResult = await testConnection();
+    res.json({
+      configured: {
+        host: cfg.mysql.host,
+        port: cfg.mysql.port,
+        database: cfg.mysql.database,
+        user: cfg.mysql.user,
+        passwordConfigured: Boolean(cfg.mysql.password)
+      },
+      result: testResult
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 apiRouter.post('/auth/login', authController.login);
 apiRouter.post('/mobile/auth/login', mobileApiController.mobileLogin);
 

@@ -42,26 +42,42 @@ async function ensureMySQLDatabase(cfg) {
 async function connectMySQL(cfg) {
   await ensureMySQLDatabase(cfg);
 
-  mysqlPool = mysql.createPool({
-    host: cfg.mysql.host || '127.0.0.1',
-    port: parseInt(cfg.mysql.port, 10) || 3306,
-    user: cfg.mysql.user || 'root',
-    password: cfg.mysql.password || '',
-    database: cfg.mysql.database || 'thesssys_wms_enterprise_db',
-    waitForConnections: true,
-    connectionLimit: 25,
-    queueLimit: 0,
-    decimalNumbers: true,
-    dateStrings: true,
-    timezone: '+05:30'
-  });
+  const primaryHost = cfg.mysql.host || '127.0.0.1';
+  const hostsToTry = [primaryHost];
+  if (primaryHost === '127.0.0.1') hostsToTry.push('localhost');
+  else if (primaryHost === 'localhost') hostsToTry.push('127.0.0.1');
 
-  // Verify connection
-  const conn = await mysqlPool.getConnection();
-  conn.release();
-  isConnected = true;
-  activeDbType = 'MYSQL';
-  console.log(`✅ MySQL Connected successfully! Database: ${cfg.mysql.database} @ ${cfg.mysql.host}:${cfg.mysql.port}`);
+  let lastErr = null;
+  for (const host of hostsToTry) {
+    try {
+      const pool = mysql.createPool({
+        host: host,
+        port: parseInt(cfg.mysql.port, 10) || 3306,
+        user: cfg.mysql.user || 'root',
+        password: cfg.mysql.password || '',
+        database: cfg.mysql.database || 'thesssys_wms_enterprise_db',
+        waitForConnections: true,
+        connectionLimit: 25,
+        queueLimit: 0,
+        decimalNumbers: true,
+        dateStrings: true,
+        timezone: '+05:30'
+      });
+
+      const conn = await pool.getConnection();
+      conn.release();
+      mysqlPool = pool;
+      isConnected = true;
+      activeDbType = 'MYSQL';
+      console.log(`✅ MySQL Connected successfully! Database: ${cfg.mysql.database} @ ${host}:${cfg.mysql.port}`);
+      return;
+    } catch (err) {
+      lastErr = err;
+      console.warn(`[MySQL Warning] Failed to connect on ${host}: ${err.message}`);
+    }
+  }
+
+  throw lastErr;
 }
 
 async function ensureConnected() {
