@@ -1,24 +1,5 @@
 {
   "dbType": "MYSQL",
-  "sqlite": {
-    "dbPath": "data/wms_enterprise.db"
-  },
-  "mssql": {
-    "host": "172.20.25.5",
-    "port": 1433,
-    "database": "WmsEnterpriseDb",
-    "user": "sa",
-    "password": "Admin@12345",
-    "encrypt": false,
-    "trustServerCertificate": true
-  },
-  "postgres": {
-    "host": "127.0.0.1",
-    "port": 5432,
-    "database": "wms_enterprise_db",
-    "user": "postgres",
-    "password": ""
-  },
   "mysql": {
     "host": "127.0.0.1",
     "port": 3306,

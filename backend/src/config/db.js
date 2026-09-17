@@ -1,10 +1,4 @@
 const mysql = require('mysql2/promise');
-let sqlite3 = null;
-try {
-  sqlite3 = require('sqlite3').verbose();
-} catch (e) {
-  // SQLite native bindings not installed/needed when running on MySQL in cPanel
-}
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
@@ -12,22 +6,18 @@ const { getConfig } = require('./dbConfigManager');
 
 let activeDbType = 'MYSQL';
 let mysqlPool = null;
-let sqliteDb = null;
 let isConnected = false;
 
 function getDbConfig() {
   const config = getConfig();
   return {
-    dbType: (config.dbType || 'MYSQL').toUpperCase(),
+    dbType: 'MYSQL',
     mysql: config.mysql || {
       host: '127.0.0.1',
       port: 3306,
-      database: 'wms_enterprise_db',
-      user: 'root',
-      password: 'root'
-    },
-    sqlite: config.sqlite || {
-      dbPath: 'data/wms_enterprise.db'
+      database: 'thesssys_wms_enterprise_db',
+      user: 'thesssys_shailendra',
+      password: ''
     }
   };
 }
@@ -41,7 +31,7 @@ async function ensureMySQLDatabase(cfg) {
       password: cfg.mysql.password || '',
       connectTimeout: 5000
     });
-    const dbName = cfg.mysql.database || 'wms_enterprise_db';
+    const dbName = cfg.mysql.database || 'thesssys_wms_enterprise_db';
     await rootConn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
     await rootConn.end();
   } catch (err) {
@@ -57,7 +47,7 @@ async function connectMySQL(cfg) {
     port: parseInt(cfg.mysql.port, 10) || 3306,
     user: cfg.mysql.user || 'root',
     password: cfg.mysql.password || '',
-    database: cfg.mysql.database || 'wms_enterprise_db',
+    database: cfg.mysql.database || 'thesssys_wms_enterprise_db',
     waitForConnections: true,
     connectionLimit: 25,
     queueLimit: 0,
@@ -74,141 +64,51 @@ async function connectMySQL(cfg) {
   console.log(`✅ MySQL Connected successfully! Database: ${cfg.mysql.database} @ ${cfg.mysql.host}:${cfg.mysql.port}`);
 }
 
-async function connectSQLite(cfg) {
-  if (!sqlite3) {
-    console.warn('⚠️ SQLite3 driver not loaded (native addon missing). Running in Memory Fallback mode until MySQL is configured in UI.');
-    isConnected = false;
-    return;
-  }
-  const dbPath = path.resolve(__dirname, '../../', cfg.sqlite.dbPath || 'data/wms_enterprise.db');
-  const dataDir = path.dirname(dbPath);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-
-  return new Promise((resolve, reject) => {
-    sqliteDb = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error('⚠️ SQLite Connection Error:', err.message);
-        isConnected = false;
-        reject(err);
-      } else {
-        console.log(`✅ SQLite Database connected (${path.basename(dbPath)})`);
-        isConnected = true;
-        activeDbType = 'SQLITE';
-        resolve();
-      }
-    });
-
-    sqliteDb.on('error', (err) => {
-      console.error('⚠️ SQLite Runtime Error:', err.message);
-      isConnected = false;
-    });
-  });
-}
-
 async function ensureConnected() {
-  if (activeDbType === 'MYSQL' && !mysqlPool) {
+  if (!mysqlPool) {
     const cfg = getDbConfig();
     await connectMySQL(cfg);
-  } else if (activeDbType === 'SQLITE' && !sqliteDb) {
-    const cfg = getDbConfig();
-    await connectSQLite(cfg);
   }
 }
 
 const dbAsync = {
   async run(sql, params = []) {
     await ensureConnected();
-    if (activeDbType === 'MYSQL') {
-      const cleanParams = params.map(p => (p === undefined ? null : p));
-      const [result] = await mysqlPool.execute(sql, cleanParams);
-      return { id: result.insertId, changes: result.affectedRows };
-    } else {
-      return new Promise((resolve, reject) => {
-        if (!sqliteDb) return reject(new Error('SQLite database is not initialized.'));
-        sqliteDb.run(sql, params, function (err) {
-          if (err) reject(err);
-          else resolve({ id: this.lastID, changes: this.changes });
-        });
-      });
-    }
+    const cleanParams = params.map(p => (p === undefined ? null : p));
+    const [result] = await mysqlPool.execute(sql, cleanParams);
+    return { id: result.insertId, changes: result.affectedRows };
   },
 
   async get(sql, params = []) {
     await ensureConnected();
-    if (activeDbType === 'MYSQL') {
-      const cleanParams = params.map(p => (p === undefined ? null : p));
-      const [rows] = await mysqlPool.execute(sql, cleanParams);
-      return rows && rows.length > 0 ? rows[0] : null;
-    } else {
-      return new Promise((resolve, reject) => {
-        if (!sqliteDb) return reject(new Error('SQLite database is not initialized.'));
-        sqliteDb.get(sql, params, (err, row) => {
-          if (err) reject(err);
-          else resolve(row || null);
-        });
-      });
-    }
+    const cleanParams = params.map(p => (p === undefined ? null : p));
+    const [rows] = await mysqlPool.execute(sql, cleanParams);
+    return rows && rows.length > 0 ? rows[0] : null;
   },
 
   async all(sql, params = []) {
     await ensureConnected();
-    if (activeDbType === 'MYSQL') {
-      const cleanParams = params.map(p => (p === undefined ? null : p));
-      const [rows] = await mysqlPool.execute(sql, cleanParams);
-      return rows || [];
-    } else {
-      return new Promise((resolve, reject) => {
-        if (!sqliteDb) return reject(new Error('SQLite database is not initialized.'));
-        sqliteDb.all(sql, params, (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        });
-      });
-    }
+    const cleanParams = params.map(p => (p === undefined ? null : p));
+    const [rows] = await mysqlPool.execute(sql, cleanParams);
+    return rows || [];
   },
 
   async exec(sql) {
     await ensureConnected();
-    if (activeDbType === 'MYSQL') {
-      return await mysqlPool.query(sql);
-    } else {
-      return new Promise((resolve, reject) => {
-        if (!sqliteDb) return reject(new Error('SQLite database is not initialized.'));
-        sqliteDb.exec(sql, (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-    }
+    return await mysqlPool.query(sql);
   }
 };
 
 async function initDatabase() {
   const cfg = getDbConfig();
-
-  if (cfg.dbType === 'MYSQL') {
-    try {
-      await connectMySQL(cfg);
-    } catch (err) {
-      console.error(`⚠️ MySQL Initialization Failed: ${err.message}. Falling back to SQLite temporary store...`);
-      try {
-        await connectSQLite(cfg);
-      } catch (e) {}
+  try {
+    await connectMySQL(cfg);
+    if (isConnected) {
+      await initMySQLSchema();
+      await ensureDefaultSeed();
     }
-  } else {
-    await connectSQLite(cfg);
-  }
-
-  if (activeDbType === 'MYSQL' && isConnected) {
-    await initMySQLSchema();
-    await ensureDefaultSeed();
-  } else if (activeDbType === 'SQLITE' && isConnected) {
-    await initSQLiteSchema();
-    await ensureDefaultSeed();
-  } else {
-    console.log('ℹ️ Server waiting for MySQL credentials to be configured via System Configuration / UI.');
+  } catch (err) {
+    console.error(`❌ MySQL Database Connection Error: ${err.message}`);
   }
 }
 
@@ -767,472 +667,6 @@ async function initMySQLSchema() {
   `);
 }
 
-async function initSQLiteSchema() {
-  await dbAsync.exec('PRAGMA foreign_keys = ON;');
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS warehouses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      warehouse_code TEXT UNIQUE NOT NULL,
-      warehouse_name TEXT NOT NULL,
-      address TEXT,
-      contact_number TEXT,
-      contact_person TEXT,
-      email TEXT,
-      prefix_logic TEXT DEFAULT 'PIK26-',
-      is_active INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      email TEXT UNIQUE,
-      password_hash TEXT NOT NULL,
-      full_name TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'Dispatcher',
-      role_name TEXT DEFAULT 'Dispatcher',
-      warehouse_id INTEGER,
-      is_active INTEGER DEFAULT 1,
-      last_login DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (warehouse_id) REFERENCES warehouses (id) ON DELETE SET NULL
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS route_masters (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      route_code TEXT NOT NULL,
-      route_name TEXT NOT NULL,
-      warehouse_id INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (warehouse_id) REFERENCES warehouses (id) ON DELETE CASCADE
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS route_schedules (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      route_id INTEGER NOT NULL,
-      trip_name TEXT NOT NULL,
-      dispatch_type TEXT NOT NULL DEFAULT 'FIXED',
-      frequency TEXT NOT NULL DEFAULT 'DAILY',
-      selected_days TEXT DEFAULT '["Mon","Tue","Wed","Thu","Fri","Sat"]',
-      cutoff_time TEXT DEFAULT '06:00',
-      dispatch_time TEXT DEFAULT '08:00',
-      is_active INTEGER DEFAULT 1,
-      priority_order INTEGER DEFAULT 1,
-      warehouse_id INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (route_id) REFERENCES route_masters (id) ON DELETE CASCADE,
-      FOREIGN KEY (warehouse_id) REFERENCES warehouses (id) ON DELETE CASCADE
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS parties (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      party_code TEXT NOT NULL,
-      party_name TEXT NOT NULL,
-      address TEXT,
-      city TEXT,
-      phone TEXT,
-      gstin TEXT,
-      salesman TEXT DEFAULT 'General Sales',
-      route_name TEXT DEFAULT 'Direct Route',
-      credit_limit REAL DEFAULT 0,
-      current_balance REAL DEFAULT 0,
-      warehouse_id INTEGER NOT NULL,
-      route_id INTEGER,
-      lat REAL,
-      lng REAL,
-      is_active INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE (party_code, warehouse_id),
-      FOREIGN KEY (warehouse_id) REFERENCES warehouses (id) ON DELETE RESTRICT,
-      FOREIGN KEY (route_id) REFERENCES route_masters (id) ON DELETE SET NULL
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS picker_checker_helpers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      employee_code TEXT UNIQUE NOT NULL,
-      name TEXT NOT NULL,
-      mobile TEXT,
-      phone TEXT,
-      role TEXT,
-      role_type TEXT NOT NULL DEFAULT 'Picker',
-      warehouse_id INTEGER NOT NULL,
-      is_active INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS drivers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      driver_name TEXT,
-      name TEXT,
-      mobile TEXT,
-      phone TEXT,
-      license_number TEXT,
-      license_no TEXT,
-      route TEXT,
-      status TEXT DEFAULT 'Available',
-      is_active INTEGER DEFAULT 1,
-      driver_pin TEXT DEFAULT '1234',
-      device_token TEXT,
-      emergency_contact TEXT,
-      photo_url TEXT,
-      last_seen_at DATETIME,
-      current_latitude REAL,
-      current_longitude REAL,
-      warehouse_id INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS vehicles (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      vehicle_number TEXT UNIQUE NOT NULL,
-      vehicle_type TEXT,
-      capacity TEXT,
-      capacity_tons REAL,
-      registration_no TEXT,
-      driver_id INTEGER,
-      status TEXT DEFAULT 'Available',
-      is_active INTEGER DEFAULT 1,
-      warehouse_id INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS salesman_masters (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      salesman_code TEXT UNIQUE NOT NULL,
-      salesman_name TEXT NOT NULL,
-      mobile TEXT,
-      phone TEXT,
-      email TEXT,
-      territory TEXT,
-      warehouse_id INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS salesmen (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      salesman_code TEXT,
-      name TEXT NOT NULL,
-      phone TEXT,
-      territory TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS pick_tickets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      date TEXT NOT NULL,
-      time TEXT NOT NULL,
-      ticket_no TEXT NOT NULL,
-      customer_order_no TEXT,
-      qty_in_pick_ticket INTEGER DEFAULT 1,
-      picker_id TEXT,
-      party_code TEXT NOT NULL,
-      party_name TEXT NOT NULL,
-      route TEXT NOT NULL,
-      salesman TEXT NOT NULL,
-      priority TEXT DEFAULT 'Normal',
-      remarks TEXT,
-      status TEXT DEFAULT 'Assigned',
-      warehouse_id INTEGER NOT NULL,
-      created_by TEXT DEFAULT 'System',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS billings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      pick_ticket_id INTEGER NOT NULL,
-      billing_date TEXT NOT NULL,
-      billing_time TEXT NOT NULL,
-      bill_no TEXT NOT NULL,
-      billed_qty INTEGER DEFAULT 1,
-      checker_id TEXT,
-      helper_id TEXT,
-      start_time DATETIME,
-      end_time DATETIME,
-      invoice_amount REAL DEFAULT 0,
-      short_qty INTEGER DEFAULT 0,
-      excess_qty INTEGER DEFAULT 0,
-      damage_qty INTEGER DEFAULT 0,
-      billing_remarks TEXT,
-      warehouse_id INTEGER NOT NULL,
-      created_by TEXT DEFAULT 'System',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (pick_ticket_id) REFERENCES pick_tickets (id) ON DELETE CASCADE
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS dispatches (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      dispatch_no TEXT NOT NULL,
-      route TEXT,
-      driver_id INTEGER NOT NULL,
-      vehicle_id INTEGER NOT NULL,
-      eway_bill TEXT,
-      lr_number TEXT,
-      dispatch_date TEXT,
-      dispatch_time TEXT,
-      total_cartons INTEGER DEFAULT 0,
-      scanned_cartons INTEGER DEFAULT 0,
-      total_amount REAL DEFAULT 0,
-      eta DATETIME,
-      pod_status TEXT DEFAULT 'Pending',
-      gps_status TEXT DEFAULT 'Inactive',
-      status TEXT DEFAULT 'In Transit',
-      dispatch_remarks TEXT,
-      notes TEXT,
-      started_at DATETIME,
-      completed_at DATETIME,
-      warehouse_id INTEGER NOT NULL,
-      created_by TEXT DEFAULT 'System',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS dispatch_parties (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      dispatch_id INTEGER NOT NULL,
-      billing_id INTEGER NOT NULL,
-      party_code TEXT NOT NULL,
-      party_name TEXT,
-      total_cartons INTEGER DEFAULT 1,
-      scanned_cartons INTEGER DEFAULT 0,
-      material_description TEXT,
-      status TEXT DEFAULT 'In Transit',
-      delivery_status TEXT DEFAULT 'Assigned',
-      delivery_notes TEXT,
-      delivered_at DATETIME,
-      latitude REAL,
-      longitude REAL,
-      receiver_name TEXT,
-      receiver_mobile TEXT,
-      stop_name TEXT,
-      stop_sequence INTEGER DEFAULT 1,
-      signature_data TEXT,
-      otp_code TEXT,
-      otp_verified INTEGER DEFAULT 0,
-      warehouse_id INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (dispatch_id) REFERENCES dispatches (id) ON DELETE CASCADE,
-      FOREIGN KEY (billing_id) REFERENCES billings (id) ON DELETE CASCADE
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS cartons (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      barcode_no TEXT NOT NULL,
-      dispatch_party_id INTEGER,
-      dispatch_id INTEGER NOT NULL,
-      warehouse_id INTEGER NOT NULL,
-      is_scanned INTEGER DEFAULT 0,
-      scanned_at DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (dispatch_id) REFERENCES dispatches (id) ON DELETE CASCADE
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS eway_bills (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ewb_no TEXT,
-      ewb_date DATETIME,
-      dispatch_id INTEGER,
-      doc_no TEXT NOT NULL,
-      doc_date TEXT,
-      party_name TEXT NOT NULL,
-      gstin TEXT,
-      hsn_code TEXT,
-      quantity INTEGER DEFAULT 1,
-      taxable_value REAL DEFAULT 0,
-      cgst_value REAL DEFAULT 0,
-      sgst_value REAL DEFAULT 0,
-      igst_value REAL DEFAULT 0,
-      total_value REAL DEFAULT 0,
-      status TEXT DEFAULT 'Generated',
-      warehouse_id INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS audit_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      warehouse_id INTEGER,
-      user_id INTEGER,
-      user_name TEXT,
-      user_role TEXT,
-      user_ip TEXT,
-      action_type TEXT NOT NULL,
-      module TEXT NOT NULL,
-      target_id TEXT,
-      details TEXT,
-      changed_fields TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      message TEXT NOT NULL,
-      type TEXT DEFAULT 'Info',
-      warehouse_id INTEGER,
-      is_read INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS performance_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      worker_name TEXT NOT NULL,
-      role TEXT NOT NULL,
-      task_count INTEGER DEFAULT 0,
-      warehouse_id INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  // 19. Return Remarks Master
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS return_remarks_master (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      code TEXT NOT NULL,
-      name TEXT NOT NULL,
-      is_active INTEGER DEFAULT 1,
-      warehouse_id INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  // 20. Arrange Teams Master
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS arrange_teams_master (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      team_code TEXT NOT NULL,
-      team_name TEXT NOT NULL,
-      is_active INTEGER DEFAULT 1,
-      warehouse_id INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  // 21. Returns
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS returns (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      return_no TEXT UNIQUE NOT NULL,
-      ref_invoice_no TEXT,
-      ref_invoice_date TEXT,
-      return_date TEXT NOT NULL,
-      party_code TEXT NOT NULL,
-      party_name TEXT NOT NULL,
-      remark_id INTEGER,
-      remark_name TEXT,
-      is_dms_received INTEGER DEFAULT 0,
-      str_no TEXT,
-      status TEXT DEFAULT 'Pending DMS',
-      total_qty INTEGER DEFAULT 0,
-      total_value REAL DEFAULT 0,
-      internal_remarks TEXT,
-      attachment_url TEXT,
-      warehouse_id INTEGER NOT NULL,
-      created_by TEXT DEFAULT 'System',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME
-    );
-  `);
-
-  try {
-    await dbAsync.exec('ALTER TABLE returns ADD COLUMN ref_invoice_no TEXT;');
-  } catch (e) {}
-  try {
-    await dbAsync.exec('ALTER TABLE returns ADD COLUMN ref_invoice_date TEXT;');
-  } catch (e) {}
-
-  // 22. Return Items
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS return_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      return_id INTEGER NOT NULL,
-      part_no TEXT NOT NULL,
-      part_name TEXT NOT NULL,
-      reference_invoice_no TEXT,
-      qty INTEGER NOT NULL DEFAULT 1,
-      rate REAL DEFAULT 0,
-      value REAL DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (return_id) REFERENCES returns (id) ON DELETE CASCADE
-    );
-  `);
-
-  // 23. Arranges
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS arranges (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      arrange_no TEXT UNIQUE NOT NULL,
-      arrange_date TEXT NOT NULL,
-      sti_no TEXT NOT NULL,
-      str_no TEXT NOT NULL,
-      arrange_by_team_id INTEGER,
-      arrange_by_team_name TEXT,
-      arrange_for TEXT NOT NULL DEFAULT 'Party',
-      destination_code TEXT,
-      destination_name TEXT,
-      status TEXT DEFAULT 'Created',
-      pick_ticket_id INTEGER,
-      pick_ticket_no TEXT,
-      billing_id INTEGER,
-      billing_no TEXT,
-      total_qty INTEGER DEFAULT 0,
-      remarks TEXT,
-      warehouse_id INTEGER NOT NULL,
-      created_by TEXT DEFAULT 'System',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME
-    );
-  `);
-
-  // 24. Arrange Items
-  await dbAsync.exec(`
-    CREATE TABLE IF NOT EXISTS arrange_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      arrange_id INTEGER NOT NULL,
-      part_no TEXT NOT NULL,
-      part_name TEXT NOT NULL,
-      required_qty INTEGER NOT NULL DEFAULT 1,
-      available_qty INTEGER DEFAULT 0,
-      remarks TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (arrange_id) REFERENCES arranges (id) ON DELETE CASCADE
-    );
-  `);
-}
 
 async function ensureDefaultSeed() {
   try {
