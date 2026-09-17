@@ -37,8 +37,14 @@ export default function DmsPending() {
     setLoading(true);
     try {
       const res = await axios.get('/api/returns?is_dms=0&limit=100');
-      setData(res.data.data || []);
+      const list = Array.isArray(res.data)
+        ? res.data
+        : (Array.isArray(res.data?.data)
+          ? res.data.data
+          : (Array.isArray(res.data?.returns) ? res.data.returns : []));
+      setData(list);
     } catch (err) {
+      setData([]);
       toast.show('Failed to fetch pending DMS queue.', 'error');
     } finally {
       setLoading(false);
@@ -65,7 +71,8 @@ export default function DmsPending() {
     }
   };
 
-  const filtered = data.filter((r) => {
+  const safeData = Array.isArray(data) ? data : [];
+  const filtered = safeData.filter((r) => {
     if (!search.trim()) return true;
     const s = search.toLowerCase();
     return (
@@ -76,7 +83,8 @@ export default function DmsPending() {
     );
   });
 
-  const totalValuePending = filtered.reduce((acc, r) => acc + (parseFloat(r.total_value) || 0), 0);
+  const safeFiltered = Array.isArray(filtered) ? filtered : [];
+  const totalValuePending = safeFiltered.reduce((acc, r) => acc + (parseFloat(r.total_value) || 0), 0);
 
   return (
     <div className="space-y-4 pb-12">
@@ -120,7 +128,7 @@ export default function DmsPending() {
           </div>
           <div>
             <h3 className="font-black text-sm uppercase tracking-wide">
-              {filtered.length} Returns Awaiting STR Settlement
+              {safeFiltered.length} Returns Awaiting STR Settlement
             </h3>
             <p className="text-xs text-amber-100">
               Total Outstanding Return Value: ₹{totalValuePending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -164,7 +172,7 @@ export default function DmsPending() {
                     Loading Pending DMS Queue...
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : safeFiltered.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-8 text-center text-emerald-600 font-bold">
                     <CheckCircle2 className="w-6 h-6 mx-auto mb-2" />
@@ -172,7 +180,7 @@ export default function DmsPending() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => (
+                safeFiltered.map((r) => (
                   <tr key={r.id} className="hover:bg-amber-50/40 transition-colors">
                     <td className="p-3 font-mono font-bold text-[#003366] whitespace-nowrap">
                       <Link to={`/return/view/${r.id}`} className="hover:underline">

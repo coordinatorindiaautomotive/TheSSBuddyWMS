@@ -70,9 +70,15 @@ export default function ReturnRegister() {
   const fetchParties = async () => {
     try {
       const res = await axios.get('/api/parties');
-      setParties(res.data || []);
+      const partyList = Array.isArray(res.data)
+        ? res.data
+        : (Array.isArray(res.data?.data)
+          ? res.data.data
+          : (Array.isArray(res.data?.parties) ? res.data.parties : []));
+      setParties(partyList);
     } catch (err) {
       console.error('Error fetching parties:', err);
+      setParties([]);
     }
   };
 
@@ -91,11 +97,17 @@ export default function ReturnRegister() {
       if (toDate) params.append('to_date', toDate);
 
       const res = await axios.get(`/api/returns?${params.toString()}`);
-      setData(res.data.data || []);
-      setTotalPages(res.data.pagination?.totalPages || 1);
-      setTotalRecords(res.data.pagination?.totalRecords || 0);
+      const returnList = Array.isArray(res.data)
+        ? res.data
+        : (Array.isArray(res.data?.data)
+          ? res.data.data
+          : (Array.isArray(res.data?.returns) ? res.data.returns : []));
+      setData(returnList);
+      setTotalPages(res.data?.pagination?.totalPages || (returnList.length ? 1 : 1));
+      setTotalRecords(res.data?.pagination?.totalRecords || returnList.length);
     } catch (err) {
       console.error('Error loading returns:', err);
+      setData([]);
       toast.show('Failed to load returns list.', 'error');
     } finally {
       setLoading(false);
@@ -153,13 +165,16 @@ export default function ReturnRegister() {
     }
   };
 
+  const safeData = Array.isArray(data) ? data : [];
+  const safeParties = Array.isArray(parties) ? parties : [];
+
   const exportCSV = () => {
-    if (data.length === 0) {
+    if (safeData.length === 0) {
       toast.show('No data available to export.', 'warning');
       return;
     }
     const headers = ['Return No', 'Date', 'Party Code', 'Party Name', 'Reason', 'DMS Status', 'STR No', 'Total Qty', 'Total Value (INR)', 'Status'];
-    const rows = data.map((r) => [
+    const rows = safeData.map((r) => [
       `"${r.return_no || ''}"`,
       `"${r.return_date || ''}"`,
       `"${r.party_code || ''}"`,
@@ -182,9 +197,9 @@ export default function ReturnRegister() {
   };
 
   // KPIs
-  const totalValSummary = data.reduce((acc, r) => acc + (parseFloat(r.total_value) || 0), 0);
-  const totalUnitsSummary = data.reduce((acc, r) => acc + (parseInt(r.total_qty, 10) || 0), 0);
-  const pendingDmsCount = data.filter((r) => !r.is_dms_received).length;
+  const totalValSummary = safeData.reduce((acc, r) => acc + (parseFloat(r.total_value) || 0), 0);
+  const totalUnitsSummary = safeData.reduce((acc, r) => acc + (parseInt(r.total_qty, 10) || 0), 0);
+  const pendingDmsCount = safeData.filter((r) => !r.is_dms_received).length;
 
   return (
     <div className="space-y-4 pb-12">
@@ -271,7 +286,7 @@ export default function ReturnRegister() {
               placeholder="Filter by Party..."
               options={[
                 { value: '', label: 'All Parties' },
-                ...parties.map((p) => ({
+                ...safeParties.map((p) => ({
                   value: p.party_code,
                   label: `${p.party_name} (${p.party_code})`
                 }))
@@ -317,7 +332,7 @@ export default function ReturnRegister() {
 
         <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
           <div className="text-slate-500 font-semibold">
-            Showing <span className="text-slate-900 font-bold">{data.length}</span> of {totalRecords} returns
+            Showing <span className="text-slate-900 font-bold">{safeData.length}</span> of {totalRecords} returns
           </div>
           {(search || partyFilter || dmsFilter !== '' || statusFilter || fromDate || toDate) && (
             <button
@@ -357,14 +372,14 @@ export default function ReturnRegister() {
                     Loading Return records...
                   </td>
                 </tr>
-              ) : data.length === 0 ? (
+              ) : safeData.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="p-8 text-center text-slate-400 font-medium">
                     No return entries found matching your criteria.
                   </td>
                 </tr>
               ) : (
-                data.map((r) => (
+                safeData.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-mono font-bold text-[#003366] whitespace-nowrap">
                       <Link to={`/return/view/${r.id}`} className="hover:underline">

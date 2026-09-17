@@ -65,9 +65,13 @@ export default function ArrangeRegister() {
   const fetchTeams = async () => {
     try {
       const res = await axios.get('/api/masters/arrange-teams');
-      setTeams(res.data || []);
+      const teamList = Array.isArray(res.data)
+        ? res.data
+        : (Array.isArray(res.data?.data) ? res.data.data : []);
+      setTeams(teamList);
     } catch (err) {
       console.error('Error fetching teams:', err);
+      setTeams([]);
     }
   };
 
@@ -86,11 +90,15 @@ export default function ArrangeRegister() {
       if (toDate) params.append('to_date', toDate);
 
       const res = await axios.get(`/api/arranges?${params.toString()}`);
-      setData(res.data.data || []);
-      setTotalPages(res.data.pagination?.totalPages || 1);
-      setTotalRecords(res.data.pagination?.totalRecords || 0);
+      const list = Array.isArray(res.data)
+        ? res.data
+        : (Array.isArray(res.data?.data) ? res.data.data : []);
+      setData(list);
+      setTotalPages(res.data?.pagination?.totalPages || (list.length ? 1 : 1));
+      setTotalRecords(res.data?.pagination?.totalRecords || list.length);
     } catch (err) {
       console.error('Error loading arranges:', err);
+      setData([]);
       toast.show('Failed to load arranges list.', 'error');
     } finally {
       setLoading(false);
@@ -141,13 +149,16 @@ export default function ArrangeRegister() {
     }
   };
 
+  const safeData = Array.isArray(data) ? data : [];
+  const safeTeams = Array.isArray(teams) ? teams : [];
+
   const exportCSV = () => {
-    if (data.length === 0) {
+    if (safeData.length === 0) {
       toast.show('No data available to export.', 'warning');
       return;
     }
     const headers = ['Arrange No', 'Date', 'STI No', 'STR No', 'Team', 'Arrange For', 'Destination', 'Total Qty', 'Pick Ticket No', 'Status'];
-    const rows = data.map((r) => [
+    const rows = safeData.map((r) => [
       `"${r.arrange_no || ''}"`,
       `"${r.arrange_date || ''}"`,
       `"${r.sti_no || ''}"`,
@@ -169,8 +180,8 @@ export default function ArrangeRegister() {
     toast.show('Export downloaded successfully!', 'success');
   };
 
-  const totalUnitsSummary = data.reduce((acc, r) => acc + (parseInt(r.total_qty, 10) || 0), 0);
-  const ptCreatedCount = data.filter((r) => r.pick_ticket_no).length;
+  const totalUnitsSummary = safeData.reduce((acc, r) => acc + (parseInt(r.total_qty, 10) || 0), 0);
+  const ptCreatedCount = safeData.filter((r) => r.pick_ticket_no).length;
 
   return (
     <div className="space-y-4 pb-12">
@@ -271,7 +282,7 @@ export default function ArrangeRegister() {
               className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 bg-white focus:ring-2 focus:ring-[#003366] focus:outline-hidden"
             >
               <option value="">All Arrange Teams</option>
-              {teams.map((t) => (
+              {safeTeams.map((t) => (
                 <option key={t.id} value={String(t.id)}>
                   {t.team_name}
                 </option>
@@ -302,7 +313,7 @@ export default function ArrangeRegister() {
 
         <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
           <div className="text-slate-500 font-semibold">
-            Showing <span className="text-slate-900 font-bold">{data.length}</span> of {totalRecords} arrangements
+            Showing <span className="text-slate-900 font-bold">{safeData.length}</span> of {totalRecords} arrangements
           </div>
           {(search || arrangeForFilter || teamFilter || statusFilter || fromDate || toDate) && (
             <button
@@ -342,14 +353,14 @@ export default function ArrangeRegister() {
                     Loading Arrange records...
                   </td>
                 </tr>
-              ) : data.length === 0 ? (
+              ) : safeData.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="p-8 text-center text-slate-400 font-medium">
                     No arrangement records found.
                   </td>
                 </tr>
               ) : (
-                data.map((r) => (
+                safeData.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-mono font-bold text-[#003366] whitespace-nowrap">
                       <Link to={`/arrange/view/${r.id}`} className="hover:underline">
