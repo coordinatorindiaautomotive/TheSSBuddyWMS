@@ -53,13 +53,18 @@ export default function ReturnReports() {
 
   const { summary, reasonBreakdown, topParties, topParts, trendData } = data || {};
 
+  const safeTopParties = Array.isArray(topParties) ? topParties : [];
+  const safeTopParts = Array.isArray(topParts) ? topParts : [];
+  const safeReasonBreakdown = Array.isArray(reasonBreakdown) ? reasonBreakdown : [];
+  const safeTrendData = Array.isArray(trendData) ? trendData : [];
+
   const exportReportCSV = () => {
-    if (!topParties || topParties.length === 0) {
+    if (safeTopParties.length === 0) {
       toast.show('No report data to export.', 'warning');
       return;
     }
     const headers = ['Party Code', 'Party Name', 'Returns Count', 'Total Units', 'Total Value (INR)'];
-    const rows = topParties.map((p) => [
+    const rows = safeTopParties.map((p) => [
       `"${p.party_code || ''}"`,
       `"${(p.party_name || '').replace(/"/g, '""')}"`,
       p.return_count || 0,
@@ -147,7 +152,7 @@ export default function ReturnReports() {
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData || []}>
+              <AreaChart data={safeTrendData}>
                 <defs>
                   <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#ed1c24" stopOpacity={0.3}/>
@@ -174,7 +179,7 @@ export default function ReturnReports() {
         </div>
 
         {/* Reasons Bar Chart */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div className="bg-[#white] rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#003366] flex items-center gap-2">
               <PieIcon className="w-4 h-4 text-amber-600" />
@@ -183,7 +188,7 @@ export default function ReturnReports() {
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={reasonBreakdown || []} layout="vertical">
+              <BarChart data={safeReasonBreakdown} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
                 <XAxis type="number" stroke="#64748B" fontSize={10} />
                 <YAxis dataKey="reason" type="category" stroke="#64748B" fontSize={10} width={120} />
@@ -222,7 +227,7 @@ export default function ReturnReports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {(topParties || []).map((p, idx) => (
+                {safeTopParties.map((p, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
                     <td className="p-2.5">
                       <div className="font-bold text-slate-800">{p.party_name}</div>
@@ -256,7 +261,7 @@ export default function ReturnReports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {(topParts || []).map((pt, idx) => (
+                {safeTopParts.map((pt, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
                     <td className="p-2.5">
                       <div className="font-mono font-bold text-[#003366]">{pt.part_no}</div>

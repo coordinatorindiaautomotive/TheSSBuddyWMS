@@ -44,8 +44,15 @@ export default function Reports() {
   const fetchRoutes = async () => {
     try {
       const res = await axios.get('/api/masters/routes');
-      setRoutesList(res.data || []);
-    } catch (e) {}
+      const list = Array.isArray(res.data)
+        ? res.data
+        : (Array.isArray(res.data?.data)
+          ? res.data.data
+          : (Array.isArray(res.data?.routes) ? res.data.routes : []));
+      setRoutesList(list);
+    } catch (e) {
+      setRoutesList([]);
+    }
   };
 
   const fetchReport = async () => {
@@ -65,12 +72,23 @@ export default function Reports() {
 
       const res = await axios.get(url);
       if (reportType === 'audit-trail') {
-        setReportData(res.data.logs || []);
+        const logs = Array.isArray(res.data)
+          ? res.data
+          : (Array.isArray(res.data?.logs)
+            ? res.data.logs
+            : (Array.isArray(res.data?.data) ? res.data.data : []));
+        setReportData(logs);
       } else {
-        setReportData(res.data || []);
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (Array.isArray(res.data?.data)
+            ? res.data.data
+            : (Array.isArray(res.data?.reports) ? res.data.reports : []));
+        setReportData(list);
       }
     } catch (err) {
       console.error('Error fetching report:', err);
+      setReportData([]);
     } finally {
       setLoading(false);
     }
@@ -89,14 +107,23 @@ export default function Reports() {
     setSearchQuery('');
     setLoading(true);
     axios.get(`/api/reports/${reportType}`).then(res => {
-      setReportData(res.data);
+      const list = Array.isArray(res.data)
+        ? res.data
+        : (Array.isArray(res.data?.data) ? res.data.data : []);
+      setReportData(list);
+    }).catch(() => {
+      setReportData([]);
+    }).finally(() => {
       setLoading(false);
     });
   };
 
+  const safeReportData = Array.isArray(reportData) ? reportData : [];
+  const safeRoutesList = Array.isArray(routesList) ? routesList : [];
+
   const exportFormattedExcel = () => {
-    if (!reportData.length) return;
-    const keys = Object.keys(reportData[0]);
+    if (!safeReportData.length) return;
+    const keys = Object.keys(safeReportData[0]);
 
     const headerCells = keys
       .map(
@@ -107,7 +134,7 @@ export default function Reports() {
       )
       .join('');
 
-    const bodyRows = reportData
+    const bodyRows = safeReportData
       .map(
         row =>
           `<tr>` +
@@ -261,7 +288,7 @@ export default function Reports() {
         <div className="flex items-center gap-2">
           <button
             onClick={exportFormattedExcel}
-            disabled={loading || reportData.length === 0}
+            disabled={loading || safeReportData.length === 0}
             className="px-4 py-2 bg-[#003366] hover:bg-[#002244] border-b-2 border-[#ed1c24] text-white text-xs font-extrabold rounded-xl flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
           >
             <Download className="w-4 h-4 text-emerald-400" />
@@ -269,7 +296,7 @@ export default function Reports() {
           </button>
           <button
             onClick={exportCSV}
-            disabled={loading || reportData.length === 0}
+            disabled={loading || safeReportData.length === 0}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold rounded-xl flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
           >
             <FileSpreadsheet className="w-4 h-4 text-slate-500" />
@@ -319,7 +346,7 @@ export default function Reports() {
                 searchPlaceholder="Search Route Name..."
                 options={[
                   { value: '', label: '-- All Routes --' },
-                  ...routesList.map(r => ({
+                  ...safeRoutesList.map(r => ({
                     value: r.route_name,
                     label: r.route_name
                   }))
@@ -385,8 +412,8 @@ export default function Reports() {
           <table className="w-full text-left text-xs border-collapse min-w-[1000px]">
             <thead className="sticky top-0 z-10">
               <tr className="bg-[#003366] border-b-4 border-[#ed1c24] text-white text-xs font-bold uppercase tracking-wider">
-                {reportData.length > 0 ? (
-                  Object.keys(reportData[0]).map(key => (
+                {safeReportData.length > 0 ? (
+                  Object.keys(safeReportData[0]).map(key => (
                     <th key={key} className="px-5 py-4 whitespace-nowrap">
                       {key.replace(/_/g, ' ')}
                     </th>
@@ -403,7 +430,7 @@ export default function Reports() {
                     Generating report data with selected filters...
                   </td>
                 </tr>
-              ) : reportData.length === 0 ? (
+              ) : safeReportData.length === 0 ? (
                 <tr>
                   <td colSpan={20} className="text-center py-12 text-slate-400 font-semibold">
                     No records match current filter criteria.
@@ -411,7 +438,7 @@ export default function Reports() {
                 </tr>
               ) : (
                 (() => {
-                  const cappedReports = (reportData || []).slice(0, 100);
+                  const cappedReports = safeReportData.slice(0, 100);
                   const totalPages = Math.ceil(cappedReports.length / pageSize) || 1;
                   const startIndex = (currentPage - 1) * pageSize;
                   const endIndex = Math.min(startIndex + pageSize, cappedReports.length);
@@ -459,8 +486,8 @@ export default function Reports() {
         </div>
 
         {/* Pagination Footer */}
-        {reportData.length > 0 && (() => {
-          const cappedTotal = Math.min(reportData.length, 100);
+        {safeReportData.length > 0 && (() => {
+          const cappedTotal = Math.min(safeReportData.length, 100);
           const totalPages = Math.ceil(cappedTotal / pageSize) || 1;
           const start = (currentPage - 1) * pageSize;
           const end = Math.min(currentPage * pageSize, cappedTotal);
@@ -469,7 +496,7 @@ export default function Reports() {
             <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
               <div className="text-slate-500 font-medium text-xs">
                 Showing <strong className="text-slate-900 font-bold">{cappedTotal > 0 ? start + 1 : 0}</strong> to <strong className="text-slate-900 font-bold">{end}</strong> of <strong className="text-slate-900 font-bold">{cappedTotal}</strong> records
-                {reportData.length > 100 && (
+                {safeReportData.length > 100 && (
                   <span className="text-[11px] text-slate-400 font-normal ml-1.5">(capped at max 100 — use filters to narrow)</span>
                 )}
               </div>

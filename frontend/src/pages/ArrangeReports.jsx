@@ -53,13 +53,17 @@ export default function ArrangeReports() {
 
   const { summary, arrangeForBreakdown, teamBreakdown, trendData } = data || {};
 
+  const safeTeamBreakdown = Array.isArray(teamBreakdown) ? teamBreakdown : [];
+  const safeArrangeForBreakdown = Array.isArray(arrangeForBreakdown) ? arrangeForBreakdown : [];
+  const safeTrendData = Array.isArray(trendData) ? trendData : [];
+
   const exportReportCSV = () => {
-    if (!teamBreakdown || teamBreakdown.length === 0) {
+    if (safeTeamBreakdown.length === 0) {
       toast.show('No data to export.', 'warning');
       return;
     }
     const headers = ['Team Name', 'Total Arranges', 'Total Units', 'Converted to Pick Ticket'];
-    const rows = teamBreakdown.map((t) => [
+    const rows = safeTeamBreakdown.map((t) => [
       `"${(t.team_name || '').replace(/"/g, '""')}"`,
       t.arrange_count || 0,
       t.total_qty || 0,
@@ -142,7 +146,7 @@ export default function ArrangeReports() {
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData || []}>
+              <AreaChart data={safeTrendData}>
                 <defs>
                   <linearGradient id="colorArr" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#004C8F" stopOpacity={0.3}/>
@@ -178,7 +182,7 @@ export default function ArrangeReports() {
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={teamBreakdown || []}>
+              <BarChart data={safeTeamBreakdown}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
                 <XAxis dataKey="team_name" stroke="#64748B" fontSize={10} />
                 <YAxis stroke="#64748B" fontSize={10} />
