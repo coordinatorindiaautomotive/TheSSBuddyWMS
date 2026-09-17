@@ -119,8 +119,8 @@ export default function Billing() {
       prefix: 'RS/',
       bill_no: defaultBillNo,
       billed_qty: 0,
-      checker_id: checkers.length > 0 ? checkers[0].id : '',
-      helper_id: helpers.length > 0 ? helpers[0].id : '',
+      checker_id: '',
+      helper_id: '',
       start_time: startTimeStr,
       end_time: endTimeStr,
       invoice_amount: 0,
@@ -245,6 +245,36 @@ export default function Billing() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.pick_ticket_id) {
+      toast.warning('Please select a Pending Pick Ticket!');
+      return;
+    }
+    if (!formData.bill_no || !formData.bill_no.trim()) {
+      toast.warning('Invoice Bill Number is required!');
+      return;
+    }
+    if (!formData.checker_id || String(formData.checker_id).trim() === '') {
+      toast.warning('Please select a Checker!');
+      return;
+    }
+    if (!formData.helper_id || String(formData.helper_id).trim() === '') {
+      toast.warning('Please select a Helper!');
+      return;
+    }
+    if (formData.billed_qty === undefined || formData.billed_qty === null || parseInt(formData.billed_qty, 10) <= 0) {
+      toast.warning('Billed Quantity must be greater than 0!');
+      return;
+    }
+    if (!formData.start_time || !formData.end_time) {
+      toast.warning('Checking Start Time and End Time are required!');
+      return;
+    }
+    if (new Date(formData.end_time) < new Date(formData.start_time)) {
+      toast.warning('Checking End Time cannot be earlier than Start Time!');
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (editingId) {

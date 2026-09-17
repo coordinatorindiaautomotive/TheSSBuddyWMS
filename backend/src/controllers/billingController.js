@@ -124,8 +124,23 @@ async function createBilling(req, res) {
       billing_remarks
     } = req.body;
 
-    if (!pick_ticket_id || !bill_no) {
-      return res.status(400).json({ message: 'Pick Ticket and Invoice Bill No are required.' });
+    if (!pick_ticket_id) {
+      return res.status(400).json({ message: 'Pick Ticket selection is required.' });
+    }
+    if (!bill_no || !String(bill_no).trim()) {
+      return res.status(400).json({ message: 'Invoice Bill Number is required.' });
+    }
+    if (!checker_id || String(checker_id).trim() === '') {
+      return res.status(400).json({ message: 'Checker selection is required.' });
+    }
+    if (!helper_id || String(helper_id).trim() === '') {
+      return res.status(400).json({ message: 'Helper selection is required.' });
+    }
+    if (billed_qty === undefined || billed_qty === null || parseInt(billed_qty, 10) <= 0) {
+      return res.status(400).json({ message: 'Billed quantity must be greater than 0.' });
+    }
+    if (!start_time || !end_time) {
+      return res.status(400).json({ message: 'Checking Start Time and End Time are required.' });
     }
 
     const cleanBillNo = String(bill_no).trim().toUpperCase();
@@ -144,7 +159,7 @@ async function createBilling(req, res) {
     const bDate = billing_date || new Date().toISOString().split('T')[0];
     const bTime = billing_time || new Date().toTimeString().split(' ')[0].substring(0, 5);
 
-    const bQty = parseInt(billed_qty !== undefined ? billed_qty : ticket.qty_in_pick_ticket, 10) || 0;
+    const bQty = parseInt(billed_qty, 10);
     const dQty = parseInt(damage_qty || 0, 10) || 0;
     const qtyDiff = (ticket.qty_in_pick_ticket || 0) - bQty;
     const computedShort = qtyDiff > 0 ? qtyDiff : 0;
@@ -165,8 +180,8 @@ async function createBilling(req, res) {
       bTime,
       cleanBillNo,
       bQty,
-      checker_id ? String(checker_id) : null,
-      helper_id ? String(helper_id) : null,
+      String(checker_id),
+      String(helper_id),
       sTime,
       eTime,
       parseFloat(invoice_amount || 0) || 0,
@@ -228,6 +243,16 @@ async function updateBilling(req, res) {
     const billing = await dbAsync.get('SELECT * FROM billings WHERE id = ?', [id]);
     if (!billing) {
       return res.status(404).json({ message: 'Billing record not found.' });
+    }
+
+    if (checker_id !== undefined && (!checker_id || String(checker_id).trim() === '')) {
+      return res.status(400).json({ message: 'Checker selection is required.' });
+    }
+    if (helper_id !== undefined && (!helper_id || String(helper_id).trim() === '')) {
+      return res.status(400).json({ message: 'Helper selection is required.' });
+    }
+    if (billed_qty !== undefined && (billed_qty === null || parseInt(billed_qty, 10) <= 0)) {
+      return res.status(400).json({ message: 'Billed quantity must be greater than 0.' });
     }
 
     const linkedPt = await dbAsync.get('SELECT status FROM pick_tickets WHERE id = ?', [billing.pick_ticket_id]);

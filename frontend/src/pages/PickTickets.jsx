@@ -371,6 +371,24 @@ export default function PickTickets() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.ticket_no || !formData.ticket_no.trim()) {
+      toast.warning('Pick Ticket Number is required!');
+      return;
+    }
+    if (!formData.party_code || !formData.party_code.trim()) {
+      toast.warning('Please select a Party!');
+      return;
+    }
+    if (!formData.picker_id || String(formData.picker_id).trim() === '') {
+      toast.warning('Please select a Floor Picker!');
+      return;
+    }
+    if (!formData.qty_in_pick_ticket || parseInt(formData.qty_in_pick_ticket, 10) <= 0) {
+      toast.warning('Quantity in Pick Ticket must be greater than 0!');
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (editingId) {
