@@ -1,19 +1,11 @@
-# Set default index document
-DirectoryIndex index.html
-
 # Prevent Directory Browsing
 Options -Indexes
 
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-
-    # 1. Serve static files directly if file or directory exists
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^ - [L]
-
-    # 2. Forward all other routes to application (Passenger / Express SPA fallback)
-    RewriteRule ^ index.html [L]
+# Enable Phusion Passenger for Node.js Application
+<IfModule mod_passenger.c>
+    PassengerEnabled on
+    PassengerAppType node
+    PassengerStartupFile app.js
 </IfModule>
 
 # Security Headers

@@ -267,6 +267,28 @@ apiRouter.post('/system/config', requireSuperAdmin, systemSettingsController.upd
 apiRouter.post('/system/test-db', requireSuperAdmin, systemSettingsController.testDatabaseConnection);
 apiRouter.post('/system/sync-db', requireSuperAdmin, systemSettingsController.autoSyncDatabase);
 
+const dbStatusHandler = async (req, res) => {
+  try {
+    const { testConnection, getConfig } = require('./config/dbConfigManager');
+    const cfg = getConfig();
+    const testResult = await testConnection();
+    res.json({
+      configured: {
+        host: cfg.mysql.host,
+        port: cfg.mysql.port,
+        database: cfg.mysql.database,
+        user: cfg.mysql.user,
+        passwordConfigured: Boolean(cfg.mysql.password)
+      },
+      result: testResult
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+app.get(['/db-status', '/api/db-status', '/TheSSBuddyWMS/db-status', '/TheSSBuddyWMS/api/db-status'], dbStatusHandler);
+
 // Mount API on all possible prefixes
 app.use('/api', apiRouter);
 app.use('/TheSSBuddyWMS/api', apiRouter);
