@@ -7,14 +7,12 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # 1. Serve Frontend Static Files Directly if File/Directory Exists
+    # 1. Serve static files directly if file or directory exists
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # 2. Fallback SPA Routing for React frontend (exclude API and WebSockets)
-    RewriteCond %{REQUEST_URI} !^/api
-    RewriteCond %{REQUEST_URI} !^/socket.io
+    # 2. Forward all other routes to application (Passenger / Express SPA fallback)
     RewriteRule ^ index.html [L]
 </IfModule>
 
