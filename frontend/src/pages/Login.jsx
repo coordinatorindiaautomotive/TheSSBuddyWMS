@@ -20,7 +20,10 @@ export default function Login() {
       await login(username, password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please check credentials.');
+      console.error('Login Error:', err);
+      const status = err.response?.status ? `[HTTP ${err.response.status}] ` : '';
+      const msg = err.response?.data?.message || err.message || 'Login failed. Please check server logs.';
+      setError(`${status}${msg}`);
     } finally {
       setLoading(false);
     }

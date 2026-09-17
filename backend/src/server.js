@@ -78,6 +78,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 const apiRouter = express.Router();
 
 // Public Routes
+apiRouter.get('/health', (req, res) => res.json({ status: 'ok', serverTime: new Date().toISOString() }));
 apiRouter.post('/auth/login', authController.login);
 apiRouter.post('/mobile/auth/login', mobileApiController.mobileLogin);
 
