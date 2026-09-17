@@ -8,6 +8,8 @@ const possibleEnvPaths = [
   path.join(__dirname, '../../../.env'),
   path.join(process.cwd(), '.env'),
   path.join(process.cwd(), 'backend/.env'),
+  '/home/thesssys/wms.thesssystems.in/.env',
+  '/home/thesssys/wms.thesssystems.in/backend/.env',
   '/home/thesssys/TheSSBuddyWMS/backend/.env',
   '/home/thesssys/public_html/backend/.env',
   '/home/thesssys/public_html/.env'
