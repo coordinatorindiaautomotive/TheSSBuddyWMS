@@ -1,11 +1,26 @@
+# Set default index document
+DirectoryIndex index.html
+
 # Prevent Directory Browsing
 Options -Indexes
 
-# Enable Phusion Passenger for Node.js Application
-<IfModule mod_passenger.c>
-    PassengerEnabled on
-    PassengerAppType node
-    PassengerStartupFile app.js
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 1. Serve static files directly if file or directory exists
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 2. Pass all API, Socket.io, and DB status requests directly to Passenger / Express
+    RewriteCond %{REQUEST_URI} ^/api [NC,OR]
+    RewriteCond %{REQUEST_URI} ^/db-status [NC,OR]
+    RewriteCond %{REQUEST_URI} ^/socket.io [NC,OR]
+    RewriteCond %{REQUEST_URI} ^/TheSSBuddyWMS [NC]
+    RewriteRule ^ - [L]
+
+    # 3. Forward non-file browser navigation routes to index.html SPA
+    RewriteRule ^ index.html [L]
 </IfModule>
 
 # Security Headers
