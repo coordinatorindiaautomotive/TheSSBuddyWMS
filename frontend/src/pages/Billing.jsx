@@ -22,7 +22,7 @@ import {
 
 export default function Billing() {
   const toast = useToast();
-  const { activeWarehouse } = useAuth();
+  const { activeWarehouse, isDispatcher, canDelete } = useAuth();
   const [billings, setBillings] = useState([]);
   const [pendingTickets, setPendingTickets] = useState([]);
   const [checkers, setCheckers] = useState([]);
@@ -347,13 +347,15 @@ export default function Billing() {
             )}
           </div>
 
-          <button
-            onClick={handleOpenCreateModal}
-            className="px-4 py-2 bg-[#004c8f] hover:bg-[#003a6d] text-white text-xs font-extrabold uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            Create Billing
-          </button>
+          {!isDispatcher && (
+            <button
+              onClick={handleOpenCreateModal}
+              className="px-4 py-2 bg-[#004c8f] hover:bg-[#003a6d] text-white text-xs font-extrabold uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Register Billing Record
+            </button>
+          )}
         </div>
       </div>
 
@@ -470,7 +472,11 @@ export default function Billing() {
 
                     {/* Actions */}
                     <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                      {isDispatched ? (
+                      {isDispatcher ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                          View Only
+                        </span>
+                      ) : isDispatched ? (
                         <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-400 border border-slate-200">
                           Dispatched
                         </span>
@@ -483,13 +489,15 @@ export default function Billing() {
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
-                          <button
-                            onClick={() => setDeleteBilling(b)}
-                            className="p-1 rounded bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 cursor-pointer transition-colors"
-                            title="Delete Invoice"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {canDelete && (
+                            <button
+                              onClick={() => setDeleteBilling(b)}
+                              className="p-1 rounded bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 cursor-pointer transition-colors"
+                              title="Delete Invoice"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>

@@ -44,7 +44,7 @@ const TD = ({ children, className = '' }) => (
 
 export default function MasterRegistries() {
   const toast = useToast();
-  const { user, activeWarehouse } = useAuth();
+  const { user, activeWarehouse, canDelete } = useAuth();
   const isSuperAdmin = Boolean(
     user && (
       ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user.role) ||
@@ -738,10 +738,12 @@ export default function MasterRegistries() {
           Activate
         </button>
       )}
-      <button onClick={() => setDeleteItem(item)}
-        className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer">
-        <Trash2 className="w-3.5 h-3.5" /> Delete
-      </button>
+      {canDelete && (
+        <button onClick={() => setDeleteItem(item)}
+          className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer">
+          <Trash2 className="w-3.5 h-3.5" /> Delete
+        </button>
+      )}
     </div>
   );
 

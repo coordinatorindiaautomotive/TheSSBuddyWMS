@@ -144,7 +144,7 @@ function SearchablePartySelect({ parties = [], selectedCode, onSelect }) {
 
 export default function PickTickets() {
   const toast = useToast();
-  const { activeWarehouse } = useAuth();
+  const { activeWarehouse, isDispatcher, canDelete } = useAuth();
   const [tickets, setTickets] = useState([]);
   const [pickers, setPickers] = useState([]);
   const [parties, setParties] = useState([]);
@@ -436,13 +436,15 @@ export default function PickTickets() {
     <div className="space-y-3">
       {/* Top Action & Search Bar Aligned on Right */}
       <div className="flex flex-col items-end gap-2.5">
-        <button
-          onClick={handleOpenCreateModal}
-          className="px-5 py-2.5 bg-[#004c8f] hover:bg-[#003a6d] text-white text-xs font-extrabold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" />
-          Create Pick Ticket
-        </button>
+        {!isDispatcher && (
+          <button
+            onClick={handleOpenCreateModal}
+            className="px-5 py-2.5 bg-[#004c8f] hover:bg-[#003a6d] text-white text-xs font-extrabold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" />
+            Create Pick Ticket
+          </button>
+        )}
 
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -552,7 +554,11 @@ export default function PickTickets() {
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                    {['Created', 'Assigned', 'Picking In Progress', 'Picked'].includes(t.status) ? (
+                    {isDispatcher ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                        View Only
+                      </span>
+                    ) : ['Created', 'Assigned', 'Picking In Progress', 'Picked'].includes(t.status) ? (
                       <div className="flex items-center justify-end gap-1.5">
                         {['Assigned', 'Picking In Progress'].includes(t.status) && (
                           <button
@@ -578,13 +584,15 @@ export default function PickTickets() {
                         >
                           <Ban className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          onClick={() => setDeleteTicket(t)}
-                          className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors cursor-pointer"
-                          title="Delete Pick Ticket"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canDelete && (
+                          <button
+                            onClick={() => setDeleteTicket(t)}
+                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors cursor-pointer"
+                            title="Delete Pick Ticket"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200">

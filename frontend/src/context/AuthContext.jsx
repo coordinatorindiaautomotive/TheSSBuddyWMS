@@ -73,15 +73,25 @@ export function AuthProvider({ children }) {
 
   const isSuperAdmin = Boolean(
     user && (
-      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin', 'Admin', 'admin', 'Superadmin'].includes(user.role) ||
-      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin', 'Admin', 'admin', 'Superadmin'].includes(user.role_name) ||
+      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user.role) ||
+      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user.role_name) ||
       user.is_super_admin ||
-      (user.username && user.username.toLowerCase().startsWith('admin')) ||
-      (user.email && (user.email.toLowerCase().includes('coordinator') || user.email.toLowerCase().startsWith('admin')))
+      (user.username && (user.username.toLowerCase() === 'admin' || user.username.toLowerCase() === 'superadmin')) ||
+      (user.email && (user.email.toLowerCase().includes('coordinator') || user.email.toLowerCase().startsWith('admin@thess')))
     )
   );
 
+  const roleNorm = String(user?.role || user?.role_name || '').toLowerCase();
+  const isDispatcher = roleNorm.includes('dispatcher');
+  const isOperator = roleNorm.includes('operator');
+  const canDelete = !isOperator;
+
   const switchWarehouse = async (warehouseId) => {
+    // Restrict warehouse switching strictly to Super Admin
+    if (!isSuperAdmin) {
+      console.warn('Warehouse switching is restricted to Super Admin only.');
+      return;
+    }
     const targetId = parseInt(warehouseId, 10);
     const wh = warehouses.find(w => w.id === targetId);
     if (wh) {
@@ -109,6 +119,9 @@ export function AuthProvider({ children }) {
       user,
       token,
       isSuperAdmin,
+      isDispatcher,
+      isOperator,
+      canDelete,
       activeWarehouse,
       warehouses,
       loading,

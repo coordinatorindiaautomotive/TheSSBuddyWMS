@@ -300,10 +300,9 @@ export default function Layout({ children }) {
             </div>
 
             {/* Warehouse Switcher / Assigned Badge in Header */}
-            <div className="flex items-center gap-1 sm:gap-2 bg-white/10 border border-white/20 rounded-xl px-2 sm:px-3 py-1 text-xs text-white min-w-[140px] sm:min-w-[200px] max-w-[260px]">
+            <div className="flex items-center gap-1.5 bg-[#00264d] border border-cyan-400/30 rounded-xl px-2.5 sm:px-3 py-1 text-xs text-white max-w-[260px] shadow-inner">
               <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
-              <span className="hidden sm:inline font-semibold text-slate-200 shrink-0">WH:</span>
-              {(Array.isArray(warehouses) && warehouses.length > 1) ? (
+              {(isSuper && Array.isArray(warehouses) && warehouses.length > 1) ? (
                 <div className="w-full">
                   <SearchableSelect
                     value={String(activeWarehouse?.id || '')}
@@ -315,13 +314,18 @@ export default function Layout({ children }) {
                     placeholder="Warehouse..."
                     searchPlaceholder="Search WH..."
                     dark={true}
-                    className="!min-h-[30px] !py-1 !px-2 !bg-transparent !border-none !text-xs !text-white font-bold"
+                    className="!min-h-[30px] !py-0.5 !px-1.5 !bg-transparent !border-none !text-xs !text-white font-bold"
                   />
                 </div>
               ) : (
-                <span className="font-extrabold text-cyan-200 truncate text-xs" title={`${activeWarehouse?.warehouse_name || 'Warehouse'} (${activeWarehouse?.warehouse_code || 'WH'})`}>
-                  {activeWarehouse?.warehouse_code || activeWarehouse?.warehouse_name || 'WH'}
-                </span>
+                <div className="flex items-center gap-1.5 overflow-hidden" title={`${activeWarehouse?.warehouse_name || 'Warehouse'} (${activeWarehouse?.warehouse_code || 'WH'})`}>
+                  <span className="font-extrabold text-cyan-100 truncate text-xs">
+                    {activeWarehouse?.warehouse_name || 'Warehouse'}
+                  </span>
+                  <span className="font-mono text-[10px] font-bold text-cyan-300 bg-cyan-900/60 px-1.5 py-0.5 rounded border border-cyan-500/30 shrink-0">
+                    {activeWarehouse?.warehouse_code || 'WH'}
+                  </span>
+                </div>
               )}
             </div>
 

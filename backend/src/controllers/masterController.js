@@ -507,6 +507,10 @@ async function updateWorker(req, res) {
 
 async function deleteWorker(req, res) {
   try {
+    const roleNorm = String(req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (roleNorm.includes('operator')) {
+      return res.status(403).json({ message: 'Operator role is not permitted to delete records.' });
+    }
     const { id } = req.params;
     await dbAsync.run('DELETE FROM picker_checker_helpers WHERE id = ?', [id]);
     return res.json({ message: 'Worker deleted successfully!' });

@@ -106,6 +106,11 @@ function formatDateTimeForDb(dt) {
 
 async function createBilling(req, res) {
   try {
+    const roleNorm = String(req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (roleNorm.includes('dispatcher')) {
+      return res.status(403).json({ message: 'Dispatcher role has read-only access to Billing.' });
+    }
+
     const whId = req.activeWarehouseId;
     const {
       pick_ticket_id,
@@ -222,6 +227,11 @@ async function createBilling(req, res) {
 
 async function updateBilling(req, res) {
   try {
+    const roleNorm = String(req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (roleNorm.includes('dispatcher')) {
+      return res.status(403).json({ message: 'Dispatcher role has read-only access to Billing.' });
+    }
+
     const { id } = req.params;
     const {
       pick_ticket_id,
@@ -342,6 +352,14 @@ async function updateBilling(req, res) {
 
 async function deleteBilling(req, res) {
   try {
+    const roleNorm = String(req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (roleNorm.includes('operator')) {
+      return res.status(403).json({ message: 'Operator role is not permitted to delete records.' });
+    }
+    if (roleNorm.includes('dispatcher')) {
+      return res.status(403).json({ message: 'Dispatcher role has read-only access to Billing.' });
+    }
+
     const { id } = req.params;
     const billing = await dbAsync.get('SELECT * FROM billings WHERE id = ?', [id]);
     if (!billing) {

@@ -124,6 +124,11 @@ async function validateNumber(req, res) {
 
 async function createPickTicket(req, res) {
   try {
+    const roleNorm = String(req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (roleNorm.includes('dispatcher')) {
+      return res.status(403).json({ message: 'Dispatcher role has read-only access to Pick Tickets.' });
+    }
+
     const whId = req.activeWarehouseId;
     const {
       date,
@@ -215,6 +220,11 @@ async function createPickTicket(req, res) {
 
 async function updatePickTicket(req, res) {
   try {
+    const roleNorm = String(req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (roleNorm.includes('dispatcher')) {
+      return res.status(403).json({ message: 'Dispatcher role has read-only access to Pick Tickets.' });
+    }
+
     const { id } = req.params;
     const whId = req.activeWarehouseId;
     const {
@@ -284,6 +294,14 @@ async function updatePickTicket(req, res) {
 
 async function deletePickTicket(req, res) {
   try {
+    const roleNorm = String(req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (roleNorm.includes('operator')) {
+      return res.status(403).json({ message: 'Operator role is not permitted to delete records.' });
+    }
+    if (roleNorm.includes('dispatcher')) {
+      return res.status(403).json({ message: 'Dispatcher role has read-only access to Pick Tickets.' });
+    }
+
     const { id } = req.params;
     const pt = await dbAsync.get('SELECT ticket_no, party_name FROM pick_tickets WHERE id = ?', [id]);
     
