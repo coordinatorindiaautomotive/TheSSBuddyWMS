@@ -22,7 +22,13 @@ function authenticate(req, res, next) {
 
     const roleNorm = String(decoded.role || decoded.role_name || '').toLowerCase().replace(/[^a-z]/g, '');
     const userNorm = String(decoded.username || decoded.email || '').toLowerCase();
-    const isSuperAdmin = roleNorm.includes('superadmin') || roleNorm === 'admin' || userNorm.startsWith('admin') || userNorm.includes('coordinator') || Boolean(decoded.is_super_admin);
+    const isSuperAdmin = !roleNorm.includes('warehouse') && (
+      roleNorm === 'superadmin' || 
+      roleNorm === 'super' || 
+      Boolean(decoded.is_super_admin) ||
+      userNorm === 'superadmin' ||
+      (userNorm === 'admin' && roleNorm !== 'warehouseadmin')
+    );
 
     const headerWhId = req.headers['x-warehouse-id'];
 
@@ -46,7 +52,13 @@ function requireSuperAdmin(req, res, next) {
   }
   const roleNorm = String(req.user.role || req.user.role_name || '').toLowerCase().replace(/[^a-z]/g, '');
   const userNorm = String(req.user.username || req.user.email || '').toLowerCase();
-  const isSuperAdmin = roleNorm.includes('superadmin') || roleNorm === 'admin' || userNorm.startsWith('admin') || userNorm.includes('coordinator') || Boolean(req.user.is_super_admin);
+  const isSuperAdmin = !roleNorm.includes('warehouse') && (
+    roleNorm === 'superadmin' || 
+    roleNorm === 'super' || 
+    Boolean(req.user.is_super_admin) ||
+    userNorm === 'superadmin' ||
+    (userNorm === 'admin' && roleNorm !== 'warehouseadmin')
+  );
   if (!isSuperAdmin) {
     return res.status(403).json({ message: 'Forbidden: Super Admin privileges required.' });
   }

@@ -1554,6 +1554,7 @@ export default function MasterRegistries() {
                     'Super Admin':      'bg-red-100 text-red-700 border-red-200',
                     'Warehouse Admin':  'bg-amber-100 text-amber-700 border-amber-200',
                     'Operator':         'bg-purple-100 text-purple-700 border-purple-200',
+                    'Dispatcher':       'bg-teal-100 text-teal-700 border-teal-200',
                     'Auditor':          'bg-blue-100 text-blue-700 border-blue-200',
                     'Viewer':           'bg-blue-100 text-blue-700 border-blue-200',
                   }[u.role_name] || 'bg-slate-100 text-slate-600 border-slate-200';
@@ -2485,6 +2486,7 @@ export default function MasterRegistries() {
                           { value: 'Super Admin', label: 'Super Admin' },
                           { value: 'Warehouse Admin', label: 'Warehouse Admin' },
                           { value: 'Operator', label: 'Operator' },
+                          { value: 'Dispatcher', label: 'Dispatcher' },
                           { value: 'Auditor', label: 'Auditor' },
                           { value: 'Viewer', label: 'Viewer' }
                         ]}

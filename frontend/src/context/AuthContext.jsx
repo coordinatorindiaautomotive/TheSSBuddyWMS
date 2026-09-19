@@ -71,17 +71,17 @@ export function AuthProvider({ children }) {
     return userData;
   };
 
+  const roleNorm = String(user?.role || user?.role_name || '').toLowerCase().trim();
   const isSuperAdmin = Boolean(
-    user && (
-      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user.role) ||
-      ['Super Admin', 'SUPER_ADMIN', 'SuperAdmin'].includes(user.role_name) ||
-      user.is_super_admin ||
-      (user.username && (user.username.toLowerCase() === 'admin' || user.username.toLowerCase() === 'superadmin')) ||
-      (user.email && (user.email.toLowerCase().includes('coordinator') || user.email.toLowerCase().startsWith('admin@thess')))
+    user &&
+    !roleNorm.includes('warehouse') &&
+    (
+      ['super admin', 'superadmin', 'super_admin', 'super'].includes(roleNorm) ||
+      Boolean(user.is_super_admin) ||
+      (user.username && (user.username.toLowerCase() === 'superadmin' || user.username.toLowerCase() === 'admin'))
     )
   );
 
-  const roleNorm = String(user?.role || user?.role_name || '').toLowerCase();
   const isDispatcher = roleNorm.includes('dispatcher');
   const isOperator = roleNorm.includes('operator');
   const canDelete = !isOperator;

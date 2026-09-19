@@ -37,7 +37,7 @@ export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const isSuper = isSuperAdmin || user?.role_name === 'Super Admin' || user?.is_super_admin;
+  const isSuper = Boolean(isSuperAdmin);
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);

@@ -155,7 +155,13 @@ async function me(req, res) {
 
     const roleNorm = String(user.role || user.role_name || '').toLowerCase().replace(/[^a-z]/g, '');
     const userNorm = String(user.username || user.email || '').toLowerCase();
-    const isSuperAdmin = roleNorm.includes('superadmin') || roleNorm === 'admin' || userNorm.startsWith('admin') || userNorm.includes('coordinator') || Boolean(user.is_super_admin);
+    const isSuperAdmin = !roleNorm.includes('warehouse') && (
+      roleNorm === 'superadmin' || 
+      roleNorm === 'super' || 
+      Boolean(user.is_super_admin) ||
+      userNorm === 'superadmin' ||
+      (userNorm === 'admin' && roleNorm !== 'warehouseadmin')
+    );
 
     let warehouse = null;
     let warehouses = [];
