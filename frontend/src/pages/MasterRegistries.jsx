@@ -692,8 +692,19 @@ export default function MasterRegistries() {
     });
   };
 
-  const f = (key) => form[key] ?? '';
-  const sf = (key, val) => setForm(p => ({ ...p, [key]: val }));
+  const f = (key) => {
+    const v = form[key];
+    if (v && typeof v === 'object' && v.target !== undefined) {
+      return v.target.value !== undefined ? v.target.value : '';
+    }
+    return v ?? '';
+  };
+  const sf = (key, val) => {
+    const rawVal = (val && typeof val === 'object' && val.target !== undefined)
+      ? (val.target.type === 'checkbox' ? val.target.checked : val.target.value)
+      : val;
+    setForm(p => ({ ...p, [key]: rawVal }));
+  };
 
   // ── Filter ──────────────────────────────────────────────────────────────────
   const filtered = (arr, keys) => {
@@ -2481,7 +2492,7 @@ export default function MasterRegistries() {
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Security Access Role <span className="text-red-500 font-bold ml-0.5">*</span></label>
                       <SearchableSelect
                         value={f('role_name')}
-                        onChange={val => sf('role_name', val)}
+                        onChange={e => sf('role_name', e?.target?.value !== undefined ? e.target.value : e)}
                         options={[
                           { value: 'Super Admin', label: 'Super Admin' },
                           { value: 'Warehouse Admin', label: 'Warehouse Admin' },
@@ -2499,7 +2510,7 @@ export default function MasterRegistries() {
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Authorized Warehouse Context</label>
                       <SearchableSelect
                         value={f('warehouse_id')}
-                        onChange={val => sf('warehouse_id', val)}
+                        onChange={e => sf('warehouse_id', e?.target?.value !== undefined ? e.target.value : e)}
                         options={[
                           { value: '', label: 'Global / All Warehouses' },
                           ...(warehouses || []).map(wh => ({

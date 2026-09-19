@@ -68,7 +68,9 @@ export default function SearchableSelect({
   // Current selected option
   const selectedOption = useMemo(() => {
     if (value === undefined || value === null) return null;
-    const strVal = String(value);
+    let strVal = typeof value === 'object' && value !== null && value.target?.value !== undefined
+      ? String(value.target.value)
+      : String(value);
     return normalizedOptions.find((opt) => String(opt.value) === strVal) || null;
   }, [normalizedOptions, value]);
 
