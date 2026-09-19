@@ -79,48 +79,47 @@ export default function Dashboard() {
     year: 'numeric'
   });
 
+  const snapshotBifurcation = todaySnapshot?.bifurcation || {
+    parties: { tickets: 0, qty: 0, pending: 0, dispatched: 0 },
+    retailOutlets: { tickets: 0, qty: 0, pending: 0, dispatched: 0 }
+  };
+
   const statCards = [
     {
       title: 'Total Pick Tickets',
       value: kpis?.totalPickTickets || 0,
       subtext: 'Created in system',
-      icon: ClipboardList,
-      link: '/pick-tickets'
+      icon: ClipboardList
     },
     {
       title: 'Pending Picking',
       value: kpis?.pendingPicking || 0,
       subtext: 'Awaiting floor pick',
-      icon: Clock,
-      link: '/pick-tickets'
+      icon: Clock
     },
     {
       title: 'Pending Billing',
       value: kpis?.pendingBilling || 0,
       subtext: 'Picked & awaiting invoice',
-      icon: Receipt,
-      link: '/billing'
+      icon: Receipt
     },
     {
       title: 'Dispatched Orders',
       value: kpis?.dispatchedOrders || 0,
       subtext: 'Manifested & departed',
-      icon: Truck,
-      link: '/dispatch'
+      icon: Truck
     },
     {
       title: 'Total Billed Value',
       value: `₹${(kpis?.totalBilledAmount || 0).toLocaleString('en-IN')}`,
       subtext: 'Invoice revenue',
-      icon: TrendingUp,
-      link: '/billing'
+      icon: TrendingUp
     },
     {
       title: 'Fleet & Logistics',
       value: `${kpis?.activeDrivers || 0} / ${kpis?.totalVehicles || 0}`,
       subtext: 'Drivers & Vehicles',
-      icon: Building2,
-      link: '/masters'
+      icon: Building2
     }
   ];
 
@@ -130,76 +129,79 @@ export default function Dashboard() {
       value: todaySnapshot?.returns?.count ?? (kpis?.returnsToday || 0),
       subtext: 'Materials returned today',
       icon: Undo2,
-      badgeBg: 'bg-rose-50 text-rose-600',
-      link: '/return/register'
+      badgeBg: 'bg-rose-50 text-rose-600'
     },
     {
       title: 'Pending DMS',
       value: todaySnapshot?.returns?.dmsPending ?? (kpis?.pendingDmsReturns || 0),
       subtext: 'Awaiting STR allocation',
       icon: AlertCircle,
-      badgeBg: 'bg-amber-50 text-amber-600',
-      link: '/return/dms-pending'
+      badgeBg: 'bg-amber-50 text-amber-600'
     },
     {
       title: 'Arrange Today',
       value: todaySnapshot?.arranges?.count ?? (kpis?.arrangesToday || 0),
       subtext: 'Floor STI requisitions',
       icon: Boxes,
-      badgeBg: 'bg-blue-50 text-[#004C8F]',
-      link: '/arrange/register'
+      badgeBg: 'bg-blue-50 text-[#004C8F]'
     },
     {
       title: 'Pending Pick Ticket',
       value: todaySnapshot?.arranges?.pending ?? (kpis?.pendingPickTicketArranges || 0),
       subtext: 'Requisitions to convert',
       icon: Sparkles,
-      badgeBg: 'bg-indigo-50 text-indigo-600',
-      link: '/arrange/register'
+      badgeBg: 'bg-indigo-50 text-indigo-600'
     },
     {
       title: 'Arrange -> Converted',
       value: todaySnapshot?.arranges?.converted ?? (kpis?.arrangeBillingConverted || 0),
       subtext: 'Fulfillment completed',
       icon: CheckCircle2,
-      badgeBg: 'bg-emerald-50 text-emerald-600',
-      link: '/arrange/reports'
+      badgeBg: 'bg-emerald-50 text-emerald-600'
     }
   ];
 
-  // Today's Snapshot Sub-Items exactly as in the user's reference mockup
+  // Today's Snapshot Sub-Items with Parties vs Retail Outlets Bifurcation
   const snapshotItems = [
     {
       label: 'New Tickets',
       value: todaySnapshot?.pickTickets?.count ?? (kpis?.totalPickTickets || 0),
+      bifurcation: {
+        parties: snapshotBifurcation.parties.tickets,
+        retail: snapshotBifurcation.retailOutlets.tickets
+      },
       icon: FileText,
       iconColor: 'text-blue-600',
-      iconBg: 'bg-blue-50 border-blue-100',
-      link: '/pick-tickets'
+      iconBg: 'bg-blue-50 border-blue-100'
     },
     {
       label: 'In Picking',
       value: todaySnapshot?.pickTickets?.pending ?? (kpis?.pendingPicking || 0),
+      bifurcation: {
+        parties: snapshotBifurcation.parties.pending,
+        retail: snapshotBifurcation.retailOutlets.pending
+      },
       icon: Box,
       iconColor: 'text-amber-600',
-      iconBg: 'bg-amber-50 border-amber-100',
-      link: '/pick-tickets'
+      iconBg: 'bg-amber-50 border-amber-100'
     },
     {
       label: 'Dispatched',
       value: todaySnapshot?.pickTickets?.dispatched ?? (kpis?.dispatchedOrders || 0),
+      bifurcation: {
+        parties: snapshotBifurcation.parties.dispatched,
+        retail: snapshotBifurcation.retailOutlets.dispatched
+      },
       icon: Truck,
       iconColor: 'text-emerald-600',
-      iconBg: 'bg-emerald-50 border-emerald-100',
-      link: '/dispatch'
+      iconBg: 'bg-emerald-50 border-emerald-100'
     },
     {
       label: 'Pending Billing',
       value: kpis?.pendingBilling || 0,
       icon: Receipt,
       iconColor: 'text-purple-600',
-      iconBg: 'bg-purple-50 border-purple-100',
-      link: '/billing'
+      iconBg: 'bg-purple-50 border-purple-100'
     }
   ];
 
@@ -210,16 +212,15 @@ export default function Dashboard() {
         {statCards.map((card, idx) => {
           const Icon = card.icon;
           return (
-            <Link
-              to={card.link}
+            <div
               key={idx}
-              className="card-enterprise p-3.5 space-y-2 hover:border-[#003366] hover:shadow-md transition-all cursor-pointer block group"
+              className="card-enterprise p-3.5 space-y-2 cursor-default block"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-[#003366]">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   {card.title}
                 </span>
-                <div className="p-1.5 rounded-lg bg-slate-100 text-[#004C8F] group-hover:bg-[#003366] group-hover:text-white transition-colors">
+                <div className="p-1.5 rounded-lg bg-slate-100 text-[#004C8F]">
                   <Icon className="w-3.5 h-3.5" />
                 </div>
               </div>
@@ -227,7 +228,7 @@ export default function Dashboard() {
                 <h3 className="text-lg font-bold text-slate-900">{card.value}</h3>
                 <p className="text-[11px] text-slate-400 font-medium">{card.subtext}</p>
               </div>
-            </Link>
+            </div>
           );
         })}
       </div>
@@ -248,10 +249,9 @@ export default function Dashboard() {
           {inventoryKpis.map((card, idx) => {
             const Icon = card.icon;
             return (
-              <Link
-                to={card.link}
+              <div
                 key={idx}
-                className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-white hover:border-[#003366] hover:shadow-xs transition-all block group cursor-pointer"
+                className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/70 block cursor-default"
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">
@@ -261,13 +261,13 @@ export default function Dashboard() {
                     <Icon className="w-3.5 h-3.5" />
                   </div>
                 </div>
-                <div className="text-base font-black text-slate-900 group-hover:text-[#003366]">
+                <div className="text-base font-black text-slate-900">
                   {card.value}
                 </div>
                 <div className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
                   {card.subtext}
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>
@@ -331,40 +331,78 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 2. TODAY'S SNAPSHOT CARD (Exact Design as Mockup) */}
+        {/* 2. TODAY'S SNAPSHOT CARD with Parties vs Retail Outlets Bifurcation */}
         <div className="lg:col-span-6 xl:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-xs p-4 flex flex-col justify-between space-y-3">
           {/* Header */}
-          <div className="border-b border-slate-100 pb-2">
-            <h3 className="text-sm font-black text-[#003366] tracking-tight">
-              Today's Snapshot
-            </h3>
-            <p className="text-xs text-slate-400 font-semibold mt-0.5">
-              {todayDateStr}
-            </p>
+          <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-black text-[#003366] tracking-tight">
+                Today's Snapshot
+              </h3>
+              <p className="text-xs text-slate-400 font-semibold mt-0.5">
+                {todayDateStr}
+              </p>
+            </div>
+            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              Live Feed
+            </span>
+          </div>
+
+          {/* 🏢 vs 🏪 Order Channel Bifurcation Banner */}
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#00264d] to-[#003366] text-white space-y-1.5 shadow-xs border border-cyan-500/20">
+            <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-cyan-300">
+              <span>Channel Bifurcation Today</span>
+              <span className="font-mono text-[9px] text-emerald-300 bg-emerald-950/80 px-1 rounded border border-emerald-500/30">Active</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 text-xs">
+              <div className="p-1.5 rounded-lg bg-white/10 border border-white/10">
+                <div className="text-[10px] text-slate-200 font-bold truncate">🏢 Parties</div>
+                <div className="text-xs font-black text-cyan-200 mt-0.5">
+                  {snapshotBifurcation.parties.tickets} <span className="text-[9px] text-slate-300 font-normal">({snapshotBifurcation.parties.qty} Qty)</span>
+                </div>
+              </div>
+              <div className="p-1.5 rounded-lg bg-white/10 border border-white/10">
+                <div className="text-[10px] text-slate-200 font-bold truncate">🏪 Retail Outlets</div>
+                <div className="text-xs font-black text-amber-300 mt-0.5">
+                  {snapshotBifurcation.retailOutlets.tickets} <span className="text-[9px] text-amber-200 font-normal">({snapshotBifurcation.retailOutlets.qty} Qty)</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* 4 Pastel Sub-Cards */}
-          <div className="space-y-2.5 flex-1 flex flex-col justify-between">
+          <div className="space-y-2 flex-1 flex flex-col justify-between">
             {snapshotItems.map((item, idx) => {
               const Icon = item.icon;
               return (
-                <Link
-                  to={item.link}
+                <div
                   key={idx}
-                  className="p-3 rounded-xl border border-slate-200/80 bg-white hover:border-[#003366] hover:shadow-xs transition-all flex items-center gap-3.5 group cursor-pointer"
+                  className="p-2.5 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col justify-between cursor-default"
                 >
-                  <div className={`w-10 h-10 rounded-xl ${item.iconBg} border flex items-center justify-center ${item.iconColor} shrink-0`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-[11px] font-semibold text-slate-500 group-hover:text-[#003366] transition-colors">
-                      {item.label}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg ${item.iconBg} border flex items-center justify-center ${item.iconColor} shrink-0`}>
+                      <Icon className="w-4 h-4" />
                     </div>
-                    <div className="text-base sm:text-lg font-black text-slate-900 leading-tight">
-                      {item.value}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-bold text-slate-600 truncate">
+                        {item.label}
+                      </div>
+                      <div className="text-sm font-black text-slate-900 leading-tight">
+                        {item.value}
+                      </div>
                     </div>
                   </div>
-                </Link>
+                  {item.bifurcation && (
+                    <div className="mt-1.5 pt-1 border-t border-slate-200/60 flex items-center justify-between text-[10px] font-extrabold">
+                      <span className="text-[#004C8F] bg-blue-100/70 px-1.5 py-0.2 rounded">
+                        Parties: {item.bifurcation.parties}
+                      </span>
+                      <span className="text-purple-700 bg-purple-100/70 px-1.5 py-0.2 rounded">
+                        Retail: {item.bifurcation.retail}
+                      </span>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
