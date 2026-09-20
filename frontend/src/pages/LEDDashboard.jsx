@@ -330,7 +330,7 @@ export default function LEDDashboard() {
   // Accurate Shift Dispatch Cards Calculation (Progress clamped 0-100%)
   const shiftCards = useMemo(() => {
     if (selectedRoute === 'ALL') {
-      const allMorningTickets = rawTickets.filter(t => String(t.dispatch_slot || 'Morning').toLowerCase() === 'morning');
+      const allMorningTickets = rawTickets.filter(t => String(t.dispatch_slot || 'Morning').toLowerCase() !== 'evening');
       const allEveningTickets = rawTickets.filter(t => String(t.dispatch_slot || '').toLowerCase() === 'evening');
 
       const mTotal = allMorningTickets.length;
@@ -352,32 +352,43 @@ export default function LEDDashboard() {
       const eCutoff = eveningCycles[0]?.cutoff_time_formatted || '04:00 PM';
       const eDispatch = eveningCycles[0]?.dispatch_time_formatted || '06:00 PM';
 
-      return [
-        {
-          id: 'morning_all',
-          title: 'Morning Shift Dispatch',
-          subtitle: 'All Routes',
-          slot: 'Morning',
-          cutoff: mCutoff,
-          dispatch: mDispatch,
-          status: morningCycles[0]?.statusBadge || (mPending > 0 ? 'In Progress' : 'Ready / Complete'),
-          statusColor: morningCycles[0]?.statusClass || (mPending > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'),
-          progress: mProgress,
-          metrics: { total: mTotal, pending: mPending, ready: mReady, dispatched: mDispatched }
-        },
-        {
-          id: 'evening_all',
-          title: 'Evening Shift Dispatch',
-          subtitle: 'All Routes',
-          slot: 'Evening',
-          cutoff: eCutoff,
-          dispatch: eDispatch,
-          status: eveningCycles[0]?.statusBadge || (ePending > 0 ? 'In Progress' : (eTotal > 0 ? 'Completed' : 'Scheduled')),
-          statusColor: eveningCycles[0]?.statusClass || (ePending > 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200'),
-          progress: eProgress,
-          metrics: { total: eTotal, pending: ePending, ready: eReady, dispatched: eDispatched }
+      const cards = [];
+
+      if (selectedSlot === 'ALL' || selectedSlot === 'Morning') {
+        if (morningCycles.length > 0 || mTotal > 0 || selectedSlot === 'Morning') {
+          cards.push({
+            id: 'morning_all',
+            title: morningCycles[0]?.trip_name || 'Morning Shift Dispatch',
+            subtitle: 'All Routes',
+            slot: 'Morning',
+            cutoff: mCutoff,
+            dispatch: mDispatch,
+            status: morningCycles[0]?.statusBadge || (mPending > 0 ? 'In Progress' : 'Ready / Complete'),
+            statusColor: morningCycles[0]?.statusClass || (mPending > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'),
+            progress: mProgress,
+            metrics: { total: mTotal, pending: mPending, ready: mReady, dispatched: mDispatched }
+          });
         }
-      ];
+      }
+
+      if (selectedSlot === 'ALL' || selectedSlot === 'Evening') {
+        if (eveningCycles.length > 0 || eTotal > 0 || selectedSlot === 'Evening') {
+          cards.push({
+            id: 'evening_all',
+            title: eveningCycles[0]?.trip_name || 'Evening Shift Dispatch',
+            subtitle: 'All Routes',
+            slot: 'Evening',
+            cutoff: eCutoff,
+            dispatch: eDispatch,
+            status: eveningCycles[0]?.statusBadge || (ePending > 0 ? 'In Progress' : (eTotal > 0 ? 'Completed' : 'Scheduled')),
+            statusColor: eveningCycles[0]?.statusClass || (ePending > 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200'),
+            progress: eProgress,
+            metrics: { total: eTotal, pending: ePending, ready: eReady, dispatched: eDispatched }
+          });
+        }
+      }
+
+      return cards;
     }
 
     const routeTickets = rawTickets.filter(t =>
@@ -391,9 +402,25 @@ export default function LEDDashboard() {
       checkRoutesMatch(c.route_name, selectedRouteObj?.route_name || selectedRoute, c.route_code, selectedRouteObj?.route_code || selectedRoute)
     );
 
+    const hasMorningSched = !!rMorningCycle;
+    const hasEveningSched = !!rEveningCycle;
+
+    let mTickets = [];
+    let eTickets = [];
+
+    if (hasMorningSched && !hasEveningSched) {
+      mTickets = routeTickets;
+      eTickets = [];
+    } else if (hasEveningSched && !hasMorningSched) {
+      mTickets = [];
+      eTickets = routeTickets;
+    } else {
+      mTickets = routeTickets.filter(t => String(t.dispatch_slot || 'Morning').toLowerCase() !== 'evening');
+      eTickets = routeTickets.filter(t => String(t.dispatch_slot || '').toLowerCase() === 'evening');
+    }
+
     const cards = [];
 
-    const mTickets = routeTickets.filter(t => String(t.dispatch_slot || 'Morning').toLowerCase() === 'morning');
     const mTotal = mTickets.length;
     const mPending = mTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;
     const mReady = mTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length;
@@ -401,7 +428,6 @@ export default function LEDDashboard() {
     const mCalculated = mTotal > 0 ? Math.round(((mReady + mDispatched) / mTotal) * 100) : 100;
     const mProgress = Math.min(100, Math.max(0, mCalculated));
 
-    const eTickets = routeTickets.filter(t => String(t.dispatch_slot || '').toLowerCase() === 'evening');
     const eTotal = eTickets.length;
     const ePending = eTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length;
     const eReady = eTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length;
@@ -409,7 +435,15 @@ export default function LEDDashboard() {
     const eCalculated = eTotal > 0 ? Math.round(((eReady + eDispatched) / eTotal) * 100) : 100;
     const eProgress = Math.min(100, Math.max(0, eCalculated));
 
-    if (rMorningCycle || mTotal > 0 || (!rEveningCycle && eTotal === 0)) {
+    const showMorning = (selectedSlot === 'ALL' || selectedSlot === 'Morning') && (
+      hasMorningSched || (!hasEveningSched && (mTotal > 0 || eTotal === 0))
+    );
+
+    const showEvening = (selectedSlot === 'ALL' || selectedSlot === 'Evening') && (
+      hasEveningSched || (!hasMorningSched && eTotal > 0)
+    );
+
+    if (showMorning) {
       cards.push({
         id: 'morning_route',
         title: rMorningCycle?.trip_name || 'Morning Shift Dispatch',
@@ -424,7 +458,7 @@ export default function LEDDashboard() {
       });
     }
 
-    if (rEveningCycle || eTotal > 0) {
+    if (showEvening) {
       cards.push({
         id: 'evening_route',
         title: rEveningCycle?.trip_name || 'Evening Shift Dispatch',
@@ -440,7 +474,7 @@ export default function LEDDashboard() {
     }
 
     return cards;
-  }, [selectedRoute, selectedRouteObj, rawTickets, morningCycles, eveningCycles]);
+  }, [selectedRoute, selectedRouteObj, selectedSlot, rawTickets, morningCycles, eveningCycles]);
 
   // Pagination for table
   const cappedTickets = (filteredTickets || []).slice(0, 150);
