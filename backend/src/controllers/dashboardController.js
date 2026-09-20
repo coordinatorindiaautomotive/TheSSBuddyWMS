@@ -99,17 +99,17 @@ async function getStats(req, res) {
         SUM(CASE WHEN status IN ('Created', 'Assigned', 'Pending') THEN 1 ELSE 0 END) as pending,
         SUM(CASE WHEN status IN ('Dispatched', 'Delivered') THEN 1 ELSE 0 END) as dispatched,
         
-        -- Parties (Wholesale/Customer Party)
-        SUM(CASE WHEN LOWER(party_name) NOT LIKE '%retail%' AND LOWER(party_name) NOT LIKE '%outlet%' AND LOWER(party_code) NOT LIKE 'ret%' AND LOWER(party_code) NOT LIKE 'ro-%' AND (remarks IS NULL OR LOWER(remarks) NOT LIKE '%retail%') THEN 1 ELSE 0 END) as party_count,
-        SUM(CASE WHEN LOWER(party_name) NOT LIKE '%retail%' AND LOWER(party_name) NOT LIKE '%outlet%' AND LOWER(party_code) NOT LIKE 'ret%' AND LOWER(party_code) NOT LIKE 'ro-%' AND (remarks IS NULL OR LOWER(remarks) NOT LIKE '%retail%') THEN qty_in_pick_ticket ELSE 0 END) as party_qty,
-        SUM(CASE WHEN (LOWER(party_name) NOT LIKE '%retail%' AND LOWER(party_name) NOT LIKE '%outlet%' AND LOWER(party_code) NOT LIKE 'ret%' AND LOWER(party_code) NOT LIKE 'ro-%' AND (remarks IS NULL OR LOWER(remarks) NOT LIKE '%retail%')) AND status IN ('Created', 'Assigned', 'Pending') THEN 1 ELSE 0 END) as party_pending,
-        SUM(CASE WHEN (LOWER(party_name) NOT LIKE '%retail%' AND LOWER(party_name) NOT LIKE '%outlet%' AND LOWER(party_code) NOT LIKE 'ret%' AND LOWER(party_code) NOT LIKE 'ro-%' AND (remarks IS NULL OR LOWER(remarks) NOT LIKE '%retail%')) AND status IN ('Dispatched', 'Delivered') THEN 1 ELSE 0 END) as party_dispatched,
+        -- Parties (All parties in Party Master except Retail Outlet salesman)
+        SUM(CASE WHEN (LOWER(COALESCE(salesman, '')) NOT LIKE '%retail%' AND LOWER(COALESCE(party_name, '')) NOT LIKE '%retail%') THEN 1 ELSE 0 END) as party_count,
+        SUM(CASE WHEN (LOWER(COALESCE(salesman, '')) NOT LIKE '%retail%' AND LOWER(COALESCE(party_name, '')) NOT LIKE '%retail%') THEN qty_in_pick_ticket ELSE 0 END) as party_qty,
+        SUM(CASE WHEN (LOWER(COALESCE(salesman, '')) NOT LIKE '%retail%' AND LOWER(COALESCE(party_name, '')) NOT LIKE '%retail%') AND status IN ('Created', 'Assigned', 'Pending') THEN 1 ELSE 0 END) as party_pending,
+        SUM(CASE WHEN (LOWER(COALESCE(salesman, '')) NOT LIKE '%retail%' AND LOWER(COALESCE(party_name, '')) NOT LIKE '%retail%') AND status IN ('Dispatched', 'Delivered') THEN 1 ELSE 0 END) as party_dispatched,
 
-        -- Retail Outlets
-        SUM(CASE WHEN LOWER(party_name) LIKE '%retail%' OR LOWER(party_name) LIKE '%outlet%' OR LOWER(party_code) LIKE 'ret%' OR LOWER(party_code) LIKE 'ro-%' OR (remarks IS NOT NULL AND LOWER(remarks) LIKE '%retail%') THEN 1 ELSE 0 END) as retail_count,
-        SUM(CASE WHEN LOWER(party_name) LIKE '%retail%' OR LOWER(party_name) LIKE '%outlet%' OR LOWER(party_code) LIKE 'ret%' OR LOWER(party_code) LIKE 'ro-%' OR (remarks IS NOT NULL AND LOWER(remarks) LIKE '%retail%') THEN qty_in_pick_ticket ELSE 0 END) as retail_qty,
-        SUM(CASE WHEN (LOWER(party_name) LIKE '%retail%' OR LOWER(party_name) LIKE '%outlet%' OR LOWER(party_code) LIKE 'ret%' OR LOWER(party_code) LIKE 'ro-%' OR (remarks IS NOT NULL AND LOWER(remarks) LIKE '%retail%')) AND status IN ('Created', 'Assigned', 'Pending') THEN 1 ELSE 0 END) as retail_pending,
-        SUM(CASE WHEN (LOWER(party_name) LIKE '%retail%' OR LOWER(party_name) LIKE '%outlet%' OR LOWER(party_code) LIKE 'ret%' OR LOWER(party_code) LIKE 'ro-%' OR (remarks IS NOT NULL AND LOWER(remarks) LIKE '%retail%')) AND status IN ('Dispatched', 'Delivered') THEN 1 ELSE 0 END) as retail_dispatched
+        -- Retail Outlets (Salesman = Retail Outlet or Retail Party)
+        SUM(CASE WHEN (LOWER(COALESCE(salesman, '')) LIKE '%retail%' OR LOWER(COALESCE(party_name, '')) LIKE '%retail%') THEN 1 ELSE 0 END) as retail_count,
+        SUM(CASE WHEN (LOWER(COALESCE(salesman, '')) LIKE '%retail%' OR LOWER(COALESCE(party_name, '')) LIKE '%retail%') THEN qty_in_pick_ticket ELSE 0 END) as retail_qty,
+        SUM(CASE WHEN (LOWER(COALESCE(salesman, '')) LIKE '%retail%' OR LOWER(COALESCE(party_name, '')) LIKE '%retail%') AND status IN ('Created', 'Assigned', 'Pending') THEN 1 ELSE 0 END) as retail_pending,
+        SUM(CASE WHEN (LOWER(COALESCE(salesman, '')) LIKE '%retail%' OR LOWER(COALESCE(party_name, '')) LIKE '%retail%') AND status IN ('Dispatched', 'Delivered') THEN 1 ELSE 0 END) as retail_dispatched
 
       FROM pick_tickets 
       ${whCondition} AND (date = ? OR date LIKE ? OR created_at LIKE ?)
