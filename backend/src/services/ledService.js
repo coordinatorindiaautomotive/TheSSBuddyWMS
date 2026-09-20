@@ -201,7 +201,7 @@ function calculateCycleStatus(metrics, cutoffTimeStr, dispatchTimeStr, targetDat
     return {
       status: 'Completed',
       statusBadge: 'Completed',
-      statusClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      statusClass: 'bg-purple-50 text-purple-700 border-purple-200',
       timeRemaining: 'Completed',
       isDelayed: false,
       secondsToDispatch: 0,
@@ -224,7 +224,13 @@ function calculateCycleStatus(metrics, cutoffTimeStr, dispatchTimeStr, targetDat
   let statusClass = 'bg-blue-50 text-blue-700 border-blue-200';
   let isDelayed = false;
 
-  if (isDispatchOverdue && (pending > 0 || picking > 0 || billing > 0 || ready > 0)) {
+  const unfulfilledUnbilled = (pending || 0) + (picking || 0) + (billing || 0);
+
+  if (unfulfilledUnbilled === 0 && (ready || 0) > 0) {
+    status = 'Ready';
+    statusBadge = 'Ready';
+    statusClass = 'bg-emerald-50 text-emerald-700 border-emerald-300';
+  } else if (isDispatchOverdue && unfulfilledUnbilled > 0) {
     status = 'Delayed';
     statusBadge = 'Delayed';
     statusClass = 'bg-red-500 text-white border-red-600';
@@ -234,14 +240,10 @@ function calculateCycleStatus(metrics, cutoffTimeStr, dispatchTimeStr, targetDat
     statusBadge = 'At Risk';
     statusClass = 'bg-amber-50 text-amber-800 border-amber-300';
     isDelayed = true;
-  } else if (isImminent && (pending > 0 || picking > 0 || billing > 0)) {
+  } else if (isImminent && (pending > 0 || picking > 0)) {
     status = 'At Risk';
     statusBadge = 'At Risk';
     statusClass = 'bg-amber-50 text-amber-800 border-amber-300';
-  } else if (ready > 0 && pending === 0 && picking === 0 && billing === 0) {
-    status = 'Ready';
-    statusBadge = 'Ready';
-    statusClass = 'bg-emerald-50 text-emerald-700 border-emerald-300';
   } else if (pending === total) {
     status = 'Upcoming';
     statusBadge = 'Upcoming';
@@ -513,10 +515,10 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
       const metrics = {
         total: mTickets.length,
-        pending: mTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length,
+        pending: mTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled' && t.current_stage !== 'Picking' && t.current_stage !== 'Billing').length,
         picking: mTickets.filter(t => t.current_stage === 'Picking').length,
-        billing: mTickets.filter(t => t.current_stage === 'Billing' || t.billing_id).length,
-        ready: mTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length,
+        billing: mTickets.filter(t => t.current_stage === 'Billing' && !t.is_billed).length,
+        ready: mTickets.filter(t => (t.is_billed || t.current_stage === 'Ready') && t.current_stage !== 'Dispatched').length,
         dispatched: mTickets.filter(t => t.current_stage === 'Dispatched').length,
         delayed: mTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed').length
       };
@@ -554,10 +556,10 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
 
       const metrics = {
         total: eTickets.length,
-        pending: eTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled').length,
+        pending: eTickets.filter(t => !t.is_billed && t.current_stage !== 'Cancelled' && t.current_stage !== 'Picking' && t.current_stage !== 'Billing').length,
         picking: eTickets.filter(t => t.current_stage === 'Picking').length,
-        billing: eTickets.filter(t => t.current_stage === 'Billing' || t.billing_id).length,
-        ready: eTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length,
+        billing: eTickets.filter(t => t.current_stage === 'Billing' && !t.is_billed).length,
+        ready: eTickets.filter(t => (t.is_billed || t.current_stage === 'Ready') && t.current_stage !== 'Dispatched').length,
         dispatched: eTickets.filter(t => t.current_stage === 'Dispatched').length,
         delayed: eTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed').length
       };
@@ -680,8 +682,8 @@ async function getLedDashboardData(params = {}, warehouseId = 1) {
   const totalTicketsCount = enrichedTickets.length;
   const pendingCount = enrichedTickets.filter(t => t.current_stage === 'Pending').length;
   const pickingCount = enrichedTickets.filter(t => t.current_stage === 'Picking').length;
-  const billingCount = enrichedTickets.filter(t => t.current_stage === 'Billing' || t.billing_id != null).length;
-  const readyCount = enrichedTickets.filter(t => t.current_stage === 'Ready' || (t.billing_id != null && t.current_stage !== 'Dispatched')).length;
+  const billingCount = enrichedTickets.filter(t => t.current_stage === 'Billing' && !t.is_billed).length;
+  const readyCount = enrichedTickets.filter(t => (t.is_billed || t.current_stage === 'Ready') && t.current_stage !== 'Dispatched').length;
   const delayedCount = enrichedTickets.filter(t => t.aging_level === 'Critical' || t.status === 'Delayed').length;
   const activeRoutesCount = new Set(allCycles.filter(c => c.metrics.total > 0).map(c => c.route_id)).size || routes.length;
 

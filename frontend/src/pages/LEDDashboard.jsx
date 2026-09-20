@@ -320,12 +320,32 @@ export default function LEDDashboard() {
   const filteredReady = filteredTickets.filter(t => t.is_billed && t.current_stage !== 'Dispatched').length;
   const filteredDispatched = filteredTickets.filter(t => t.current_stage === 'Dispatched').length;
 
-  // Next Dispatch Details
-  const nextDispatch = data?.nextDispatch || null;
-
   // Cycles from API
   const morningCycles = data?.morningDispatch?.cycles || [];
   const eveningCycles = data?.eveningDispatch?.cycles || [];
+
+  // Next Dispatch Details (Dynamically follows selected route or global next)
+  const nextDispatch = useMemo(() => {
+    if (!data) return null;
+    if (selectedRoute !== 'ALL') {
+      const allApiCycles = [...morningCycles, ...eveningCycles];
+      const routeCycles = allApiCycles.filter(c =>
+        checkRoutesMatch(c.route_name, selectedRouteObj?.route_name || selectedRoute, c.route_code, selectedRouteObj?.route_code || selectedRoute)
+      );
+      if (routeCycles.length === 0) return null;
+      const upcoming = routeCycles.find(c => c.metrics?.total > 0 && c.metrics?.dispatched < c.metrics?.total) || routeCycles[0];
+      return upcoming ? {
+        route_name: upcoming.route_name,
+        slot: upcoming.slot,
+        cutoff_time_formatted: upcoming.cutoff_time_formatted,
+        dispatch_time_formatted: upcoming.dispatch_time_formatted,
+        status: upcoming.statusBadge || upcoming.status,
+        is_delayed: upcoming.isDelayed,
+        time_remaining: upcoming.timeRemaining
+      } : null;
+    }
+    return data?.nextDispatch || null;
+  }, [data, selectedRoute, selectedRouteObj, morningCycles, eveningCycles]);
 
   // Accurate Shift Dispatch Cards Calculation (Progress clamped 0-100%)
   const shiftCards = useMemo(() => {
