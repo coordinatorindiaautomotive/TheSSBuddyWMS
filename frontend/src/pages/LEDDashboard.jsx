@@ -347,16 +347,21 @@ export default function LEDDashboard() {
       const eCalculated = eTotal > 0 ? Math.round(((eReady + eDispatched) / eTotal) * 100) : 100;
       const eProgress = Math.min(100, Math.max(0, eCalculated));
 
+      const mCutoff = morningCycles[0]?.cutoff_time_formatted || '08:00 AM';
+      const mDispatch = morningCycles[0]?.dispatch_time_formatted || '10:00 AM';
+      const eCutoff = eveningCycles[0]?.cutoff_time_formatted || '04:00 PM';
+      const eDispatch = eveningCycles[0]?.dispatch_time_formatted || '06:00 PM';
+
       return [
         {
           id: 'morning_all',
           title: 'Morning Shift Dispatch',
           subtitle: 'All Routes',
           slot: 'Morning',
-          cutoff: '08:00 AM',
-          dispatch: '10:00 AM',
-          status: mPending > 0 ? 'In Progress' : 'Ready / Complete',
-          statusColor: mPending > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          cutoff: mCutoff,
+          dispatch: mDispatch,
+          status: morningCycles[0]?.statusBadge || (mPending > 0 ? 'In Progress' : 'Ready / Complete'),
+          statusColor: morningCycles[0]?.statusClass || (mPending > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'),
           progress: mProgress,
           metrics: { total: mTotal, pending: mPending, ready: mReady, dispatched: mDispatched }
         },
@@ -365,10 +370,10 @@ export default function LEDDashboard() {
           title: 'Evening Shift Dispatch',
           subtitle: 'All Routes',
           slot: 'Evening',
-          cutoff: '04:00 PM',
-          dispatch: '06:00 PM',
-          status: ePending > 0 ? 'In Progress' : (eTotal > 0 ? 'Completed' : 'Scheduled'),
-          statusColor: ePending > 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200',
+          cutoff: eCutoff,
+          dispatch: eDispatch,
+          status: eveningCycles[0]?.statusBadge || (ePending > 0 ? 'In Progress' : (eTotal > 0 ? 'Completed' : 'Scheduled')),
+          statusColor: eveningCycles[0]?.statusClass || (ePending > 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200'),
           progress: eProgress,
           metrics: { total: eTotal, pending: ePending, ready: eReady, dispatched: eDispatched }
         }
@@ -412,8 +417,8 @@ export default function LEDDashboard() {
         slot: 'Morning',
         cutoff: rMorningCycle?.cutoff_time_formatted || '08:00 AM',
         dispatch: rMorningCycle?.dispatch_time_formatted || '10:00 AM',
-        status: rMorningCycle?.status || (mPending > 0 ? 'In Progress' : 'Ready'),
-        statusColor: mPending > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        status: rMorningCycle?.statusBadge || rMorningCycle?.status || (mPending > 0 ? 'In Progress' : 'Ready'),
+        statusColor: rMorningCycle?.statusClass || (mPending > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'),
         progress: mProgress,
         metrics: { total: mTotal, pending: mPending, ready: mReady, dispatched: mDispatched }
       });
@@ -427,8 +432,8 @@ export default function LEDDashboard() {
         slot: 'Evening',
         cutoff: rEveningCycle?.cutoff_time_formatted || '04:00 PM',
         dispatch: rEveningCycle?.dispatch_time_formatted || '06:00 PM',
-        status: rEveningCycle?.status || (ePending > 0 ? 'In Progress' : 'Scheduled'),
-        statusColor: ePending > 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200',
+        status: rEveningCycle?.statusBadge || rEveningCycle?.status || (ePending > 0 ? 'In Progress' : 'Scheduled'),
+        statusColor: rEveningCycle?.statusClass || (ePending > 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200'),
         progress: eProgress,
         metrics: { total: eTotal, pending: ePending, ready: eReady, dispatched: eDispatched }
       });
